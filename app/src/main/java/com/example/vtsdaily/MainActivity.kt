@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.delay
 
 
 // Data classes
@@ -122,8 +123,12 @@ fun PassengerApp() {
     val context = LocalContext.current
     var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var showCompleted by rememberSaveable { mutableStateOf(false) }
-    var schedule by remember { mutableStateOf(loadSchedule(scheduleDate)) }
+    val baseSchedule = remember(scheduleDate) { loadSchedule(scheduleDate) }
+    var insertedPassengers by rememberSaveable(scheduleDate) {
+        mutableStateOf(emptyList<Passenger>()) }
     var showInsertDialog by remember { mutableStateOf(false) }
+    var scrollToBottom by remember { mutableStateOf(false) }
+
 
 
     val calendarDialog = remember {
@@ -132,7 +137,7 @@ fun PassengerApp() {
             { _, year, month, dayOfMonth ->
                 val pickedDate = LocalDate.of(year, month + 1, dayOfMonth)
                 scheduleDate = pickedDate
-                schedule = loadSchedule(pickedDate)
+                var schedule = loadSchedule(pickedDate)
             },
             scheduleDate.year,
             scheduleDate.monthValue - 1,
@@ -171,12 +176,14 @@ fun PassengerApp() {
                 InsertTripDialog(
                     onDismiss = { showInsertDialog = false },
                     onInsert = { newPassenger ->
-                        val updatedList = schedule.passengers + newPassenger
-                        schedule = schedule.copy(passengers = updatedList)
+                        insertedPassengers = insertedPassengers + newPassenger
                         showInsertDialog = false
+                        scrollToBottom = true
                     }
+
                 )
             }
+
 
 
             Text(
@@ -185,7 +192,15 @@ fun PassengerApp() {
             )
         }
 
-        PassengerTable(schedule.passengers, schedule.date, showCompleted)
+        PassengerTable(baseSchedule.passengers + insertedPassengers, baseSchedule.date, showCompleted)
+
+        if (scrollToBottom) {
+        LaunchedEffect(Unit) {
+            delay(100)
+            // Normally you'd scroll a LazyColumn here
+            scrollToBottom = false
+        }
+    }
     }
 }
 
@@ -337,17 +352,22 @@ fun InsertTripDialog(onDismiss: () -> Unit, onInsert: (Passenger) -> Unit) {
     var time by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
 
+    val isValid = name.isNotBlank() && pickup.isNotBlank() && dropoff.isNotBlank() && time.isNotBlank()
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Insert New Trip") },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
                 OutlinedTextField(value = id, onValueChange = { id = it }, label = { Text("ID") })
                 OutlinedTextField(value = pickup, onValueChange = { pickup = it }, label = { Text("Pickup Address") })
                 OutlinedTextField(value = dropoff, onValueChange = { dropoff = it }, label = { Text("Dropoff Address") })
                 OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time") })
                 OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") })
+                if (!isValid) {
+                    Text("Name, Pickup, Dropoff, and Time are required.", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+                }
             }
         },
         confirmButton = {
@@ -355,12 +375,14 @@ fun InsertTripDialog(onDismiss: () -> Unit, onInsert: (Passenger) -> Unit) {
                 onClick = {
                     val newPassenger = Passenger(name, id, pickup, dropoff, time, phone)
                     onInsert(newPassenger)
-                }
-            ) { Text("Insert") }
+                },
+                enabled = isValid
+            ) {
+                Text("Insert")
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
-
