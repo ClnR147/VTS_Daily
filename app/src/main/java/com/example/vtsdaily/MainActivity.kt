@@ -1,5 +1,3 @@
-
-
 package com.example.vtsdaily
 
 import android.content.Context
@@ -14,21 +12,23 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.Alignment
-import java.io.File
 import jxl.Workbook
 import jxl.read.biff.BiffException
+import java.io.File
 import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 
 data class Passenger(
     val name: String,
@@ -64,42 +64,39 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        fun showReturnNotification(context: Context) {}
+        fun showReturnNotification(context: Context) {
+            // No-op for now
+        }
     }
 }
 
-fun loadSchedule(): Schedule {
+fun loadSchedule(forDate: LocalDate): Schedule {
     val passengers = mutableListOf<Passenger>()
-    var scheduleDate = "unknown"
+    val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+    val scheduleDate = forDate.format(formatter)
 
     try {
         val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
-
-        val file = folder.listFiles()?.firstOrNull {
-            it.name.endsWith(".xls") && it.name.startsWith("VTS ")
-        } ?: return Schedule("", emptyList())
-
-        val pattern = Regex("""VTS (\d{1,2}-\d{1,2}-\d{2})""")
-        val match = pattern.find(file.name)
-        if (match != null) {
-            scheduleDate = match.groupValues[1]
-        }
+        val fileName = "VTS $scheduleDate.xls"
+        val file = File(folder, fileName)
+        if (!file.exists()) return Schedule(scheduleDate, emptyList())
 
         val workbook = Workbook.getWorkbook(file)
         val sheet = workbook.getSheet(0)
 
-        for (i in 1 until sheet.rows) {
+        for (i in 0 until sheet.rows) {
             val row = sheet.getRow(i)
-
-            val name = row.getOrNull(0)?.contents?.trim() ?: ""
-            val id = row.getOrNull(1)?.contents?.trim() ?: ""
-            val pickup = row.getOrNull(2)?.contents?.trim() ?: ""
-            val dropoff = row.getOrNull(3)?.contents?.trim() ?: ""
-            val time = row.getOrNull(4)?.contents?.trim() ?: ""
-            val phone = row.getOrNull(5)?.contents?.trim() ?: ""
-
-            if (name.isNotBlank()) {
-                passengers.add(Passenger(name, id, pickup, dropoff, time, phone))
+            if (row.size >= 6 && row[0].contents.isNotBlank()) {
+                passengers.add(
+                    Passenger(
+                        name = row[0].contents.trim(),
+                        id = row[1].contents.trim(),
+                        pickupAddress = row[2].contents.trim(),
+                        dropoffAddress = row[3].contents.trim(),
+                        typeTime = row[4].contents.trim(),
+                        phone = row[5].contents.trim()
+                    )
+                )
             }
         }
 
@@ -116,28 +113,40 @@ fun loadSchedule(): Schedule {
 @Composable
 fun PassengerApp() {
     val context = LocalContext.current
-    var schedule by remember { mutableStateOf(loadSchedule()) }
+    var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    var schedule by remember { mutableStateOf(loadSchedule(scheduleDate)) }
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         ) {
             Button(onClick = {
-                schedule = loadSchedule()
+                schedule = loadSchedule(scheduleDate)
                 Toast.makeText(context, "Schedule reloaded", Toast.LENGTH_SHORT).show()
             }) {
                 Text("Reload Schedule")
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Text(
-                text = LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
+                text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 style = MaterialTheme.typography.labelLarge
             )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(onClick = {
+                scheduleDate = if (scheduleDate == LocalDate.now())
+                    LocalDate.now().plusDays(1)
+                else
+                    LocalDate.now()
+
+                schedule = loadSchedule(scheduleDate)
+            }) {
+                Icon(Icons.Default.DateRange, contentDescription = "Toggle Date")
+            }
         }
 
         PassengerTable(schedule.passengers, schedule.date)
@@ -189,10 +198,8 @@ fun PassengerTable(passengers: List<Passenger>, scheduleDate: String) {
             text = { Text("Mark this trip as completed and hide it?") },
             confirmButton = {
                 TextButton(onClick = {
-                    passengerToComplete?.let { passenger ->
-                        val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-$scheduleDate"
-                        prefs.edit().putBoolean(key, true).apply()
-                    }
+                    val key = "${passengerToComplete!!.name}-${passengerToComplete!!.pickupAddress}-${passengerToComplete!!.dropoffAddress}-${passengerToComplete!!.typeTime}-$scheduleDate"
+                    prefs.edit().putBoolean(key, true).apply()
                     passengerToComplete = null
                 }) {
                     Text("Yes")
