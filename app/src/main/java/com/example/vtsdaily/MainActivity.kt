@@ -232,7 +232,7 @@ fun PassengerTable(passengers: List<Passenger>, scheduleDate: String, showComple
         )
     }
 
-    if (passengerToComplete != null) {
+    if (passengerToComplete != null && !showCompleted) {
         AlertDialog(
             onDismissRequest = { passengerToComplete = null },
             title = { Text("Complete Trip") },
@@ -294,16 +294,19 @@ fun PassengerTable(passengers: List<Passenger>, scheduleDate: String, showComple
                     Text(passenger.name, modifier = Modifier.weight(2f))
                     Text("${passenger.pickupAddress} → ${passenger.dropoffAddress}", modifier = Modifier.weight(4f))
 
-                    IconButton(
-                        onClick = { passengerToComplete = passenger },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Mark as completed",
-                            tint = Color.Green
-                        )
+                    if (!showCompleted) {
+                        IconButton(
+                            onClick = { passengerToComplete = passenger },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Mark as completed",
+                                tint = Color.Green
+                            )
+                        }
                     }
+
                 }
                 Divider(color = Color.LightGray, thickness = 0.5.dp)
             }
