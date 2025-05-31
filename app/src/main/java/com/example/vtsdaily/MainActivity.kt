@@ -28,6 +28,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
@@ -122,6 +123,8 @@ fun PassengerApp() {
     var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var showCompleted by rememberSaveable { mutableStateOf(false) }
     var schedule by remember { mutableStateOf(loadSchedule(scheduleDate)) }
+    var showInsertDialog by remember { mutableStateOf(false) }
+
 
     val calendarDialog = remember {
         DatePickerDialog(
@@ -145,6 +148,13 @@ fun PassengerApp() {
             IconButton(onClick = { calendarDialog.show() }) {
                 Icon(Icons.Default.DateRange, contentDescription = "Pick Date")
             }
+            IconButton(
+                onClick = { showInsertDialog = true },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Insert new trip")
+            }
+
 
             IconButton(onClick = {
                 showCompleted = !showCompleted
@@ -157,6 +167,18 @@ fun PassengerApp() {
 
             Spacer(modifier = Modifier.width(8.dp))
 
+            if (showInsertDialog) {
+                InsertTripDialog(
+                    onDismiss = { showInsertDialog = false },
+                    onInsert = { newPassenger ->
+                        val updatedList = schedule.passengers + newPassenger
+                        schedule = schedule.copy(passengers = updatedList)
+                        showInsertDialog = false
+                    }
+                )
+            }
+
+
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 style = MaterialTheme.typography.labelLarge
@@ -165,6 +187,11 @@ fun PassengerApp() {
 
         PassengerTable(schedule.passengers, schedule.date, showCompleted)
     }
+}
+
+@Composable
+fun InsertTripDialog(onDismiss: () -> Unit, onInsert: Any) {
+
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -297,3 +324,40 @@ fun launchWaze(context: Context, address: String) {
         Toast.makeText(context, "Waze not installed", Toast.LENGTH_SHORT).show()
     }
 }
+
+@Composable
+fun InsertTripDialog(onDismiss: () -> Unit, onInsert: (Passenger) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var id by remember { mutableStateOf("") }
+    var pickup by remember { mutableStateOf("") }
+    var dropoff by remember { mutableStateOf("") }
+    var time by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Insert New Trip") },
+        text = {
+            Column {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
+                OutlinedTextField(value = id, onValueChange = { id = it }, label = { Text("ID") })
+                OutlinedTextField(value = pickup, onValueChange = { pickup = it }, label = { Text("Pickup Address") })
+                OutlinedTextField(value = dropoff, onValueChange = { dropoff = it }, label = { Text("Dropoff Address") })
+                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time") })
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") })
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val newPassenger = Passenger(name, id, pickup, dropoff, time, phone)
+                    onInsert(newPassenger)
+                }
+            ) { Text("Insert") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
