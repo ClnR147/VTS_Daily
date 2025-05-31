@@ -115,6 +115,8 @@ fun PassengerApp() {
     val context = LocalContext.current
     var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var schedule by remember { mutableStateOf(loadSchedule(scheduleDate)) }
+    var showCompleted by remember { mutableStateOf(false) }
+
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
@@ -134,7 +136,13 @@ fun PassengerApp() {
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 style = MaterialTheme.typography.labelLarge
             )
+            Spacer(modifier = Modifier.width(12.dp))
 
+            Text("Trips")
+            Switch(
+                checked = showCompleted,
+                onCheckedChange = { showCompleted = it }
+            )
             Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(onClick = {
@@ -149,23 +157,25 @@ fun PassengerApp() {
             }
         }
 
-        PassengerTable(schedule.passengers, schedule.date)
+        PassengerTable(schedule.passengers, schedule.date, showCompleted)
+
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PassengerTable(passengers: List<Passenger>, scheduleDate: String) {
+fun PassengerTable(passengers: List<Passenger>, scheduleDate: String, showCompleted: Boolean){
     val context = LocalContext.current
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToComplete by remember { mutableStateOf<Passenger?>(null) }
 
     val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
 
-    val visiblePassengers = passengers.filterNot {
+    val visiblePassengers = passengers.filter {
         val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-$scheduleDate"
-        prefs.getBoolean(key, false)
+        showCompleted || !prefs.getBoolean(key, false)
     }
+
 
     if (selectedPassenger != null) {
         AlertDialog(
