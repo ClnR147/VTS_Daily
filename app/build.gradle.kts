@@ -62,6 +62,8 @@ dependencies {
 
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
     implementation("net.sourceforge.jexcelapi:jxl:2.6.12")
+    implementation("com.google.android.material:material:1.9.0") // or latest
+
 
     // Compose BOM (safe and version-controlled)
     implementation(platform("androidx.compose:compose-bom:2023.10.01"))

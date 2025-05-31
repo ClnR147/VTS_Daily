@@ -1,5 +1,6 @@
 package com.example.vtsdaily
 
+import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -12,23 +13,25 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import java.io.File
 import jxl.Workbook
 import jxl.read.biff.BiffException
-import java.io.File
 import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+
+
+// Data classes
 
 data class Passenger(
     val name: String,
@@ -44,6 +47,7 @@ data class Schedule(
     val passengers: List<Passenger>
 )
 
+// MainActivity
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,9 +68,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        fun showReturnNotification(context: Context) {
-            // No-op for now
-        }
+        fun showReturnNotification(context: Context) {}
     }
 }
 
@@ -113,10 +115,22 @@ fun loadSchedule(forDate: LocalDate): Schedule {
 @Composable
 fun PassengerApp() {
     val context = LocalContext.current
-    var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    var scheduleDate by remember { mutableStateOf(LocalDate.now()) }
     var schedule by remember { mutableStateOf(loadSchedule(scheduleDate)) }
-    var showCompleted by remember { mutableStateOf(false) }
 
+    val calendarDialog = remember {
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val pickedDate = LocalDate.of(year, month + 1, dayOfMonth)
+                scheduleDate = pickedDate
+                schedule = loadSchedule(pickedDate)
+            },
+            scheduleDate.year,
+            scheduleDate.monthValue - 1,
+            scheduleDate.dayOfMonth
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
@@ -127,7 +141,15 @@ fun PassengerApp() {
                 schedule = loadSchedule(scheduleDate)
                 Toast.makeText(context, "Schedule reloaded", Toast.LENGTH_SHORT).show()
             }) {
-                Text("Reload Schedule")
+                Text("Reload")
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Button(onClick = {
+                calendarDialog.show()
+            }) {
+                Text("Picker")
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -136,46 +158,25 @@ fun PassengerApp() {
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 style = MaterialTheme.typography.labelLarge
             )
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Text("Trips")
-            Switch(
-                checked = showCompleted,
-                onCheckedChange = { showCompleted = it }
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(onClick = {
-                scheduleDate = if (scheduleDate == LocalDate.now())
-                    LocalDate.now().plusDays(1)
-                else
-                    LocalDate.now()
-
-                schedule = loadSchedule(scheduleDate)
-            }) {
-                Icon(Icons.Default.DateRange, contentDescription = "Toggle Date")
-            }
         }
 
-        PassengerTable(schedule.passengers, schedule.date, showCompleted)
-
+        PassengerTable(schedule.passengers, schedule.date)
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PassengerTable(passengers: List<Passenger>, scheduleDate: String, showCompleted: Boolean){
+fun PassengerTable(passengers: List<Passenger>, scheduleDate: String) {
     val context = LocalContext.current
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToComplete by remember { mutableStateOf<Passenger?>(null) }
 
     val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
 
-    val visiblePassengers = passengers.filter {
+    val visiblePassengers = passengers.filterNot {
         val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-$scheduleDate"
-        showCompleted || !prefs.getBoolean(key, false)
+        prefs.getBoolean(key, false)
     }
-
 
     if (selectedPassenger != null) {
         AlertDialog(
@@ -208,8 +209,10 @@ fun PassengerTable(passengers: List<Passenger>, scheduleDate: String, showComple
             text = { Text("Mark this trip as completed and hide it?") },
             confirmButton = {
                 TextButton(onClick = {
-                    val key = "${passengerToComplete!!.name}-${passengerToComplete!!.pickupAddress}-${passengerToComplete!!.dropoffAddress}-${passengerToComplete!!.typeTime}-$scheduleDate"
-                    prefs.edit().putBoolean(key, true).apply()
+                    passengerToComplete?.let { passenger ->
+                        val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-$scheduleDate"
+                        prefs.edit().putBoolean(key, true).apply()
+                    }
                     passengerToComplete = null
                 }) {
                     Text("Yes")
