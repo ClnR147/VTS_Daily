@@ -32,7 +32,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
-
+import androidx.compose.runtime.saveable.rememberSaveable
 
 
 // Data classes
@@ -119,9 +119,9 @@ fun loadSchedule(forDate: LocalDate): Schedule {
 @Composable
 fun PassengerApp() {
     val context = LocalContext.current
-    var scheduleDate by remember { mutableStateOf(LocalDate.now()) }
+    var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    var showCompleted by rememberSaveable { mutableStateOf(false) }
     var schedule by remember { mutableStateOf(loadSchedule(scheduleDate)) }
-    var showCompleted by remember { mutableStateOf(false) }
 
     val calendarDialog = remember {
         DatePickerDialog(
@@ -142,22 +142,9 @@ fun PassengerApp() {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         ) {
-            Button(onClick = {
-                schedule = loadSchedule(scheduleDate)
-                Toast.makeText(context, "Schedule reloaded", Toast.LENGTH_SHORT).show()
-            }) {
-                Text("Reload")
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(onClick = {
-                calendarDialog.show()
-            }) {
+            IconButton(onClick = { calendarDialog.show() }) {
                 Icon(Icons.Default.DateRange, contentDescription = "Pick Date")
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(onClick = {
                 showCompleted = !showCompleted
