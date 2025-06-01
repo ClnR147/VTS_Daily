@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
 
 }
 
-fun loadSchedule(forDate: LocalDate): Schedule {
+fun loadSchedule(context: Context, forDate: LocalDate): Schedule {
     val passengers = mutableListOf<Passenger>()
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
     val scheduleDate = forDate.format(formatter)
@@ -105,16 +105,18 @@ fun loadSchedule(forDate: LocalDate): Schedule {
         for (i in 0 until sheet.rows) {
             val row = sheet.getRow(i)
             if (row.size >= 6 && row[0].contents.isNotBlank()) {
-                passengers.add(
-                    Passenger(
-                        name = row[0].contents.trim(),
-                        id = row[1].contents.trim(),
-                        pickupAddress = row[2].contents.trim(),
-                        dropoffAddress = row[3].contents.trim(),
-                        typeTime = row[4].contents.trim(),
-                        phone = row[5].contents.trim()
-                    )
+                val passenger = Passenger(
+                    name = row[0].contents.trim(),
+                    id = row[1].contents.trim(),
+                    pickupAddress = row[2].contents.trim(),
+                    dropoffAddress = row[3].contents.trim(),
+                    typeTime = row[4].contents.trim(),
+                    phone = row[5].contents.trim()
                 )
+
+                if (!RemovedTripStore.isTripRemoved(forDate, passenger)) {
+                    passengers.add(passenger)
+                }
             }
         }
 
@@ -129,6 +131,59 @@ fun loadSchedule(forDate: LocalDate): Schedule {
 }
 
 
+class RemovedTripStore {
+    companion object {
+        private val gson = Gson()
+        private val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+
+        private fun getFile(): File {
+            val dir = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
+            if (!dir.exists()) dir.mkdirs()
+            return File(dir, "removed_trips.json")
+        }
+
+
+        fun getRemovedTrips(forDate: LocalDate): List<RemovedTrip> {
+            val file = getFile()
+            if (!file.exists()) return emptyList()
+
+            val type = object : TypeToken<Map<String, List<RemovedTrip>>>() {}.type
+            val map: Map<String, List<RemovedTrip>> = gson.fromJson(file.readText(), type)
+            return map[forDate.format(formatter)] ?: emptyList()
+        }
+
+        fun isTripRemoved(forDate: LocalDate, passenger: Passenger): Boolean {
+            return getRemovedTrips(forDate).any {
+                it.name == passenger.name &&
+                        it.pickupAddress == passenger.pickupAddress &&
+                        it.dropoffAddress == passenger.dropoffAddress &&
+                        it.typeTime == passenger.typeTime
+            }
+        }
+
+        fun addRemovedTrip(forDate: LocalDate, passenger: Passenger) {
+            val file = getFile()
+            val type = object : TypeToken<MutableMap<String, MutableList<RemovedTrip>>>() {}.type
+            val map: MutableMap<String, MutableList<RemovedTrip>> =
+                if (file.exists()) gson.fromJson(file.readText(), type)
+                else mutableMapOf()
+
+            val key = forDate.format(formatter)
+            val list = map.getOrPut(key) { mutableListOf() }
+            list.add(
+                RemovedTrip(
+                    name = passenger.name,
+                    pickupAddress = passenger.pickupAddress,
+                    dropoffAddress = passenger.dropoffAddress,
+                    typeTime = passenger.typeTime,
+                    date = key
+                )
+            )
+
+            file.writeText(gson.toJson(map))
+        }
+    }
+}
 
 fun getRemovedTrips(context: Context): List<RemovedTrip> {
     val file = File(context.filesDir, "removed_trips.json")
@@ -153,11 +208,11 @@ fun addRemovedTrip(context: Context, trip: RemovedTrip) {
 
 @Composable
 fun PassengerApp() {
+    val context = LocalContext.current
     var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var showCompleted by rememberSaveable { mutableStateOf(false) }
-    val baseSchedule = remember(scheduleDate) { loadSchedule(scheduleDate) }
-    var insertedPassengers by rememberSaveable(scheduleDate) {
-        mutableStateOf(emptyList<Passenger>()) }
+    var baseSchedule by remember(scheduleDate) { mutableStateOf(loadSchedule(context, scheduleDate)) }
+    var insertedPassengers by rememberSaveable(scheduleDate) { mutableStateOf(emptyList<Passenger>()) }
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
@@ -167,22 +222,15 @@ fun PassengerApp() {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         ) {
-
-            IconButton(
-                onClick = { showInsertDialog = true },
-                modifier = Modifier.size(32.dp)
-            ) {
+            IconButton(onClick = { showInsertDialog = true }, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.Add, contentDescription = "Insert new trip")
             }
 
             IconButton(onClick = { showDateListDialog = true }) {
-            Icon(Icons.Default.List, contentDescription = "Select from available dates")
+                Icon(Icons.Default.List, contentDescription = "Select from available dates")
             }
 
-
-            IconButton(onClick = {
-                showCompleted = !showCompleted
-            }) {
+            IconButton(onClick = { showCompleted = !showCompleted }) {
                 Icon(
                     imageVector = if (showCompleted) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                     contentDescription = if (showCompleted) "Hide Completed" else "Show Completed"
@@ -191,69 +239,77 @@ fun PassengerApp() {
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            if (showDateListDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDateListDialog = false },
-                    title = { Text("Choose Date") },
-                    text = {
-                        val pastDates = getAvailableScheduleDates()
-
-                        Column {
-                            pastDates.forEach { date ->
-                                TextButton(onClick = {
-                                    showDateListDialog = false
-                                    scheduleDate = date
-
-                                }) {
-                                    Text(date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {},
-                    dismissButton = {
-                        TextButton(onClick = { showDateListDialog = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                )
-            }
-
-            if (showInsertDialog) {
-                InsertTripDialog(
-                    onDismiss = { showInsertDialog = false },
-                    onInsert = { newPassenger ->
-                        insertedPassengers = insertedPassengers + newPassenger
-                        showInsertDialog = false
-                        scrollToBottom = true
-                    }
-
-                )
-            }
-
-
-
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 style = MaterialTheme.typography.labelLarge
             )
         }
 
-        PassengerTable(baseSchedule.passengers + insertedPassengers, baseSchedule.date, showCompleted)
+        if (showDateListDialog) {
+            AlertDialog(
+                onDismissRequest = { showDateListDialog = false },
+                title = { Text("Choose Date") },
+                text = {
+                    val pastDates = getAvailableScheduleDates()
+                    Column {
+                        pastDates.forEach { date ->
+                            TextButton(onClick = {
+                                scheduleDate = date
+                                baseSchedule = loadSchedule(context, date)
+                                showDateListDialog = false
+                            }) {
+                                Text(date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showDateListDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showInsertDialog) {
+            InsertTripDialog(
+                onDismiss = { showInsertDialog = false },
+                onInsert = { newPassenger ->
+                    insertedPassengers = insertedPassengers + newPassenger
+                    showInsertDialog = false
+                    scrollToBottom = true
+                }
+            )
+        }
+
+        PassengerTable(
+            passengers = baseSchedule.passengers + insertedPassengers,
+            scheduleDate = baseSchedule.date,
+            showCompleted = showCompleted,
+            onTripRemoved = {
+                baseSchedule = loadSchedule(context, scheduleDate)
+            }
+        )
 
         if (scrollToBottom) {
-        LaunchedEffect(Unit) {
-            delay(100)
-            // Normally you'd scroll a LazyColumn here
-            scrollToBottom = false
+            LaunchedEffect(Unit) {
+                delay(100)
+                scrollToBottom = false
+            }
         }
-    }
     }
 }
 
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PassengerTable(passengers: List<Passenger>, scheduleDate: String, showCompleted: Boolean) {
+fun PassengerTable(
+    passengers: List<Passenger>,
+    scheduleDate: String,
+    showCompleted: Boolean,
+    onTripRemoved: () -> Unit
+) {
     val context = LocalContext.current
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToComplete by remember { mutableStateOf<Passenger?>(null) }
@@ -282,10 +338,25 @@ fun PassengerTable(passengers: List<Passenger>, scheduleDate: String, showComple
                         launchWaze(context, selectedPassenger!!.dropoffAddress)
                         selectedPassenger = null
                     }) { Text("Drop-off Address") }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(onClick = {
+                        RemovedTripStore.addRemovedTrip(LocalDate.now(), selectedPassenger!!)
+                        onTripRemoved()
+                        selectedPassenger = null
+                        Toast.makeText(context, "Trip removed", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Text("Remove Trip", color = Color.Red)
+                    }
                 }
             },
             confirmButton = {},
-            dismissButton = {}
+            dismissButton = {
+                TextButton(onClick = { selectedPassenger = null }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 
@@ -340,7 +411,7 @@ fun PassengerTable(passengers: List<Passenger>, scheduleDate: String, showComple
                                     data = Uri.parse("tel:${passenger.phone}")
                                 }
                                 context.startActivity(intent)
-                                },
+                            },
                             onLongClick = {
                                 selectedPassenger = passenger
                             }
@@ -362,13 +433,13 @@ fun PassengerTable(passengers: List<Passenger>, scheduleDate: String, showComple
                             )
                         }
                     }
-
                 }
                 Divider(color = Color.LightGray, thickness = 0.5.dp)
             }
         }
     }
 }
+
 
 fun launchWaze(context: Context, address: String) {
     val encoded = Uri.encode(address)
