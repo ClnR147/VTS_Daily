@@ -131,19 +131,6 @@ fun PassengerApp() {
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
-    val calendarDialog = remember {
-        DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                val pickedDate = LocalDate.of(year, month + 1, dayOfMonth)
-                scheduleDate = pickedDate
-                var schedule = loadSchedule(pickedDate)
-            },
-            scheduleDate.year,
-            scheduleDate.monthValue - 1,
-            scheduleDate.dayOfMonth
-        )
-    }
     val availableDates = remember { getAvailableScheduleDates() }
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
@@ -151,9 +138,7 @@ fun PassengerApp() {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         ) {
-            IconButton(onClick = { calendarDialog.show() }) {
-                Icon(Icons.Default.DateRange, contentDescription = "Pick Date")
-            }
+
             IconButton(
                 onClick = { showInsertDialog = true },
                 modifier = Modifier.size(32.dp)
