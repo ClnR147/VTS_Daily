@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
 
 }
 
-fun loadSchedule(context: Context, forDate: LocalDate): Schedule {
+fun loadSchedule(forDate: LocalDate): Schedule {
     val passengers = mutableListOf<Passenger>()
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
     val scheduleDate = forDate.format(formatter)
@@ -199,19 +199,11 @@ fun getRemovedTrips(context: Context): List<RemovedTrip> {
     }
 }
 
-fun addRemovedTrip(context: Context, trip: RemovedTrip) {
-    val currentList = getRemovedTrips(context).toMutableList()
-    currentList.add(trip)
-    val json = Gson().toJson(currentList)
-    File(context.filesDir, "removed_trips.json").writeText(json)
-}
-
 @Composable
 fun PassengerApp() {
-    val context = LocalContext.current
     var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var showCompleted by rememberSaveable { mutableStateOf(false) }
-    var baseSchedule by remember(scheduleDate) { mutableStateOf(loadSchedule(context, scheduleDate)) }
+    var baseSchedule by remember(scheduleDate) { mutableStateOf(loadSchedule(scheduleDate)) }
     var insertedPassengers by rememberSaveable(scheduleDate) { mutableStateOf(emptyList<Passenger>()) }
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
@@ -255,7 +247,7 @@ fun PassengerApp() {
                         pastDates.forEach { date ->
                             TextButton(onClick = {
                                 scheduleDate = date
-                                baseSchedule = loadSchedule(context, date)
+                                baseSchedule = loadSchedule(date)
                                 showDateListDialog = false
                             }) {
                                 Text(date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
@@ -285,10 +277,10 @@ fun PassengerApp() {
 
         PassengerTable(
             passengers = baseSchedule.passengers + insertedPassengers,
-            scheduleDate = baseSchedule.date,
+            scheduleDate = scheduleDate.format(DateTimeFormatter.ofPattern("M-d-yy")),
             showCompleted = showCompleted,
             onTripRemoved = {
-                baseSchedule = loadSchedule(context, scheduleDate)
+                baseSchedule = loadSchedule(scheduleDate)
             }
         )
 
