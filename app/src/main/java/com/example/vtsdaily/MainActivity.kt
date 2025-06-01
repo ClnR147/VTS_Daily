@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.saveable.rememberSaveable
 import kotlinx.coroutines.delay
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 
 // Data classes
@@ -50,6 +52,14 @@ data class Passenger(
 data class Schedule(
     val date: String,
     val passengers: List<Passenger>
+)
+
+data class RemovedTrip(
+    val name: String,
+    val pickupAddress: String,
+    val dropoffAddress: String,
+    val typeTime: String,
+    val date: String // same format as Schedule.date, e.g. "5-31-25"
 )
 
 // MainActivity
@@ -116,6 +126,29 @@ fun loadSchedule(forDate: LocalDate): Schedule {
     }
 
     return Schedule(scheduleDate, passengers)
+}
+
+
+
+fun getRemovedTrips(context: Context): List<RemovedTrip> {
+    val file = File(context.filesDir, "removed_trips.json")
+    if (!file.exists()) return emptyList()
+
+    return try {
+        val json = file.readText()
+        val type = object : TypeToken<List<RemovedTrip>>() {}.type
+        Gson().fromJson(json, type)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyList()
+    }
+}
+
+fun addRemovedTrip(context: Context, trip: RemovedTrip) {
+    val currentList = getRemovedTrips(context).toMutableList()
+    currentList.add(trip)
+    val json = Gson().toJson(currentList)
+    File(context.filesDir, "removed_trips.json").writeText(json)
 }
 
 @Composable
