@@ -351,7 +351,6 @@ fun launchWaze(context: Context, address: String) {
     }
 }
 
-
 fun getAvailableScheduleDates(): List<LocalDate> {
     val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
     if (!folder.exists()) return emptyList()
