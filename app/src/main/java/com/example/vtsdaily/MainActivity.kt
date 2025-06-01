@@ -194,7 +194,8 @@ class RemovedTripStore {
 fun PassengerApp() {
     val context = LocalContext.current
 
-    var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    val defaultDate = getAvailableScheduleDates().firstOrNull() ?: LocalDate.now()
+    var scheduleDate by rememberSaveable { mutableStateOf(defaultDate) }
 
     var baseSchedule: Schedule by remember(scheduleDate) {
         mutableStateOf(loadSchedule(scheduleDate))
