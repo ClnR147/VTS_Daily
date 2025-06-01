@@ -279,7 +279,6 @@ fun PassengerApp() {
     }
 }
 
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PassengerTable(
