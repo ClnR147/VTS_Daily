@@ -185,7 +185,6 @@ class RemovedTripStore {
     }
 }
 
-
 @Composable
 fun PassengerApp() {
     var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
