@@ -102,6 +102,9 @@ fun loadSchedule(forDate: LocalDate): Schedule {
         val workbook = Workbook.getWorkbook(file)
         val sheet = workbook.getSheet(0)
 
+        // 🧠 Get removed trips for this date
+        val removedTrips = RemovedTripStore.getRemovedTrips(forDate)
+
         for (i in 0 until sheet.rows) {
             val row = sheet.getRow(i)
             if (row.size >= 6 && row[0].contents.isNotBlank()) {
@@ -114,7 +117,15 @@ fun loadSchedule(forDate: LocalDate): Schedule {
                     phone = row[5].contents.trim()
                 )
 
-                if (!RemovedTripStore.isTripRemoved(forDate, passenger)) {
+                // ❌ Skip passengers that were removed
+                val isRemoved = removedTrips.any {
+                    it.name == passenger.name &&
+                            it.pickupAddress == passenger.pickupAddress &&
+                            it.dropoffAddress == passenger.dropoffAddress &&
+                            it.typeTime == passenger.typeTime
+                }
+
+                if (!isRemoved) {
                     passengers.add(passenger)
                 }
             }
@@ -131,6 +142,8 @@ fun loadSchedule(forDate: LocalDate): Schedule {
 }
 
 
+
+
 class RemovedTripStore {
     companion object {
         private val gson = Gson()
@@ -141,7 +154,6 @@ class RemovedTripStore {
             if (!dir.exists()) dir.mkdirs()
             return File(dir, "removed_trips.json")
         }
-
 
         fun getRemovedTrips(forDate: LocalDate): List<RemovedTrip> {
             val file = getFile()
@@ -170,30 +182,30 @@ class RemovedTripStore {
 
             val key = forDate.format(formatter)
             val list = map.getOrPut(key) { mutableListOf() }
-            list.add(
-                RemovedTrip(
-                    name = passenger.name,
-                    pickupAddress = passenger.pickupAddress,
-                    dropoffAddress = passenger.dropoffAddress,
-                    typeTime = passenger.typeTime,
-                    date = key
-                )
-            )
+            list.add(RemovedTrip(passenger.name, passenger.pickupAddress, passenger.dropoffAddress, passenger.typeTime, key))
 
             file.writeText(gson.toJson(map))
         }
     }
 }
 
+
 @Composable
 fun PassengerApp() {
+    val context = LocalContext.current
+
     var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+
+    var baseSchedule: Schedule by remember(scheduleDate) {
+        mutableStateOf(loadSchedule(scheduleDate))
+    }
+
     var showCompleted by rememberSaveable { mutableStateOf(false) }
-    var baseSchedule by remember(scheduleDate) { mutableStateOf(loadSchedule(scheduleDate)) }
     var insertedPassengers by rememberSaveable(scheduleDate) { mutableStateOf(emptyList<Passenger>()) }
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
+
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
@@ -265,10 +277,15 @@ fun PassengerApp() {
             passengers = baseSchedule.passengers + insertedPassengers,
             scheduleDate = scheduleDate,
             showCompleted = showCompleted,
+            context = context, // ✅ add this
             onTripRemoved = {
                 baseSchedule = loadSchedule(scheduleDate)
             }
         )
+
+
+
+
 
         if (scrollToBottom) {
             LaunchedEffect(Unit) {
@@ -285,9 +302,10 @@ fun PassengerTable(
     passengers: List<Passenger>,
     scheduleDate: LocalDate,
     showCompleted: Boolean,
+    context: Context, // add this
     onTripRemoved: () -> Unit
-) {
-    val context = LocalContext.current
+)
+ {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToComplete by remember { mutableStateOf<Passenger?>(null) }
 
@@ -320,7 +338,7 @@ fun PassengerTable(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Button(onClick = {
-                        RemovedTripStore.addRemovedTrip(LocalDate.now(), selectedPassenger!!)
+                        RemovedTripStore.addRemovedTrip(scheduleDate, selectedPassenger!!)
                         onTripRemoved()
                         selectedPassenger = null
                         Toast.makeText(context, "Trip removed", Toast.LENGTH_SHORT).show()
