@@ -185,19 +185,6 @@ class RemovedTripStore {
     }
 }
 
-fun getRemovedTrips(context: Context): List<RemovedTrip> {
-    val file = File(context.filesDir, "removed_trips.json")
-    if (!file.exists()) return emptyList()
-
-    return try {
-        val json = file.readText()
-        val type = object : TypeToken<List<RemovedTrip>>() {}.type
-        Gson().fromJson(json, type)
-    } catch (e: Exception) {
-        e.printStackTrace()
-        emptyList()
-    }
-}
 
 @Composable
 fun PassengerApp() {
