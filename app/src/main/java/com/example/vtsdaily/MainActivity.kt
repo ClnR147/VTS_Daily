@@ -1,6 +1,5 @@
 package com.example.vtsdaily
 
-import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -32,10 +31,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.material.icons.filled.List
 import kotlinx.coroutines.delay
 
 
@@ -76,8 +73,9 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        fun showReturnNotification(context: Context) {}
+
     }
+
 }
 
 fun loadSchedule(forDate: LocalDate): Schedule {
@@ -122,7 +120,6 @@ fun loadSchedule(forDate: LocalDate): Schedule {
 
 @Composable
 fun PassengerApp() {
-    val context = LocalContext.current
     var scheduleDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var showCompleted by rememberSaveable { mutableStateOf(false) }
     val baseSchedule = remember(scheduleDate) { loadSchedule(scheduleDate) }
@@ -131,7 +128,6 @@ fun PassengerApp() {
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
-    val availableDates = remember { getAvailableScheduleDates() }
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
@@ -167,13 +163,14 @@ fun PassengerApp() {
                     onDismissRequest = { showDateListDialog = false },
                     title = { Text("Choose Date") },
                     text = {
-                        val pastDates = (0..7).map { LocalDate.now().minusDays(it.toLong()) }
+                        val pastDates = getAvailableScheduleDates()
+
                         Column {
                             pastDates.forEach { date ->
                                 TextButton(onClick = {
                                     showDateListDialog = false
                                     scheduleDate = date
-                                    var schedule = loadSchedule(date)
+
                                 }) {
                                     Text(date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
                                 }
@@ -219,36 +216,6 @@ fun PassengerApp() {
         }
     }
     }
-}
-
-@Composable
-fun InsertTripDialog(onDismiss: () -> Unit, onInsert: Any) {
-
-}
-
-@Composable
-fun ScheduleDateListDialog(
-    dates: List<LocalDate>,
-    onSelect: (LocalDate) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Available Schedules") },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                dates.forEach { date ->
-                    TextButton(onClick = { onSelect(date) }) {
-                        Text(date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -340,8 +307,7 @@ fun PassengerTable(passengers: List<Passenger>, scheduleDate: String, showComple
                                     data = Uri.parse("tel:${passenger.phone}")
                                 }
                                 context.startActivity(intent)
-                                MainActivity.showReturnNotification(context)
-                            },
+                                },
                             onLongClick = {
                                 selectedPassenger = passenger
                             }
@@ -379,7 +345,7 @@ fun launchWaze(context: Context, address: String) {
     }
     try {
         context.startActivity(intent)
-        MainActivity.showReturnNotification(context)
+
     } catch (e: Exception) {
         Toast.makeText(context, "Waze not installed", Toast.LENGTH_SHORT).show()
     }
