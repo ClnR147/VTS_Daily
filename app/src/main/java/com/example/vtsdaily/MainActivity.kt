@@ -295,7 +295,8 @@ fun PassengerTable(
     val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
 
     val visiblePassengers = if (showCompleted) passengers else passengers.filterNot {
-        val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-$scheduleDate"
+        val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(DateTimeFormatter.ofPattern("M-d-yy"))}"
+
         prefs.getBoolean(key, false)
     }
 
