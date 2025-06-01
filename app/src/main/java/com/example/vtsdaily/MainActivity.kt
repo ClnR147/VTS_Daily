@@ -212,9 +212,6 @@ fun PassengerApp() {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         ) {
-            IconButton(onClick = { showInsertDialog = true }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Add, contentDescription = "Insert new trip")
-            }
 
             IconButton(onClick = { showDateListDialog = true }) {
                 Icon(Icons.Default.List, contentDescription = "Select from available dates")
@@ -223,8 +220,10 @@ fun PassengerApp() {
             IconButton(onClick = { showCompleted = !showCompleted }) {
                 Icon(
                     imageVector = if (showCompleted) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                    contentDescription = if (showCompleted) "Hide Completed" else "Show Completed"
-                )
+                    contentDescription = if (showCompleted) "Hide Completed" else "Show Completed")
+            }
+            IconButton(onClick = { showInsertDialog = true }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.Add, contentDescription = "Insert new trip")
             }
 
             Spacer(modifier = Modifier.width(8.dp))
