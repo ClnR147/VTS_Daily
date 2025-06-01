@@ -263,7 +263,7 @@ fun PassengerApp() {
 
         PassengerTable(
             passengers = baseSchedule.passengers + insertedPassengers,
-            scheduleDate = scheduleDate.format(DateTimeFormatter.ofPattern("M-d-yy")),
+            scheduleDate = scheduleDate,
             showCompleted = showCompleted,
             onTripRemoved = {
                 baseSchedule = loadSchedule(scheduleDate)
@@ -284,7 +284,7 @@ fun PassengerApp() {
 @Composable
 fun PassengerTable(
     passengers: List<Passenger>,
-    scheduleDate: String,
+    scheduleDate: LocalDate,
     showCompleted: Boolean,
     onTripRemoved: () -> Unit
 ) {
