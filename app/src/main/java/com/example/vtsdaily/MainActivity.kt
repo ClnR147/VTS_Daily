@@ -33,7 +33,9 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material.icons.filled.List
 import kotlinx.coroutines.delay
 
 
@@ -128,9 +130,7 @@ fun PassengerApp() {
         mutableStateOf(emptyList<Passenger>()) }
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
-
-
-
+    var showDateListDialog by remember { mutableStateOf(false) }
     val calendarDialog = remember {
         DatePickerDialog(
             context,
@@ -144,6 +144,7 @@ fun PassengerApp() {
             scheduleDate.dayOfMonth
         )
     }
+    val availableDates = remember { getAvailableScheduleDates() }
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
@@ -160,6 +161,10 @@ fun PassengerApp() {
                 Icon(Icons.Default.Add, contentDescription = "Insert new trip")
             }
 
+            IconButton(onClick = { showDateListDialog = true }) {
+            Icon(Icons.Default.List, contentDescription = "Select from available dates")
+            }
+
 
             IconButton(onClick = {
                 showCompleted = !showCompleted
@@ -171,6 +176,33 @@ fun PassengerApp() {
             }
 
             Spacer(modifier = Modifier.width(8.dp))
+
+            if (showDateListDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDateListDialog = false },
+                    title = { Text("Choose Date") },
+                    text = {
+                        val pastDates = (0..7).map { LocalDate.now().minusDays(it.toLong()) }
+                        Column {
+                            pastDates.forEach { date ->
+                                TextButton(onClick = {
+                                    showDateListDialog = false
+                                    scheduleDate = date
+                                    var schedule = loadSchedule(date)
+                                }) {
+                                    Text(date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { showDateListDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
 
             if (showInsertDialog) {
                 InsertTripDialog(
@@ -207,6 +239,31 @@ fun PassengerApp() {
 @Composable
 fun InsertTripDialog(onDismiss: () -> Unit, onInsert: Any) {
 
+}
+
+@Composable
+fun ScheduleDateListDialog(
+    dates: List<LocalDate>,
+    onSelect: (LocalDate) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Available Schedules") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                dates.forEach { date ->
+                    TextButton(onClick = { onSelect(date) }) {
+                        Text(date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -341,6 +398,23 @@ fun launchWaze(context: Context, address: String) {
     } catch (e: Exception) {
         Toast.makeText(context, "Waze not installed", Toast.LENGTH_SHORT).show()
     }
+}
+
+fun getAvailableScheduleDates(): List<LocalDate> {
+    val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
+    if (!folder.exists()) return emptyList()
+
+    val pattern = Regex("""VTS (\d{1,2}-\d{1,2}-\d{2})\.xls""")
+    return folder.listFiles()
+        ?.mapNotNull { file ->
+            pattern.find(file.name)?.groupValues?.get(1)?.let {
+                runCatching {
+                    LocalDate.parse(it, DateTimeFormatter.ofPattern("M-d-yy"))
+                }.getOrNull()
+            }
+        }
+        ?.sortedDescending()
+        ?: emptyList()
 }
 
 @Composable
