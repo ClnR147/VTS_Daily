@@ -405,13 +405,18 @@ fun PassengerTable(
 
 
         visiblePassengers.forEachIndexed { index, passenger ->
-            val backgroundColor = if (index % 2 == 0) Color(0xFFE8F4FD) else Color.White
+            val backgroundColor = if (index % 2 == 0) Color(0xFFF8FBFF) else Color.White
+            val labelColor = Color(0xFF1A73E8)
 
-            Column(modifier = Modifier.fillMaxWidth().background(backgroundColor)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(backgroundColor)
+                    .padding(vertical = 8.dp, horizontal = 12.dp)
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp, horizontal = 8.dp)
                         .combinedClickable(
                             onClick = {
                                 val intent = Intent(Intent.ACTION_DIAL).apply {
@@ -422,13 +427,33 @@ fun PassengerTable(
                             onLongClick = {
                                 selectedPassenger = passenger
                             }
-                        )
+                        ),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(passenger.typeTime, modifier = Modifier.weight(1f))
-                    Text(passenger.name, modifier = Modifier.weight(2f))
-                    Text("${passenger.pickupAddress} → ${passenger.dropoffAddress}", modifier = Modifier.weight(4f))
+                    Text(
+                        text = passenger.typeTime,
+                        modifier = Modifier.weight(1f),
+                        color = labelColor,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = passenger.name,
+                        modifier = Modifier.weight(2f),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
 
-                    if (!showCompleted) {
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "${passenger.pickupAddress} → ${passenger.dropoffAddress}",
+                    modifier = Modifier.padding(start = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.DarkGray
+                )
+
+                if (!showCompleted) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         IconButton(
                             onClick = { passengerToComplete = passenger },
                             modifier = Modifier.size(24.dp)
@@ -436,16 +461,18 @@ fun PassengerTable(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Mark as completed",
-                                tint = Color.Green
+                                tint = Color(0xFF2E7D32)
                             )
                         }
                     }
                 }
+
                 Divider(color = Color.LightGray, thickness = 0.5.dp)
             }
         }
+
+        }
     }
-}
 
 
 fun launchWaze(context: Context, address: String) {
