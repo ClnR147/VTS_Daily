@@ -37,7 +37,6 @@ import kotlinx.coroutines.delay
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
-
 // Data classes
 
 data class Passenger(
