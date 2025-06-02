@@ -282,9 +282,9 @@ fun PassengerApp() {
             passengers = baseSchedule.passengers + insertedPassengers,
             scheduleDate = scheduleDate,
             showCompleted = showCompleted,
-            context = context, // ✅ add this
+            context = context,
             onTripRemoved = {
-                baseSchedule = loadSchedule(scheduleDate)
+                baseSchedule = loadSchedule(scheduleDate) // ✅ reload schedule here
             }
         )
 
@@ -316,13 +316,17 @@ fun PassengerTable(
 
     val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
 
-    val visiblePassengers = if (showCompleted) passengers else passengers.filterNot {
-        val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(DateTimeFormatter.ofPattern("M-d-yy"))}"
+     val visiblePassengers = if (showCompleted) {
+         passengers
+     } else {
+         passengers.filterNot {
+             val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(DateTimeFormatter.ofPattern("M-d-yy"))}"
+             prefs.getBoolean(key, false)
+         }
+     }
 
-        prefs.getBoolean(key, false)
-    }
 
-    if (selectedPassenger != null) {
+     if (selectedPassenger != null) {
         AlertDialog(
             onDismissRequest = { selectedPassenger = null },
             title = { Text("Navigate to...") },
@@ -369,10 +373,11 @@ fun PassengerTable(
             confirmButton = {
                 TextButton(onClick = {
                     passengerToComplete?.let { passenger ->
-                        val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-$scheduleDate"
+                        val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(DateTimeFormatter.ofPattern("M-d-yy"))}"
                         prefs.edit().putBoolean(key, true).apply()
                     }
                     passengerToComplete = null
+                    onTripRemoved() // 🚨 This triggers reloading the visible list
                 }) {
                     Text("Yes")
                 }
