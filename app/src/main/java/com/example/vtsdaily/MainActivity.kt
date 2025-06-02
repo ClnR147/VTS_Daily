@@ -211,29 +211,35 @@ fun PassengerApp() {
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF4285F4)) // Google Blue
+                .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
+            IconButton(onClick = { showInsertDialog = true }) {
+                Icon(Icons.Default.Add, contentDescription = "Insert", tint = Color.White)
+            }
 
             IconButton(onClick = { showDateListDialog = true }) {
-                Icon(Icons.Default.List, contentDescription = "Select from available dates")
+                Icon(Icons.Default.List, contentDescription = "Select Date", tint = Color.White)
             }
 
             IconButton(onClick = { showCompleted = !showCompleted }) {
                 Icon(
                     imageVector = if (showCompleted) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                    contentDescription = if (showCompleted) "Hide Completed" else "Show Completed")
-            }
-            IconButton(onClick = { showInsertDialog = true }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Add, contentDescription = "Insert new trip")
+                    contentDescription = "Toggle Completed",
+                    tint = Color.White
+                )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-                style = MaterialTheme.typography.labelLarge
+                style = MaterialTheme.typography.titleLarge.copy(color = Color.White)
             )
         }
+
 
         if (showDateListDialog) {
             AlertDialog(
@@ -386,12 +392,18 @@ fun PassengerTable(
             .padding(8.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Text("Time", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
-            Text("Name", modifier = Modifier.weight(2f), style = MaterialTheme.typography.labelLarge)
-            Text("Trip", modifier = Modifier.weight(4f), style = MaterialTheme.typography.labelLarge)
-            Spacer(modifier = Modifier.width(32.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(vertical = 8.dp, horizontal = 12.dp)
+        ) {
+            Text("Time", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Color(0xFF1A237E))
+            Text("Name", modifier = Modifier.weight(2f), style = MaterialTheme.typography.titleMedium, color = Color(0xFF1A237E))
+            Text("Trip", modifier = Modifier.weight(4f), style = MaterialTheme.typography.titleMedium, color = Color(0xFF1A237E))
         }
+        Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
+
 
         visiblePassengers.forEachIndexed { index, passenger ->
             val backgroundColor = if (index % 2 == 0) Color(0xFFE8F4FD) else Color.White
