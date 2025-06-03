@@ -206,7 +206,6 @@ fun PassengerApp() {
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
 
-
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -277,6 +276,7 @@ fun PassengerApp() {
                 }
             )
         }
+
 
         PassengerTable(
             passengers = baseSchedule.passengers + insertedPassengers,
