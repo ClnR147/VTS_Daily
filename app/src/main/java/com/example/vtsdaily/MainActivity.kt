@@ -32,10 +32,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.delay
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -469,19 +466,16 @@ fun PassengerTable(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "From:",
-                            modifier = Modifier
-                                .width(48.dp)
-                                .alignByBaseline(),
-                            color = Color(0xFF1A73E8),
+                            modifier = Modifier.width(52.dp), // slightly more space for visual balance
+                            color = Color(0xFF5F6368), // subtler blue-gray tone
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
                             passenger.pickupAddress,
-                            modifier = Modifier.alignByBaseline(),
                             color = Color.DarkGray,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -489,28 +483,21 @@ fun PassengerTable(
 
                     Spacer(modifier = Modifier.height(2.dp))
 
-                    Row(modifier = Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "To:",
-                            modifier = Modifier
-                                .width(48.dp)
-                                .alignByBaseline(),
-                            color = Color(0xFF1A73E8),
+                            modifier = Modifier.width(52.dp),
+                            color = Color(0xFF5F6368),
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
                             passenger.dropoffAddress,
-                            modifier = Modifier.alignByBaseline(),
                             color = Color.DarkGray,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
-
-
-
-
 
                 if (!showCompleted) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
