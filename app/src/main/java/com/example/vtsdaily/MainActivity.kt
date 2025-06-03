@@ -32,6 +32,10 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.delay
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -419,7 +423,6 @@ fun PassengerTable(
         ) {
             Text("Time", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Color(0xFF1A237E))
             Text("Name", modifier = Modifier.weight(2f), style = MaterialTheme.typography.titleMedium, color = Color(0xFF1A237E))
-            Text("Trip", modifier = Modifier.weight(4f), style = MaterialTheme.typography.titleMedium, color = Color(0xFF1A237E))
         }
         Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
 
@@ -466,11 +469,18 @@ fun PassengerTable(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "${passenger.pickupAddress} → ${passenger.dropoffAddress}",
+                    buildAnnotatedString {
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF1A237E))) {
+                            append("Trip: ")
+                        }
+                        withStyle(style = SpanStyle(color = Color.DarkGray)) {
+                            append("${passenger.pickupAddress} → ${passenger.dropoffAddress}")
+                        }
+                    },
                     modifier = Modifier.padding(start = 8.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.DarkGray
+                    style = MaterialTheme.typography.bodySmall
                 )
+
 
                 if (!showCompleted) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
