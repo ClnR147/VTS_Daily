@@ -428,7 +428,7 @@ fun PassengerTable(
 
 
         visiblePassengers.forEachIndexed { index, passenger ->
-            val backgroundColor = if (index % 2 == 0) Color(0xFFF8FBFF) else Color.White
+            val backgroundColor = if (index % 2 == 0) Color(0xFFE3F2FD) else Color.White // Softer blue
             val labelColor = Color(0xFF1A73E8)
 
             Column(
@@ -468,18 +468,48 @@ fun PassengerTable(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    buildAnnotatedString {
-                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF1A237E))) {
-                            append("Trip: ")
-                        }
-                        withStyle(style = SpanStyle(color = Color.DarkGray)) {
-                            append("${passenger.pickupAddress} → ${passenger.dropoffAddress}")
-                        }
-                    },
-                    modifier = Modifier.padding(start = 8.dp),
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            "From:",
+                            modifier = Modifier
+                                .width(48.dp)
+                                .alignByBaseline(),
+                            color = Color(0xFF1A73E8),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            passenger.pickupAddress,
+                            modifier = Modifier.alignByBaseline(),
+                            color = Color.DarkGray,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            "To:",
+                            modifier = Modifier
+                                .width(48.dp)
+                                .alignByBaseline(),
+                            color = Color(0xFF1A73E8),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            passenger.dropoffAddress,
+                            modifier = Modifier.alignByBaseline(),
+                            color = Color.DarkGray,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+
+
 
 
                 if (!showCompleted) {
@@ -497,7 +527,8 @@ fun PassengerTable(
                     }
                 }
 
-                Divider(color = Color.LightGray, thickness = 0.5.dp)
+                Divider(color = Color(0xFFB0BEC5), thickness = 1.dp) // Medium gray-blue
+
             }
         }
 
