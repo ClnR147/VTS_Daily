@@ -28,7 +28,6 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.List
@@ -211,7 +210,7 @@ fun PassengerApp() {
     var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
 
     val showCompleted = viewMode == TripViewMode.COMPLETED
-    val showRemoved = viewMode == TripViewMode.REMOVED
+
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
