@@ -61,6 +61,10 @@ data class RemovedTrip(
     val date: String // same format as Schedule.date, e.g. "5-31-25"
 )
 
+enum class TripViewMode {
+    ACTIVE, COMPLETED, REMOVED
+}
+
 // MainActivity
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -192,7 +196,6 @@ class RemovedTripStore {
 @Composable
 fun PassengerApp() {
     val context = LocalContext.current
-
     val defaultDate = getAvailableScheduleDates().firstOrNull() ?: LocalDate.now()
     var scheduleDate by rememberSaveable { mutableStateOf(defaultDate) }
 
@@ -200,18 +203,22 @@ fun PassengerApp() {
         mutableStateOf(loadSchedule(scheduleDate))
     }
 
-    var showCompleted by rememberSaveable { mutableStateOf(false) }
     var insertedPassengers by rememberSaveable(scheduleDate) { mutableStateOf(emptyList<Passenger>()) }
     var showInsertDialog by remember { mutableStateOf(false) }
-    var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
+    var scrollToBottom by remember { mutableStateOf(false) }
+
+    var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
+
+    val showCompleted = viewMode == TripViewMode.COMPLETED
+    val showRemoved = viewMode == TripViewMode.REMOVED
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF4285F4)) // Google Blue
+                .background(Color(0xFF4285F4))
                 .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
             IconButton(onClick = { showInsertDialog = true }) {
@@ -222,12 +229,19 @@ fun PassengerApp() {
                 Icon(Icons.Default.List, contentDescription = "Select Date", tint = Color.White)
             }
 
-            IconButton(onClick = { showCompleted = !showCompleted }) {
-                Icon(
-                    imageVector = if (showCompleted) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                    contentDescription = "Toggle Completed",
-                    tint = Color.White
-                )
+            IconButton(onClick = {
+                viewMode = when (viewMode) {
+                    TripViewMode.ACTIVE -> TripViewMode.COMPLETED
+                    TripViewMode.COMPLETED -> TripViewMode.REMOVED
+                    TripViewMode.REMOVED -> TripViewMode.ACTIVE
+                }
+            }) {
+                val icon = when (viewMode) {
+                    TripViewMode.ACTIVE -> Icons.Default.VisibilityOff
+                    TripViewMode.COMPLETED -> Icons.Default.Check
+                    TripViewMode.REMOVED -> Icons.Default.List
+                }
+                Icon(icon, contentDescription = "Toggle View Mode", tint = Color.White)
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -237,7 +251,6 @@ fun PassengerApp() {
                 style = MaterialTheme.typography.titleLarge.copy(color = Color.White)
             )
         }
-
 
         if (showDateListDialog) {
             AlertDialog(
@@ -277,20 +290,23 @@ fun PassengerApp() {
             )
         }
 
+        val displayedPassengers = when (viewMode) {
+            TripViewMode.ACTIVE -> baseSchedule.passengers + insertedPassengers
+            TripViewMode.COMPLETED -> baseSchedule.passengers + insertedPassengers
+            TripViewMode.REMOVED -> RemovedTripStore.getRemovedTrips(scheduleDate).map {
+                Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "")
+            }
+        }
 
         PassengerTable(
-            passengers = baseSchedule.passengers + insertedPassengers,
+            passengers = displayedPassengers,
             scheduleDate = scheduleDate,
             showCompleted = showCompleted,
             context = context,
             onTripRemoved = {
-                baseSchedule = loadSchedule(scheduleDate) // ✅ reload schedule here
+                baseSchedule = loadSchedule(scheduleDate)
             }
         )
-
-
-
-
 
         if (scrollToBottom) {
             LaunchedEffect(Unit) {
