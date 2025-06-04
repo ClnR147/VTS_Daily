@@ -534,7 +534,6 @@ fun PassengerTable(
 }
 
 
-
 fun launchWaze(context: Context, address: String) {
     val encoded = Uri.encode(address)
     val uri = Uri.parse("https://waze.com/ul?q=$encoded&navigate=yes")
