@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.delay
@@ -196,6 +197,7 @@ class RemovedTripStore {
 @Composable
 fun PassengerApp() {
     val context = LocalContext.current
+
     val defaultDate = getAvailableScheduleDates().firstOrNull() ?: LocalDate.now()
     var scheduleDate by rememberSaveable { mutableStateOf(defaultDate) }
 
@@ -205,13 +207,10 @@ fun PassengerApp() {
 
     var insertedPassengers by rememberSaveable(scheduleDate) { mutableStateOf(emptyList<Passenger>()) }
     var showInsertDialog by remember { mutableStateOf(false) }
-    var showDateListDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
+    var showDateListDialog by remember { mutableStateOf(false) }
 
     var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
-
-    val showCompleted = viewMode == TripViewMode.COMPLETED
-
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         Row(
@@ -236,12 +235,15 @@ fun PassengerApp() {
                     TripViewMode.REMOVED -> TripViewMode.ACTIVE
                 }
             }) {
-                val icon = when (viewMode) {
-                    TripViewMode.ACTIVE -> Icons.Default.VisibilityOff
-                    TripViewMode.COMPLETED -> Icons.Default.Check
-                    TripViewMode.REMOVED -> Icons.Default.List
-                }
-                Icon(icon, contentDescription = "Toggle View Mode", tint = Color.White)
+                Icon(
+                    imageVector = when (viewMode) {
+                        TripViewMode.ACTIVE -> Icons.Default.VisibilityOff
+                        TripViewMode.COMPLETED -> Icons.Default.Visibility
+                        TripViewMode.REMOVED -> Icons.Default.Visibility
+                    },
+                    contentDescription = "Toggle View",
+                    tint = Color.White
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -290,18 +292,28 @@ fun PassengerApp() {
             )
         }
 
-        val displayedPassengers = when (viewMode) {
+        val passengers = when (viewMode) {
             TripViewMode.ACTIVE -> baseSchedule.passengers + insertedPassengers
-            TripViewMode.COMPLETED -> baseSchedule.passengers + insertedPassengers
-            TripViewMode.REMOVED -> RemovedTripStore.getRemovedTrips(scheduleDate).map {
-                Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "")
+            TripViewMode.COMPLETED -> {
+                val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
+                val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+                val keyDate = scheduleDate.format(formatter)
+                (baseSchedule.passengers + insertedPassengers).filter {
+                    val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-$keyDate"
+                    prefs.getBoolean(key, false)
+                }
+            }
+            TripViewMode.REMOVED -> {
+                RemovedTripStore.getRemovedTrips(scheduleDate).map {
+                    Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "")
+                }
             }
         }
 
         PassengerTable(
-            passengers = displayedPassengers,
+            passengers = passengers,
             scheduleDate = scheduleDate,
-            showCompleted = showCompleted,
+            viewMode = viewMode,
             context = context,
             onTripRemoved = {
                 baseSchedule = loadSchedule(scheduleDate)
@@ -317,32 +329,30 @@ fun PassengerApp() {
     }
 }
 
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PassengerTable(
     passengers: List<Passenger>,
     scheduleDate: LocalDate,
-    showCompleted: Boolean,
-    context: Context, // add this
+    viewMode: TripViewMode,
+    context: Context,
     onTripRemoved: () -> Unit
-)
- {
+) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToComplete by remember { mutableStateOf<Passenger?>(null) }
 
     val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
+    val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
-     val visiblePassengers = if (showCompleted) {
-         passengers
-     } else {
-         passengers.filterNot {
-             val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(DateTimeFormatter.ofPattern("M-d-yy"))}"
-             prefs.getBoolean(key, false)
-         }
-     }
+    val visiblePassengers = if (viewMode == TripViewMode.ACTIVE) {
+        passengers.filterNot {
+            val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(formatter)}"
+            prefs.getBoolean(key, false)
+        }
+    } else passengers
 
-
-     if (selectedPassenger != null) {
+    if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
             onDismissRequest = { selectedPassenger = null },
             title = { Text("Navigate to...") },
@@ -381,7 +391,7 @@ fun PassengerTable(
         )
     }
 
-    if (passengerToComplete != null && !showCompleted) {
+    if (passengerToComplete != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
             onDismissRequest = { passengerToComplete = null },
             title = { Text("Complete Trip") },
@@ -389,11 +399,11 @@ fun PassengerTable(
             confirmButton = {
                 TextButton(onClick = {
                     passengerToComplete?.let { passenger ->
-                        val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(DateTimeFormatter.ofPattern("M-d-yy"))}"
+                        val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(formatter)}"
                         prefs.edit().putBoolean(key, true).apply()
                     }
                     passengerToComplete = null
-                    onTripRemoved() // 🚨 This triggers reloading the visible list
+                    onTripRemoved()
                 }) {
                     Text("Yes")
                 }
@@ -423,9 +433,8 @@ fun PassengerTable(
         }
         Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
 
-
         visiblePassengers.forEachIndexed { index, passenger ->
-            val backgroundColor = if (index % 2 == 0) Color(0xFFE3F2FD) else Color.White // Softer blue
+            val backgroundColor = if (index % 2 == 0) Color(0xFFE3F2FD) else Color.White
             val labelColor = Color(0xFF1A73E8)
 
             Column(
@@ -439,13 +448,17 @@ fun PassengerTable(
                         .fillMaxWidth()
                         .combinedClickable(
                             onClick = {
-                                val intent = Intent(Intent.ACTION_DIAL).apply {
-                                    data = Uri.parse("tel:${passenger.phone}")
+                                if (passenger.phone.isNotBlank()) {
+                                    val intent = Intent(Intent.ACTION_DIAL).apply {
+                                        data = Uri.parse("tel:${passenger.phone}")
+                                    }
+                                    context.startActivity(intent)
                                 }
-                                context.startActivity(intent)
                             },
                             onLongClick = {
-                                selectedPassenger = passenger
+                                if (viewMode == TripViewMode.ACTIVE) {
+                                    selectedPassenger = passenger
+                                }
                             }
                         ),
                     verticalAlignment = Alignment.CenterVertically
@@ -469,8 +482,8 @@ fun PassengerTable(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "From:",
-                            modifier = Modifier.width(52.dp), // slightly more space for visual balance
-                            color = Color(0xFF5F6368), // subtler blue-gray tone
+                            modifier = Modifier.width(52.dp),
+                            color = Color(0xFF5F6368),
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -499,7 +512,7 @@ fun PassengerTable(
                     }
                 }
 
-                if (!showCompleted) {
+                if (viewMode == TripViewMode.ACTIVE) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         IconButton(
                             onClick = { passengerToComplete = passenger },
@@ -514,13 +527,12 @@ fun PassengerTable(
                     }
                 }
 
-                Divider(color = Color(0xFFB0BEC5), thickness = 1.dp) // Medium gray-blue
-
+                Divider(color = Color(0xFFB0BEC5), thickness = 1.dp)
             }
         }
-
-        }
     }
+}
+
 
 
 fun launchWaze(context: Context, address: String) {
