@@ -216,7 +216,7 @@ fun PassengerApp() {
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.clickable { showDateListDialog = true }
             )
         }
