@@ -209,23 +209,24 @@ fun PassengerApp() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(32.dp)
-                .background(Color(0xFF4285F4)),
+                .background(Color(0xFF9A7DAB)),
             contentAlignment = Alignment.BottomCenter
         ) {
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-                color = Color.White,
+                color = Color(0xFFFFF5E1),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.clickable { showDateListDialog = true }
             )
         }
 
+
         // Compact Bottom Banner: AddTrip + Trip Status
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF4285F4))
+                .background(Color(0xFF9A7DAB)) // Smoky Plum
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -233,18 +234,37 @@ fun PassengerApp() {
                 onClick = { showInsertDialog = true },
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Text("AddTrip", color = Color.White, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+                Text(
+                    "AddTrip",
+                    color = Color(0xFFFFF5E1), // Light cream text
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                )
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
+            // Colored status label
+            val statusLabel = when (viewMode) {
+                TripViewMode.ACTIVE -> "Active"
+                TripViewMode.COMPLETED -> "Completed"
+                TripViewMode.REMOVED -> "NoShow/Cancel"
+            }
+
+            val statusColor = when (viewMode) {
+                TripViewMode.ACTIVE -> Color(0xFFB2FF59)     // Light Green
+                TripViewMode.COMPLETED -> Color(0xFF81D4FA)  // Light Blue
+                TripViewMode.REMOVED -> Color(0xFFFFD180)    // Soft Orange
+            }
+
             Text(
-                text = "Trip Status: " + when (viewMode) {
-                    TripViewMode.ACTIVE -> "Active"
-                    TripViewMode.COMPLETED -> "Completed"
-                    TripViewMode.REMOVED -> "Removed"
-                },
-                color = Color.White,
+                text = "Trip Status: ",
+                color = Color(0xFFFFF5E1),
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+            )
+
+            Text(
+                text = statusLabel,
+                color = statusColor,
                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.clickable {
                     viewMode = when (viewMode) {
@@ -255,6 +275,8 @@ fun PassengerApp() {
                 }
             )
         }
+
+
 
         if (showDateListDialog) {
             AlertDialog(
