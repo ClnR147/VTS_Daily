@@ -204,54 +204,55 @@ fun PassengerApp() {
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
 
-        // Header with centered, clickable date
+        // Compact Top Banner: Date at bottom
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF4285F4))
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .height(32.dp)
+                .background(Color(0xFF4285F4)),
+            contentAlignment = Alignment.BottomCenter
         ) {
-            // Header row: AddTrip and ViewMode toggle
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { showInsertDialog = true }) {
-                        Text("AddTrip", color = Color.White)
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Text(
-                        text = "Trip Status: " + when (viewMode) {
-                            TripViewMode.ACTIVE -> "Active"
-                            TripViewMode.COMPLETED -> "Completed"
-                            TripViewMode.REMOVED -> "Removed"
-                        },
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.clickable {
-                            viewMode = when (viewMode) {
-                                TripViewMode.ACTIVE -> TripViewMode.COMPLETED
-                                TripViewMode.COMPLETED -> TripViewMode.REMOVED
-                                TripViewMode.REMOVED -> TripViewMode.ACTIVE
-                            }
-                        }
-                    )
-                }
-            }
-
-            // Clickable centered date
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .offset(y = (-8).dp)
-                    .clickable { showDateListDialog = true }
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.clickable { showDateListDialog = true }
+            )
+        }
+
+        // Compact Bottom Banner: AddTrip + Trip Status
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF4285F4))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick = { showInsertDialog = true },
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text("AddTrip", color = Color.White, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = "Trip Status: " + when (viewMode) {
+                    TripViewMode.ACTIVE -> "Active"
+                    TripViewMode.COMPLETED -> "Completed"
+                    TripViewMode.REMOVED -> "Removed"
+                },
+                color = Color.White,
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.clickable {
+                    viewMode = when (viewMode) {
+                        TripViewMode.ACTIVE -> TripViewMode.COMPLETED
+                        TripViewMode.COMPLETED -> TripViewMode.REMOVED
+                        TripViewMode.REMOVED -> TripViewMode.ACTIVE
+                    }
+                }
             )
         }
 
@@ -329,6 +330,8 @@ fun PassengerApp() {
         }
     }
 }
+
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
