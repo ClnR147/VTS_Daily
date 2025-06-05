@@ -223,27 +223,28 @@ fun PassengerApp() {
 
 
         // Compact Bottom Banner: AddTrip + Trip Status
+        // Enlarged Bottom Banner: AddTrip + Trip Status
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF9A7DAB)) // Smoky Plum
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .height(56.dp) // Increased height for better touch targets
+                .background(Color(0xFF9A7DAB))
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(
                 onClick = { showInsertDialog = true },
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
                     "AddTrip",
-                    color = Color(0xFFFFF5E1), // Light cream text
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                    color = Color(0xFFFFF5E1),
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                 )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-            // Colored status label
             val statusLabel = when (viewMode) {
                 TripViewMode.ACTIVE -> "Active"
                 TripViewMode.COMPLETED -> "Completed"
@@ -251,21 +252,21 @@ fun PassengerApp() {
             }
 
             val statusColor = when (viewMode) {
-                TripViewMode.ACTIVE -> Color(0xFFB2FF59)     // Light Green
-                TripViewMode.COMPLETED -> Color(0xFF81D4FA)  // Light Blue
-                TripViewMode.REMOVED -> Color(0xFFFFD180)    // Soft Orange
+                TripViewMode.ACTIVE -> Color(0xFFB2FF59)
+                TripViewMode.COMPLETED -> Color(0xFF81D4FA)
+                TripViewMode.REMOVED -> Color(0xFFFFD180)
             }
 
             Text(
                 text = "Trip Status: ",
                 color = Color(0xFFFFF5E1),
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
             )
 
             Text(
                 text = statusLabel,
                 color = statusColor,
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.clickable {
                     viewMode = when (viewMode) {
                         TripViewMode.ACTIVE -> TripViewMode.COMPLETED
@@ -275,6 +276,7 @@ fun PassengerApp() {
                 }
             )
         }
+
 
 
 
