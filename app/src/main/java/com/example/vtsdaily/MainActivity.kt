@@ -9,7 +9,6 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.combinedClickable
@@ -28,11 +27,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.delay
@@ -229,55 +224,22 @@ fun PassengerApp() {
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = {
+                    Text(
+                        text = "Trip Status: " + when (viewMode) {
+                            TripViewMode.ACTIVE -> "Active"
+                            TripViewMode.COMPLETED -> "Completed"
+                            TripViewMode.REMOVED -> "Removed"
+                        },
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.clickable {
                             viewMode = when (viewMode) {
                                 TripViewMode.ACTIVE -> TripViewMode.COMPLETED
                                 TripViewMode.COMPLETED -> TripViewMode.REMOVED
                                 TripViewMode.REMOVED -> TripViewMode.ACTIVE
                             }
-                        }) {
-                            Icon(
-                                imageVector = when (viewMode) {
-                                    TripViewMode.ACTIVE -> Icons.Default.VisibilityOff
-                                    TripViewMode.COMPLETED,
-                                    TripViewMode.REMOVED -> Icons.Default.Visibility
-                                },
-                                contentDescription = "Toggle View",
-                                tint = Color.White
-                            )
                         }
-
-                        AnimatedContent(
-                            targetState = viewMode,
-                            label = "ViewModeTransition"
-                        ) { mode ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = when (mode) {
-                                        TripViewMode.ACTIVE -> Icons.Default.List
-                                        TripViewMode.COMPLETED -> Icons.Default.Check
-                                        TripViewMode.REMOVED -> Icons.Default.Delete
-                                    },
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-
-                                Spacer(modifier = Modifier.width(4.dp))
-
-                                Text(
-                                    text = when (mode) {
-                                        TripViewMode.ACTIVE -> "Active"
-                                        TripViewMode.COMPLETED -> "Completed"
-                                        TripViewMode.REMOVED -> "Removed"
-                                    },
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
+                    )
                 }
             }
 
