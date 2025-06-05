@@ -27,10 +27,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
@@ -85,11 +83,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    companion object {
-
-    }
-
 }
 
 fun loadSchedule(forDate: LocalDate): Schedule {
@@ -209,48 +202,70 @@ fun PassengerApp() {
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
-
     var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+
+        // Responsive header layout
         Row(
-            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF4285F4))
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = { showInsertDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Insert", tint = Color.White)
-            }
-
-            IconButton(onClick = { showDateListDialog = true }) {
-                Icon(Icons.Default.List, contentDescription = "Select Date", tint = Color.White)
-            }
-
-            IconButton(onClick = {
-                viewMode = when (viewMode) {
-                    TripViewMode.ACTIVE -> TripViewMode.COMPLETED
-                    TripViewMode.COMPLETED -> TripViewMode.REMOVED
-                    TripViewMode.REMOVED -> TripViewMode.ACTIVE
+            // Left side: buttons and view mode toggle
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { showDateListDialog = true }) {
+                    Text("SchedDate", color = Color.White)
                 }
-            }) {
-                Icon(
-                    imageVector = when (viewMode) {
-                        TripViewMode.ACTIVE -> Icons.Default.VisibilityOff
-                        TripViewMode.COMPLETED -> Icons.Default.Visibility
-                        TripViewMode.REMOVED -> Icons.Default.Visibility
-                    },
-                    contentDescription = "Toggle View",
-                    tint = Color.White
-                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                TextButton(onClick = { showInsertDialog = true }) {
+                    Text("AddTrip", color = Color.White)
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = {
+                        viewMode = when (viewMode) {
+                            TripViewMode.ACTIVE -> TripViewMode.COMPLETED
+                            TripViewMode.COMPLETED -> TripViewMode.REMOVED
+                            TripViewMode.REMOVED -> TripViewMode.ACTIVE
+                        }
+                    }) {
+                        Icon(
+                            imageVector = when (viewMode) {
+                                TripViewMode.ACTIVE -> Icons.Default.VisibilityOff
+                                TripViewMode.COMPLETED,
+                                TripViewMode.REMOVED -> Icons.Default.Visibility
+                            },
+                            contentDescription = "Toggle View",
+                            tint = Color.White
+                        )
+                    }
+
+                    Text(
+                        text = when (viewMode) {
+                            TripViewMode.ACTIVE -> "Active"
+                            TripViewMode.COMPLETED -> "Completed"
+                            TripViewMode.REMOVED -> "Removed"
+                        },
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
+            // Right: schedule date
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-                style = MaterialTheme.typography.titleLarge.copy(color = Color.White)
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.CenterVertically)
             )
         }
 
@@ -328,6 +343,7 @@ fun PassengerApp() {
         }
     }
 }
+
 
 
 @OptIn(ExperimentalFoundationApi::class)
