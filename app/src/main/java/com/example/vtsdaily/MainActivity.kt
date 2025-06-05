@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.combinedClickable
@@ -29,6 +30,8 @@ import java.util.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
@@ -206,26 +209,20 @@ fun PassengerApp() {
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
 
-        // Header with centered date above controls
+        // Header with centered, clickable date
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF4285F4))
                 .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
-            // Row of buttons and view toggle
+            // Header row: AddTrip and ViewMode toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { showDateListDialog = true }) {
-                        Text("SchedDate", color = Color.White)
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
                     TextButton(onClick = { showInsertDialog = true }) {
                         Text("AddTrip", color = Color.White)
                     }
@@ -251,28 +248,48 @@ fun PassengerApp() {
                             )
                         }
 
-                        Text(
-                            text = when (viewMode) {
-                                TripViewMode.ACTIVE -> "Active"
-                                TripViewMode.COMPLETED -> "Completed"
-                                TripViewMode.REMOVED -> "Removed"
-                            },
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        AnimatedContent(
+                            targetState = viewMode,
+                            label = "ViewModeTransition"
+                        ) { mode ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = when (mode) {
+                                        TripViewMode.ACTIVE -> Icons.Default.List
+                                        TripViewMode.COMPLETED -> Icons.Default.Check
+                                        TripViewMode.REMOVED -> Icons.Default.Delete
+                                    },
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+
+                                Spacer(modifier = Modifier.width(4.dp))
+
+                                Text(
+                                    text = when (mode) {
+                                        TripViewMode.ACTIVE -> "Active"
+                                        TripViewMode.COMPLETED -> "Completed"
+                                        TripViewMode.REMOVED -> "Removed"
+                                    },
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            // Overlayed centered date nudged upward
+            // Clickable centered date
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .offset(y = (-8).dp) // Try -10.dp or more if still too tight
-                // gently lift it upward
+                    .offset(y = (-8).dp)
+                    .clickable { showDateListDialog = true }
             )
         }
 
@@ -350,9 +367,6 @@ fun PassengerApp() {
         }
     }
 }
-
-
-
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
