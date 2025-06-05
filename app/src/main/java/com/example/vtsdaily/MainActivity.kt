@@ -206,66 +206,73 @@ fun PassengerApp() {
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
 
-        // Responsive header layout
-        Row(
+        // Header with centered date above controls
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF4285F4))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
-            // Left side: buttons and view mode toggle
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { showDateListDialog = true }) {
-                    Text("SchedDate", color = Color.White)
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                TextButton(onClick = { showInsertDialog = true }) {
-                    Text("AddTrip", color = Color.White)
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
+            // Row of buttons and view toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = {
-                        viewMode = when (viewMode) {
-                            TripViewMode.ACTIVE -> TripViewMode.COMPLETED
-                            TripViewMode.COMPLETED -> TripViewMode.REMOVED
-                            TripViewMode.REMOVED -> TripViewMode.ACTIVE
-                        }
-                    }) {
-                        Icon(
-                            imageVector = when (viewMode) {
-                                TripViewMode.ACTIVE -> Icons.Default.VisibilityOff
-                                TripViewMode.COMPLETED,
-                                TripViewMode.REMOVED -> Icons.Default.Visibility
-                            },
-                            contentDescription = "Toggle View",
-                            tint = Color.White
-                        )
+                    TextButton(onClick = { showDateListDialog = true }) {
+                        Text("SchedDate", color = Color.White)
                     }
 
-                    Text(
-                        text = when (viewMode) {
-                            TripViewMode.ACTIVE -> "Active"
-                            TripViewMode.COMPLETED -> "Completed"
-                            TripViewMode.REMOVED -> "Removed"
-                        },
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    TextButton(onClick = { showInsertDialog = true }) {
+                        Text("AddTrip", color = Color.White)
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = {
+                            viewMode = when (viewMode) {
+                                TripViewMode.ACTIVE -> TripViewMode.COMPLETED
+                                TripViewMode.COMPLETED -> TripViewMode.REMOVED
+                                TripViewMode.REMOVED -> TripViewMode.ACTIVE
+                            }
+                        }) {
+                            Icon(
+                                imageVector = when (viewMode) {
+                                    TripViewMode.ACTIVE -> Icons.Default.VisibilityOff
+                                    TripViewMode.COMPLETED,
+                                    TripViewMode.REMOVED -> Icons.Default.Visibility
+                                },
+                                contentDescription = "Toggle View",
+                                tint = Color.White
+                            )
+                        }
+
+                        Text(
+                            text = when (viewMode) {
+                                TripViewMode.ACTIVE -> "Active"
+                                TripViewMode.COMPLETED -> "Completed"
+                                TripViewMode.REMOVED -> "Removed"
+                            },
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
             }
 
-            // Right: schedule date
+            // Overlayed centered date nudged upward
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.CenterVertically)
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = (-8).dp) // Try -10.dp or more if still too tight
+                // gently lift it upward
             )
         }
 
@@ -343,6 +350,7 @@ fun PassengerApp() {
         }
     }
 }
+
 
 
 
