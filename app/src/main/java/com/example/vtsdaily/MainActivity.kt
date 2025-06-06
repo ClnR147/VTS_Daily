@@ -209,7 +209,7 @@ fun PassengerApp() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(40.dp)
-                .background(Color(0xFF2196F3)),
+                .background(Color(0xFFE0E0E0)),
             contentAlignment = Alignment.BottomCenter
         ) {
             Text(
@@ -226,7 +226,7 @@ fun PassengerApp() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .background(Color(0xFF2196F3))
+                .background(Color(0xFFE0E0E0))
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
