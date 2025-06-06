@@ -204,29 +204,29 @@ fun PassengerApp() {
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
 
-        // Top Banner
+        // Top Banner (flat, light purple)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
-                .background(Color(0xFF9A7DAB)),
+                .height(40.dp)
+                .background(Color(0xFF2196F3)),
             contentAlignment = Alignment.BottomCenter
         ) {
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-                color = Color(0xFFFFF5E1),
+                color = Color(0xFF4A148C),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.clickable { showDateListDialog = true }
             )
         }
 
-        // Bottom Banner
+        // Bottom Banner (flat, light purple)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .background(Color(0xFF9A7DAB))
+                .background(Color(0xFF2196F3))
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -236,7 +236,7 @@ fun PassengerApp() {
             ) {
                 Text(
                     "AddTrip",
-                    color = Color(0xFFFFF5E1),
+                    color = Color(0xFF4A148C),
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                 )
             }
@@ -250,14 +250,14 @@ fun PassengerApp() {
             }
 
             val statusColor = when (viewMode) {
-                TripViewMode.ACTIVE -> Color(0xFFB2FF59)
-                TripViewMode.COMPLETED -> Color(0xFF81D4FA)
-                TripViewMode.REMOVED -> Color(0xFFFFD180)
+                TripViewMode.ACTIVE -> Color(0xFF33691E)
+                TripViewMode.COMPLETED -> Color(0xFF01579B)
+                TripViewMode.REMOVED -> Color(0xFFEF6C00)
             }
 
             Text(
                 text = "Trip Status:",
-                color = Color(0xFFFFF5E1),
+                color = Color(0xFF4A148C),
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.clickable {
                     viewMode = when (viewMode) {
@@ -355,6 +355,8 @@ fun PassengerApp() {
 
 
 
+
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PassengerTable(
@@ -447,6 +449,7 @@ fun PassengerTable(
             .padding(8.dp)
             .verticalScroll(rememberScrollState())
     ) {
+        Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
