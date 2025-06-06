@@ -204,7 +204,7 @@ fun PassengerApp() {
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
 
-        // Compact Top Banner: Date at bottom
+        // Top Banner
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -221,13 +221,11 @@ fun PassengerApp() {
             )
         }
 
-
-        // Compact Bottom Banner: AddTrip + Trip Status
-        // Enlarged Bottom Banner: AddTrip + Trip Status
+        // Bottom Banner
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp) // Increased height for better touch targets
+                .height(56.dp)
                 .background(Color(0xFF9A7DAB))
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -258,14 +256,8 @@ fun PassengerApp() {
             }
 
             Text(
-                text = "Trip Status: ",
+                text = "Trip Status:",
                 color = Color(0xFFFFF5E1),
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
-            )
-
-            Text(
-                text = statusLabel,
-                color = statusColor,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.clickable {
                     viewMode = when (viewMode) {
@@ -275,10 +267,15 @@ fun PassengerApp() {
                     }
                 }
             )
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            Text(
+                text = statusLabel,
+                color = statusColor,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+            )
         }
-
-
-
 
         if (showDateListDialog) {
             AlertDialog(
@@ -354,6 +351,7 @@ fun PassengerApp() {
         }
     }
 }
+
 
 
 
