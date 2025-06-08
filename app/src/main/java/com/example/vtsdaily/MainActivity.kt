@@ -231,12 +231,13 @@ fun PassengerApp() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(
-                onClick = { showInsertDialog = true },
+                onClick = { if (viewMode == TripViewMode.ACTIVE) showInsertDialog = true },
+                enabled = viewMode == TripViewMode.ACTIVE,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
                     "AddTrip",
-                    color = Color(0xFF4A148C),
+                    color = if (viewMode == TripViewMode.ACTIVE) Color(0xFF4A148C) else Color.Gray,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                 )
             }
