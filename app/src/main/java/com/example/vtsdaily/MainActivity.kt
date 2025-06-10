@@ -400,15 +400,6 @@ fun PassengerTable(
                     }) { Text("Drop-off Address") }
 
                     Spacer(modifier = Modifier.height(8.dp))
-
-                    Button(onClick = {
-                        RemovedTripStore.addRemovedTrip(scheduleDate, selectedPassenger!!)
-                        onTripRemoved()
-                        selectedPassenger = null
-                        Toast.makeText(context, "Trip removed", Toast.LENGTH_SHORT).show()
-                    }) {
-                        Text("Remove Trip", color = Color.Red)
-                    }
                 }
             },
             confirmButton = {},
