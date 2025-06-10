@@ -368,7 +368,7 @@ fun PassengerTable(
     onTripRemoved: () -> Unit
 ) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
-    var passengerToComplete by remember { mutableStateOf<Passenger?>(null) }
+    var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
 
     val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
@@ -380,6 +380,7 @@ fun PassengerTable(
         }
     } else passengers
 
+    // Dialog: Waze + Remove Trip (Long press)
     if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
             onDismissRequest = { selectedPassenger = null },
@@ -419,27 +420,35 @@ fun PassengerTable(
         )
     }
 
-    if (passengerToComplete != null && viewMode == TripViewMode.ACTIVE) {
+    // Dialog: Complete or Cancel Trip (via checkmark)
+    if (passengerToActOn != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
-            onDismissRequest = { passengerToComplete = null },
-            title = { Text("Complete Trip") },
-            text = { Text("Mark this trip as completed and hide it?") },
+            onDismissRequest = { passengerToActOn = null },
+            title = { Text("Trip Action") },
+            text = { Text("Would you like to complete or cancel this trip?") },
             confirmButton = {
                 TextButton(onClick = {
-                    passengerToComplete?.let { passenger ->
+                    passengerToActOn?.let { passenger ->
                         val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(formatter)}"
                         prefs.edit().putBoolean(key, true).apply()
+                        onTripRemoved()
                     }
-                    passengerToComplete = null
-                    onTripRemoved()
+                    passengerToActOn = null
                 }) {
-                    Text("Yes")
+                    Text("Complete")
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    passengerToComplete = null
-                }) { Text("Cancel") }
+                    passengerToActOn?.let {
+                        RemovedTripStore.addRemovedTrip(scheduleDate, it)
+                        onTripRemoved()
+                        Toast.makeText(context, "Trip canceled", Toast.LENGTH_SHORT).show()
+                    }
+                    passengerToActOn = null
+                }) {
+                    Text("Cancel Trip")
+                }
             }
         )
     }
@@ -544,12 +553,12 @@ fun PassengerTable(
                 if (viewMode == TripViewMode.ACTIVE) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         IconButton(
-                            onClick = { passengerToComplete = passenger },
+                            onClick = { passengerToActOn = passenger },
                             modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = "Mark as completed",
+                                contentDescription = "Mark as completed or cancel",
                                 tint = Color(0xFF2E7D32)
                             )
                         }
@@ -561,6 +570,7 @@ fun PassengerTable(
         }
     }
 }
+
 
 
 fun launchWaze(context: Context, address: String) {
