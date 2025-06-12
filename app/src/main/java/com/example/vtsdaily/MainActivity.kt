@@ -50,17 +50,24 @@ data class Schedule(
     val passengers: List<Passenger>
 )
 
+enum class TripRemovalReason {
+    CANCELLED,
+    NO_SHOW
+}
 data class RemovedTrip(
     val name: String,
     val pickupAddress: String,
     val dropoffAddress: String,
     val typeTime: String,
-    val date: String // same format as Schedule.date, e.g. "5-31-25"
+    val date: String, // format "M-d-yy"
+    val reason: TripRemovalReason = TripRemovalReason.CANCELLED // default for legacy entries
 )
 
 enum class TripViewMode {
     ACTIVE, COMPLETED, REMOVED
 }
+
+
 
 // MainActivity
 class MainActivity : ComponentActivity() {
@@ -168,7 +175,7 @@ class RemovedTripStore {
             }
         }
 
-        fun addRemovedTrip(forDate: LocalDate, passenger: Passenger) {
+        fun addRemovedTrip(forDate: LocalDate, passenger: Passenger, reason: TripRemovalReason) {
             val file = getFile()
             val type = object : TypeToken<MutableMap<String, MutableList<RemovedTrip>>>() {}.type
             val map: MutableMap<String, MutableList<RemovedTrip>> =
@@ -177,10 +184,21 @@ class RemovedTripStore {
 
             val key = forDate.format(formatter)
             val list = map.getOrPut(key) { mutableListOf() }
-            list.add(RemovedTrip(passenger.name, passenger.pickupAddress, passenger.dropoffAddress, passenger.typeTime, key))
+
+            list.add(
+                RemovedTrip(
+                    name = passenger.name,
+                    pickupAddress = passenger.pickupAddress,
+                    dropoffAddress = passenger.dropoffAddress,
+                    typeTime = passenger.typeTime,
+                    date = key,
+                    reason = reason
+                )
+            )
 
             file.writeText(gson.toJson(map))
         }
+
     }
 }
 
@@ -414,35 +432,47 @@ fun PassengerTable(
     // Dialog: Complete or Cancel Trip (via checkmark)
     if (passengerToActOn != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
-            onDismissRequest = { passengerToActOn = null },
+            onDismissRequest = { passengerToActOn = null }, // allow dismiss by back/outside
             title = { Text("Trip Action") },
-            text = { Text("Would you like to complete or cancel this trip?") },
+            text = { Text("Choose an action for this trip:") },
             confirmButton = {
-                TextButton(onClick = {
-                    passengerToActOn?.let { passenger ->
-                        val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(formatter)}"
-                        prefs.edit().putBoolean(key, true).apply()
-                        onTripRemoved()
+                Column {
+                    TextButton(onClick = {
+                        passengerToActOn?.let { passenger ->
+                            val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(formatter)}"
+                            prefs.edit().putBoolean(key, true).apply()
+                            onTripRemoved()
+                        }
+                        passengerToActOn = null
+                    }) {
+                        Text("Complete")
                     }
-                    passengerToActOn = null
-                }) {
-                    Text("Complete")
+                    TextButton(onClick = {
+                        passengerToActOn?.let {
+                            RemovedTripStore.addRemovedTrip(scheduleDate, it, TripRemovalReason.CANCELLED)
+                            onTripRemoved()
+                            Toast.makeText(context, "Trip cancelled", Toast.LENGTH_SHORT).show()
+                        }
+                        passengerToActOn = null
+                    }) {
+                        Text("Cancel Trip")
+                    }
+                    TextButton(onClick = {
+                        passengerToActOn?.let {
+                            RemovedTripStore.addRemovedTrip(scheduleDate, it, TripRemovalReason.NO_SHOW)
+                            onTripRemoved()
+                            Toast.makeText(context, "Marked as No Show", Toast.LENGTH_SHORT).show()
+                        }
+                        passengerToActOn = null
+                    }) {
+                        Text("No Show")
+                    }
                 }
             },
-            dismissButton = {
-                TextButton(onClick = {
-                    passengerToActOn?.let {
-                        RemovedTripStore.addRemovedTrip(scheduleDate, it)
-                        onTripRemoved()
-                        Toast.makeText(context, "Trip canceled", Toast.LENGTH_SHORT).show()
-                    }
-                    passengerToActOn = null
-                }) {
-                    Text("Cancel Trip")
-                }
-            }
+            // no dismissButton, user can still exit with back button or tapping outside
         )
     }
+
 
     Column(
         modifier = Modifier
@@ -462,9 +492,23 @@ fun PassengerTable(
         }
         Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
 
+        // Load removal reasons if in REMOVED view
+        val removedReasonMap = if (viewMode == TripViewMode.REMOVED) {
+            RemovedTripStore.getRemovedTrips(scheduleDate).associateBy {
+                "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}"
+            }
+        } else emptyMap()
+
         visiblePassengers.forEachIndexed { index, passenger ->
             val backgroundColor = if (index % 2 == 0) Color(0xFFE3F2FD) else Color.White
             val labelColor = Color(0xFF1A73E8)
+
+            val passengerKey = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}"
+            val reasonText = when (removedReasonMap[passengerKey]?.reason) {
+                TripRemovalReason.CANCELLED -> " (Cancelled)"
+                TripRemovalReason.NO_SHOW -> " (No Show)"
+                else -> ""
+            }
 
             Column(
                 modifier = Modifier
@@ -499,11 +543,14 @@ fun PassengerTable(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = passenger.name,
+                        text = passenger.name + reasonText,
                         modifier = Modifier.weight(2f),
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
+
+                // ... (rest of your unchanged content like From/To rows and IconButton)
+
 
                 Spacer(modifier = Modifier.height(4.dp))
 
