@@ -239,8 +239,7 @@ fun PassengerApp() {
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 color = Color(0xFF4A148C),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.clickable { showDateListDialog = true }
             )
         }
@@ -262,7 +261,7 @@ fun PassengerApp() {
                 Text(
                     "AddTrip",
                     color = if (viewMode == TripViewMode.ACTIVE) Color(0xFF4A148C) else Color.Gray,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
                 )
             }
 
@@ -283,7 +282,7 @@ fun PassengerApp() {
             Text(
                 text = "Trip Status:",
                 color = Color(0xFF4A148C),
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                 modifier = Modifier.clickable {
                     viewMode = when (viewMode) {
                         TripViewMode.ACTIVE -> TripViewMode.COMPLETED
@@ -298,7 +297,7 @@ fun PassengerApp() {
             Text(
                 text = statusLabel,
                 color = statusColor,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
         }
 
@@ -306,7 +305,7 @@ fun PassengerApp() {
         if (showDateListDialog) {
             AlertDialog(
                 onDismissRequest = { showDateListDialog = false },
-                title = { Text("Choose Date") },
+                title = { Text("Choose Date", style = MaterialTheme.typography.titleMedium) },
                 text = {
                     val pastDates = getAvailableScheduleDates()
                     Column {
@@ -317,7 +316,10 @@ fun PassengerApp() {
                                 insertedPassengers = InsertedTripStore.loadInsertedTrips(context, date)
                                 showDateListDialog = false
                             }) {
-                                Text(date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
+                                Text(
+                                    date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
                             }
                         }
                     }
@@ -325,7 +327,7 @@ fun PassengerApp() {
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { showDateListDialog = false }) {
-                        Text("Cancel")
+                        Text("Cancel", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             )
@@ -344,7 +346,7 @@ fun PassengerApp() {
             )
         }
 
-        // Unified passenger table (delegates filtering by viewMode)
+        // Unified passenger table
         PassengerTable(
             passengers = baseSchedule.passengers,
             insertedPassengers = insertedPassengers,
@@ -380,6 +382,7 @@ fun PassengerApp() {
         }
     }
 }
+
 
 
 
