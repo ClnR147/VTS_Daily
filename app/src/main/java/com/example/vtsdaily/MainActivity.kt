@@ -215,7 +215,10 @@ fun PassengerApp() {
         mutableStateOf(loadSchedule(scheduleDate))
     }
 
-    var insertedPassengers by rememberSaveable(scheduleDate) { mutableStateOf(emptyList<Passenger>()) }
+    var insertedPassengers by remember(scheduleDate) {
+        mutableStateOf(InsertedTripStore.loadInsertedTrips(context, scheduleDate))
+    }
+
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
@@ -223,7 +226,7 @@ fun PassengerApp() {
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
 
-        // Top Banner (flat, light purple)
+        // Top Banner
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -240,7 +243,7 @@ fun PassengerApp() {
             )
         }
 
-        // Bottom Banner (flat, light purple)
+        // Bottom Banner
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -297,6 +300,7 @@ fun PassengerApp() {
             )
         }
 
+        // Date picker dialog
         if (showDateListDialog) {
             AlertDialog(
                 onDismissRequest = { showDateListDialog = false },
@@ -308,6 +312,7 @@ fun PassengerApp() {
                             TextButton(onClick = {
                                 scheduleDate = date
                                 baseSchedule = loadSchedule(date)
+                                insertedPassengers = InsertedTripStore.loadInsertedTrips(context, date)
                                 showDateListDialog = false
                             }) {
                                 Text(date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
@@ -324,17 +329,20 @@ fun PassengerApp() {
             )
         }
 
+        // Insert dialog
         if (showInsertDialog) {
             InsertTripDialog(
                 onDismiss = { showInsertDialog = false },
                 onInsert = { newPassenger ->
                     insertedPassengers = insertedPassengers + newPassenger
+                    InsertedTripStore.addInsertedTrip(context, scheduleDate, newPassenger)
                     showInsertDialog = false
                     scrollToBottom = true
                 }
             )
         }
 
+        // Filter passengers
         val passengers = when (viewMode) {
             TripViewMode.ACTIVE -> baseSchedule.passengers + insertedPassengers
             TripViewMode.COMPLETED -> {
@@ -353,13 +361,16 @@ fun PassengerApp() {
             }
         }
 
+        // PassengerTable with updated onTripRemoved
         PassengerTable(
             passengers = passengers,
             scheduleDate = scheduleDate,
             viewMode = viewMode,
             context = context,
-            onTripRemoved = {
+            onTripRemoved = { removedPassenger ->
                 baseSchedule = loadSchedule(scheduleDate)
+                InsertedTripStore.removeInsertedTrip(context, scheduleDate, removedPassenger)
+                insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
             }
         )
 
@@ -377,6 +388,7 @@ fun PassengerApp() {
 
 
 
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PassengerTable(
@@ -384,7 +396,7 @@ fun PassengerTable(
     scheduleDate: LocalDate,
     viewMode: TripViewMode,
     context: Context,
-    onTripRemoved: () -> Unit
+    onTripRemoved: (Passenger) -> Unit // ✅ updated
 ) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
@@ -433,7 +445,7 @@ fun PassengerTable(
     // Dialog: Complete or Cancel Trip (via checkmark)
     if (passengerToActOn != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
-            onDismissRequest = { passengerToActOn = null }, // allow dismiss by back/outside
+            onDismissRequest = { passengerToActOn = null },
             title = { Text("Trip Action") },
             text = { Text("Choose an action for this trip:") },
             confirmButton = {
@@ -442,51 +454,41 @@ fun PassengerTable(
                         passengerToActOn?.let { passenger ->
                             val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(formatter)}"
                             prefs.edit().putBoolean(key, true).apply()
-                            onTripRemoved()
+                            onTripRemoved(passenger)
                         }
                         passengerToActOn = null
-                    }) {
-                        Text("Complete")
-                    }
+                    }) { Text("Complete") }
+
                     TextButton(onClick = {
                         passengerToActOn?.let {
                             RemovedTripStore.addRemovedTrip(scheduleDate, it, TripRemovalReason.CANCELLED)
-                            onTripRemoved()
+                            onTripRemoved(it)
                             Toast.makeText(context, "Trip cancelled", Toast.LENGTH_SHORT).show()
                         }
                         passengerToActOn = null
-                    }) {
-                        Text("Cancel Trip")
-                    }
+                    }) { Text("Cancel Trip") }
+
                     TextButton(onClick = {
                         passengerToActOn?.let {
                             RemovedTripStore.addRemovedTrip(scheduleDate, it, TripRemovalReason.NO_SHOW)
-                            onTripRemoved()
+                            onTripRemoved(it)
                             Toast.makeText(context, "Marked as No Show", Toast.LENGTH_SHORT).show()
                         }
                         passengerToActOn = null
-                    }) {
-                        Text("No Show")
+                    }) { Text("No Show") }
 
                     TextButton(onClick = {
-                            passengerToActOn?.let {
-                                RemovedTripStore.addRemovedTrip(scheduleDate, it, TripRemovalReason.REMOVED)
-                                onTripRemoved()
-                                Toast.makeText(context, "Trip removed by dispatch", Toast.LENGTH_SHORT).show()
-                            }
-                            passengerToActOn = null
-                        }) {
-                            Text("Removed")
+                        passengerToActOn?.let {
+                            RemovedTripStore.addRemovedTrip(scheduleDate, it, TripRemovalReason.REMOVED)
+                            onTripRemoved(it)
+                            Toast.makeText(context, "Trip removed by dispatch", Toast.LENGTH_SHORT).show()
                         }
-
-
-                    }
+                        passengerToActOn = null
+                    }) { Text("Removed") }
                 }
-            },
-            // no dismissButton, user can still exit with back button or tapping outside
+            }
         )
     }
-
 
     Column(
         modifier = Modifier
@@ -506,7 +508,6 @@ fun PassengerTable(
         }
         Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
 
-        // Load removal reasons if in REMOVED view
         val removedReasonMap = if (viewMode == TripViewMode.REMOVED) {
             RemovedTripStore.getRemovedTrips(scheduleDate).associateBy {
                 "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}"
@@ -564,42 +565,19 @@ fun PassengerTable(
                     )
                 }
 
-                // ... (rest of your unchanged content like From/To rows and IconButton)
-
-
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "From:",
-                            modifier = Modifier.width(52.dp),
-                            color = Color(0xFF5F6368),
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            passenger.pickupAddress,
-                            color = Color.DarkGray,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text("From:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Text(passenger.pickupAddress, color = Color.DarkGray, style = MaterialTheme.typography.bodySmall)
                     }
 
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "To:",
-                            modifier = Modifier.width(52.dp),
-                            color = Color(0xFF5F6368),
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            passenger.dropoffAddress,
-                            color = Color.DarkGray,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text("To:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                        Text(passenger.dropoffAddress, color = Color.DarkGray, style = MaterialTheme.typography.bodySmall)
                     }
                 }
 
