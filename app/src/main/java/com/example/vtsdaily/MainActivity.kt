@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -53,7 +54,8 @@ data class Schedule(
 enum class TripRemovalReason {
     CANCELLED,
     NO_SHOW,
-    REMOVED
+    REMOVED,
+    COMPLETED
 }
 data class RemovedTrip(
     val name: String,
@@ -349,9 +351,22 @@ fun PassengerApp() {
             scheduleDate = scheduleDate,
             viewMode = viewMode,
             context = context,
-            onTripRemoved = { removedPassenger ->
+            onTripRemoved = { removedPassenger, reason ->
+                val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+                val key = "${removedPassenger.name}-${removedPassenger.pickupAddress}-${removedPassenger.dropoffAddress}-${removedPassenger.typeTime}-${scheduleDate.format(formatter)}"
+                val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
+
+                when (reason) {
+                    TripRemovalReason.COMPLETED -> {
+                        prefs.edit().putBoolean(key, true).apply()
+                    }
+                    else -> {
+                        RemovedTripStore.addRemovedTrip(scheduleDate, removedPassenger, reason)
+                        InsertedTripStore.removeInsertedTrip(context, scheduleDate, removedPassenger)
+                    }
+                }
+
                 baseSchedule = loadSchedule(scheduleDate)
-                InsertedTripStore.removeInsertedTrip(context, scheduleDate, removedPassenger)
                 insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
             }
         )
@@ -367,15 +382,16 @@ fun PassengerApp() {
 }
 
 
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PassengerTable(
     passengers: List<Passenger>,
-    insertedPassengers: List<Passenger>, // ✅ new
+    insertedPassengers: List<Passenger>,
     scheduleDate: LocalDate,
     viewMode: TripViewMode,
     context: Context,
-    onTripRemoved: (Passenger) -> Unit
+    onTripRemoved: (Passenger, TripRemovalReason) -> Unit // ✅ updated signature
 ) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
@@ -391,12 +407,15 @@ fun PassengerTable(
         }
         TripViewMode.COMPLETED -> allPassengers.filter {
             val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(formatter)}"
-            prefs.getBoolean(key, false)
+            val result = prefs.getBoolean(key, false)
+            Log.d("FilterCompleted", "Checking key: $key => $result for ${it.name}")
+            result
         }
-        TripViewMode.REMOVED -> emptyList() // your logic still applies
+        TripViewMode.REMOVED -> RemovedTripStore.getRemovedTrips(scheduleDate).map {
+            Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "")
+        }
     }
 
-    // Dialog: Waze + Remove Trip (Long press)
     if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
             onDismissRequest = { selectedPassenger = null },
@@ -427,7 +446,6 @@ fun PassengerTable(
         )
     }
 
-    // Dialog: Complete or Cancel Trip (via checkmark)
     if (passengerToActOn != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
             onDismissRequest = { passengerToActOn = null },
@@ -438,16 +456,17 @@ fun PassengerTable(
                     TextButton(onClick = {
                         passengerToActOn?.let { passenger ->
                             val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(formatter)}"
+                            Log.d("CompleteTrip", "Saving key: $key")
                             prefs.edit().putBoolean(key, true).apply()
-                            onTripRemoved(passenger)
+                            Log.d("TripComplete", "Marked complete: $key")
+                            onTripRemoved(passenger, TripRemovalReason.COMPLETED)
                         }
                         passengerToActOn = null
                     }) { Text("Complete") }
 
                     TextButton(onClick = {
                         passengerToActOn?.let {
-                            RemovedTripStore.addRemovedTrip(scheduleDate, it, TripRemovalReason.CANCELLED)
-                            onTripRemoved(it)
+                            onTripRemoved(it, TripRemovalReason.CANCELLED)
                             Toast.makeText(context, "Trip cancelled", Toast.LENGTH_SHORT).show()
                         }
                         passengerToActOn = null
@@ -455,8 +474,7 @@ fun PassengerTable(
 
                     TextButton(onClick = {
                         passengerToActOn?.let {
-                            RemovedTripStore.addRemovedTrip(scheduleDate, it, TripRemovalReason.NO_SHOW)
-                            onTripRemoved(it)
+                            onTripRemoved(it, TripRemovalReason.NO_SHOW)
                             Toast.makeText(context, "Marked as No Show", Toast.LENGTH_SHORT).show()
                         }
                         passengerToActOn = null
@@ -464,8 +482,7 @@ fun PassengerTable(
 
                     TextButton(onClick = {
                         passengerToActOn?.let {
-                            RemovedTripStore.addRemovedTrip(scheduleDate, it, TripRemovalReason.REMOVED)
-                            onTripRemoved(it)
+                            onTripRemoved(it, TripRemovalReason.REMOVED)
                             Toast.makeText(context, "Trip removed by dispatch", Toast.LENGTH_SHORT).show()
                         }
                         passengerToActOn = null
