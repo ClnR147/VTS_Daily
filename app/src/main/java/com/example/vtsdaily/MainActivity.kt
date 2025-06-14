@@ -13,7 +13,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,6 +33,21 @@ import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.delay
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Card
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
+import androidx.compose.material.Divider
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
+import androidx.compose.material.OutlinedTextField
+
+
+
+
 
 // Data classes
 
@@ -240,7 +254,7 @@ fun PassengerApp() {
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 color = Color(0xFF4A148C),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.h5.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.clickable { showDateListDialog = true }
             )
         }
@@ -264,7 +278,8 @@ fun PassengerApp() {
                 Text(
                     "AddTrip",
                     color = if (viewMode == TripViewMode.ACTIVE) Color(0xFF4A148C) else Color.Gray,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
+                    style = MaterialTheme.typography.h6
+                        .copy(fontWeight = FontWeight.Medium)
                 )
             }
 
@@ -285,7 +300,8 @@ fun PassengerApp() {
             Text(
                 text = "Trip Status:",
                 color = Color(0xFF4A148C),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                style = MaterialTheme.typography.h6
+                    .copy(fontWeight = FontWeight.Medium),
                 modifier = Modifier.clickable {
                     viewMode = when (viewMode) {
                         TripViewMode.ACTIVE -> TripViewMode.COMPLETED
@@ -300,7 +316,8 @@ fun PassengerApp() {
             Text(
                 text = statusLabel,
                 color = statusColor,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.h6
+                    .copy(fontWeight = FontWeight.Bold)
             )
         }
 
@@ -310,7 +327,8 @@ fun PassengerApp() {
         if (showDateListDialog) {
             AlertDialog(
                 onDismissRequest = { showDateListDialog = false },
-                title = { Text("Choose Date", style = MaterialTheme.typography.titleMedium) },
+                title = { Text("Choose Date", style = MaterialTheme.typography.h6
+                ) },
                 text = {
                     val pastDates = getAvailableScheduleDates()
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -323,7 +341,7 @@ fun PassengerApp() {
                             }) {
                                 Text(
                                     date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-                                    style = MaterialTheme.typography.bodyLarge
+                                    style = MaterialTheme.typography.body1
                                 )
                             }
                         }
@@ -332,7 +350,7 @@ fun PassengerApp() {
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { showDateListDialog = false }) {
-                        Text("Cancel", style = MaterialTheme.typography.bodyLarge)
+                        Text("Cancel", style = MaterialTheme.typography.body1)
                     }
                 }
             )
@@ -398,7 +416,7 @@ fun PassengerTable(
     scheduleDate: LocalDate,
     viewMode: TripViewMode,
     context: Context,
-    onTripRemoved: (Passenger, TripRemovalReason) -> Unit // ✅ updated signature
+    onTripRemoved: (Passenger, TripRemovalReason) -> Unit
 ) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
@@ -428,20 +446,16 @@ fun PassengerTable(
             onDismissRequest = { selectedPassenger = null },
             title = { Text("Navigate to...") },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = {
                         launchWaze(context, selectedPassenger!!.pickupAddress)
                         selectedPassenger = null
                     }) { Text("Pickup Address") }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
                     Button(onClick = {
                         launchWaze(context, selectedPassenger!!.dropoffAddress)
                         selectedPassenger = null
                     }) { Text("Drop-off Address") }
-
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
             },
             confirmButton = {},
@@ -457,9 +471,8 @@ fun PassengerTable(
         AlertDialog(
             onDismissRequest = { passengerToActOn = null },
             title = { Text("Trip Action") },
-            text = { Text("Choose an action for this trip:") },
-            confirmButton = {
-                Column {
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(onClick = {
                         passengerToActOn?.let { passenger ->
                             val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(formatter)}"
@@ -495,7 +508,9 @@ fun PassengerTable(
                         passengerToActOn = null
                     }) { Text("Removed") }
                 }
-            }
+            },
+            confirmButton = {},
+            dismissButton = {}
         )
     }
 
@@ -512,8 +527,10 @@ fun PassengerTable(
                 .background(Color.White)
                 .padding(vertical = 8.dp, horizontal = 12.dp)
         ) {
-            Text("Time", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Color(0xFF1A237E))
-            Text("Name", modifier = Modifier.weight(2f), style = MaterialTheme.typography.titleMedium, color = Color(0xFF1A237E))
+            Text("Time", modifier = Modifier.weight(1f), style = MaterialTheme.typography.h6
+                , color = Color(0xFF1A237E))
+            Text("Name", modifier = Modifier.weight(2f), style = MaterialTheme.typography.h6
+                , color = Color(0xFF1A237E))
         }
         Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
 
@@ -524,9 +541,7 @@ fun PassengerTable(
         } else emptyMap()
 
         visiblePassengers.forEachIndexed { index, passenger ->
-            val backgroundColor = if (index % 2 == 0) Color(0xFFE3F2FD) else Color.White
             val labelColor = Color(0xFF1A73E8)
-
             val passengerKey = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}"
             val reasonText = when (removedReasonMap[passengerKey]?.reason) {
                 TripRemovalReason.CANCELLED -> " (Cancelled)"
@@ -535,81 +550,96 @@ fun PassengerTable(
                 else -> ""
             }
 
-            Column(
+            Card(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(backgroundColor)
-                    .padding(vertical = 8.dp, horizontal = 12.dp)
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .combinedClickable(
-                            onClick = {
-                                if (passenger.phone.isNotBlank()) {
-                                    val intent = Intent(Intent.ACTION_DIAL).apply {
-                                        data = Uri.parse("tel:${passenger.phone}")
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(
+                                onClick = {
+                                    if (passenger.phone.isNotBlank()) {
+                                        val intent = Intent(Intent.ACTION_DIAL).apply {
+                                            data = Uri.parse("tel:${passenger.phone}")
+                                        }
+                                        context.startActivity(intent)
                                     }
-                                    context.startActivity(intent)
+                                },
+                                onLongClick = {
+                                    if (viewMode == TripViewMode.ACTIVE) {
+                                        selectedPassenger = passenger
+                                    }
                                 }
-                            },
-                            onLongClick = {
-                                if (viewMode == TripViewMode.ACTIVE) {
-                                    selectedPassenger = passenger
-                                }
-                            }
-                        ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = passenger.typeTime,
-                        modifier = Modifier.weight(1f),
-                        color = labelColor,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = passenger.name + reasonText,
-                        modifier = Modifier.weight(2f),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("From:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
-                        Text(passenger.pickupAddress, color = Color.DarkGray, style = MaterialTheme.typography.bodySmall)
+                            ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = passenger.typeTime,
+                            modifier = Modifier.weight(1f),
+                            color = labelColor,
+                            style = MaterialTheme.typography.body2
+                        )
+                        Text(
+                            text = passenger.name + reasonText,
+                            modifier = Modifier.weight(2f),
+                            style = MaterialTheme.typography.body1
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("To:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
-                        Text(passenger.dropoffAddress, color = Color.DarkGray, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-
-                if (viewMode == TripViewMode.ACTIVE) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        IconButton(
-                            onClick = { passengerToActOn = passenger },
-                            modifier = Modifier.size(24.dp)
+                    Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Mark as completed or cancel",
-                                tint = Color(0xFF2E7D32)
-                            )
+                            Text("From:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.caption)
+                            Text(passenger.pickupAddress, color = Color.DarkGray, style = MaterialTheme.typography.caption)
+                        }
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("To:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.caption)
+                            Text(passenger.dropoffAddress, color = Color.DarkGray, style = MaterialTheme.typography.caption)
+                        }
+                    }
+
+                    if (viewMode == TripViewMode.ACTIVE) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            IconButton(
+                                onClick = { passengerToActOn = passenger },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Mark as completed or cancel",
+                                    tint = Color(0xFF2E7D32)
+                                )
+                            }
                         }
                     }
                 }
-
-                Divider(color = Color(0xFFB0BEC5), thickness = 1.dp)
             }
         }
     }
 }
+
 
 
 
@@ -667,7 +697,7 @@ fun InsertTripDialog(onDismiss: () -> Unit, onInsert: (Passenger) -> Unit) {
                 OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time") })
                 OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") })
                 if (!isValid) {
-                    Text("Name, Pickup, Dropoff, and Time are required.", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+                    Text("Name, Pickup, Dropoff, and Time are required.", color = Color.Red, style = MaterialTheme.typography.caption)
                 }
             }
         },
