@@ -226,14 +226,15 @@ fun PassengerApp() {
     var showDateListDialog by remember { mutableStateOf(false) }
     var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
 
         // Top Banner
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(40.dp)
-                .background(Color(0xFFE0E0E0)),
+                .background(Color(0xFFE0E0E0))
+                .padding(horizontal = 12.dp),
             contentAlignment = Alignment.BottomCenter
         ) {
             Text(
@@ -244,13 +245,15 @@ fun PassengerApp() {
             )
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
         // Bottom Banner
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
                 .background(Color(0xFFE0E0E0))
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(
@@ -265,7 +268,7 @@ fun PassengerApp() {
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(24.dp))
 
             val statusLabel = when (viewMode) {
                 TripViewMode.ACTIVE -> "Active"
@@ -292,7 +295,7 @@ fun PassengerApp() {
                 }
             )
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Text(
                 text = statusLabel,
@@ -301,6 +304,8 @@ fun PassengerApp() {
             )
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
         // Date picker dialog
         if (showDateListDialog) {
             AlertDialog(
@@ -308,7 +313,7 @@ fun PassengerApp() {
                 title = { Text("Choose Date", style = MaterialTheme.typography.titleMedium) },
                 text = {
                     val pastDates = getAvailableScheduleDates()
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         pastDates.forEach { date ->
                             TextButton(onClick = {
                                 scheduleDate = date
@@ -373,7 +378,6 @@ fun PassengerApp() {
             }
         )
 
-        // Scroll trigger
         if (scrollToBottom) {
             LaunchedEffect(Unit) {
                 delay(100)
