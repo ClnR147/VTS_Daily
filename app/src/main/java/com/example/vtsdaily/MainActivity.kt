@@ -329,7 +329,7 @@ fun PassengerApp() {
             )
         }
 
-        // Insert dialog
+        // Insert trip dialog
         if (showInsertDialog) {
             InsertTripDialog(
                 onDismiss = { showInsertDialog = false },
@@ -342,28 +342,10 @@ fun PassengerApp() {
             )
         }
 
-        // Filter passengers
-        val passengers = when (viewMode) {
-            TripViewMode.ACTIVE -> baseSchedule.passengers + insertedPassengers
-            TripViewMode.COMPLETED -> {
-                val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
-                val formatter = DateTimeFormatter.ofPattern("M-d-yy")
-                val keyDate = scheduleDate.format(formatter)
-                (baseSchedule.passengers + insertedPassengers).filter {
-                    val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-$keyDate"
-                    prefs.getBoolean(key, false)
-                }
-            }
-            TripViewMode.REMOVED -> {
-                RemovedTripStore.getRemovedTrips(scheduleDate).map {
-                    Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "")
-                }
-            }
-        }
-
-        // PassengerTable with updated onTripRemoved
+        // Unified passenger table (delegates filtering by viewMode)
         PassengerTable(
-            passengers = passengers,
+            passengers = baseSchedule.passengers,
+            insertedPassengers = insertedPassengers,
             scheduleDate = scheduleDate,
             viewMode = viewMode,
             context = context,
@@ -374,6 +356,7 @@ fun PassengerApp() {
             }
         )
 
+        // Scroll trigger
         if (scrollToBottom) {
             LaunchedEffect(Unit) {
                 delay(100)
@@ -384,19 +367,15 @@ fun PassengerApp() {
 }
 
 
-
-
-
-
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PassengerTable(
     passengers: List<Passenger>,
+    insertedPassengers: List<Passenger>, // ✅ new
     scheduleDate: LocalDate,
     viewMode: TripViewMode,
     context: Context,
-    onTripRemoved: (Passenger) -> Unit // ✅ updated
+    onTripRemoved: (Passenger) -> Unit
 ) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
@@ -404,12 +383,18 @@ fun PassengerTable(
     val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
-    val visiblePassengers = if (viewMode == TripViewMode.ACTIVE) {
-        passengers.filterNot {
+    val allPassengers = passengers + insertedPassengers
+    val visiblePassengers = when (viewMode) {
+        TripViewMode.ACTIVE -> allPassengers.filterNot {
             val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(formatter)}"
             prefs.getBoolean(key, false)
         }
-    } else passengers
+        TripViewMode.COMPLETED -> allPassengers.filter {
+            val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(formatter)}"
+            prefs.getBoolean(key, false)
+        }
+        TripViewMode.REMOVED -> emptyList() // your logic still applies
+    }
 
     // Dialog: Waze + Remove Trip (Long press)
     if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
