@@ -52,7 +52,8 @@ data class Schedule(
 
 enum class TripRemovalReason {
     CANCELLED,
-    NO_SHOW
+    NO_SHOW,
+    REMOVED
 }
 data class RemovedTrip(
     val name: String,
@@ -466,6 +467,19 @@ fun PassengerTable(
                         passengerToActOn = null
                     }) {
                         Text("No Show")
+
+                    TextButton(onClick = {
+                            passengerToActOn?.let {
+                                RemovedTripStore.addRemovedTrip(scheduleDate, it, TripRemovalReason.REMOVED)
+                                onTripRemoved()
+                                Toast.makeText(context, "Trip removed by dispatch", Toast.LENGTH_SHORT).show()
+                            }
+                            passengerToActOn = null
+                        }) {
+                            Text("Removed")
+                        }
+
+
                     }
                 }
             },
@@ -507,6 +521,7 @@ fun PassengerTable(
             val reasonText = when (removedReasonMap[passengerKey]?.reason) {
                 TripRemovalReason.CANCELLED -> " (Cancelled)"
                 TripRemovalReason.NO_SHOW -> " (No Show)"
+                TripRemovalReason.REMOVED -> " (Removed)"
                 else -> ""
             }
 
