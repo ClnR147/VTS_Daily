@@ -593,20 +593,25 @@ fun PassengerTable(
                                     }
                                 }
                             ),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.Top // Align at top to support baseline alignment
                     ) {
                         Text(
                             text = passenger.typeTime,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .alignByBaseline(),
                             color = labelColor,
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
                             text = passenger.name + reasonText,
-                            modifier = Modifier.weight(2f),
+                            modifier = Modifier
+                                .weight(2f)
+                                .alignByBaseline(),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
+
 
                     Spacer(modifier = Modifier.height(4.dp))
 
