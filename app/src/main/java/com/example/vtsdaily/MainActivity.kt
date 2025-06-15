@@ -24,7 +24,6 @@ import jxl.Workbook
 import jxl.read.biff.BiffException
 import java.io.IOException
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -44,12 +43,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-
-
-
-
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 
 // Data classes
@@ -87,7 +84,7 @@ enum class TripViewMode {
     ACTIVE, COMPLETED, REMOVED
 }
 
-
+val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
 
 // MainActivity
 class MainActivity : ComponentActivity() {
@@ -107,6 +104,19 @@ class MainActivity : ComponentActivity() {
                 PassengerApp()
             }
         }
+    }
+}
+
+fun toSortableTime(typeTime: String): LocalTime {
+    return try {
+        // Examples: "PA 09:00 - 10:00" → "09:00"
+        val firstTime = typeTime.substringAfter(" ")
+            .substringBefore("-")
+            .trim()
+        LocalTime.parse(firstTime, DateTimeFormatter.ofPattern("HH:mm"))
+    } catch (e: Exception) {
+        Log.e("SortError", "Failed to parse time from: $typeTime")
+        LocalTime.MIDNIGHT
     }
 }
 
@@ -409,8 +419,6 @@ fun PassengerApp() {
 }
 
 
-
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PassengerTable(
@@ -427,22 +435,30 @@ fun PassengerTable(
     val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
-    val allPassengers = passengers + insertedPassengers
+    val sortedPassengers = (passengers + insertedPassengers).sortedBy {toSortableTime(it.typeTime) }
+
     val visiblePassengers = when (viewMode) {
-        TripViewMode.ACTIVE -> allPassengers.filterNot {
-            val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(formatter)}"
-            prefs.getBoolean(key, false)
-        }
-        TripViewMode.COMPLETED -> allPassengers.filter {
-            val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(formatter)}"
-            val result = prefs.getBoolean(key, false)
-            Log.d("FilterCompleted", "Checking key: $key => $result for ${it.name}")
-            result
-        }
-        TripViewMode.REMOVED -> RemovedTripStore.getRemovedTrips(scheduleDate).map {
-            Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "")
-        }
+        TripViewMode.ACTIVE -> (passengers + insertedPassengers)
+            .filterNot {
+                val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(formatter)}"
+                prefs.getBoolean(key, false)
+            }
+            .sortedBy { toSortableTime(it.typeTime) }
+
+        TripViewMode.COMPLETED -> (passengers + insertedPassengers)
+            .filter {
+                val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(formatter)}"
+                prefs.getBoolean(key, false)
+            }
+            .sortedBy { toSortableTime(it.typeTime) }
+
+        TripViewMode.REMOVED -> RemovedTripStore.getRemovedTrips(scheduleDate)
+            .map {
+                Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "")
+            }
+            .sortedBy { toSortableTime(it.typeTime) }
     }
+
 
     if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
@@ -479,9 +495,7 @@ fun PassengerTable(
                     TextButton(onClick = {
                         passengerToActOn?.let { passenger ->
                             val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(formatter)}"
-                            Log.d("CompleteTrip", "Saving key: $key")
                             prefs.edit().putBoolean(key, true).apply()
-                            Log.d("TripComplete", "Marked complete: $key")
                             onTripRemoved(passenger, TripRemovalReason.COMPLETED)
                         }
                         passengerToActOn = null
@@ -676,6 +690,8 @@ fun getAvailableScheduleDates(): List<LocalDate> {
         ?.sortedDescending()
         ?: emptyList()
 }
+
+
 
 @Composable
 fun InsertTripDialog(onDismiss: () -> Unit, onInsert: (Passenger) -> Unit) {
