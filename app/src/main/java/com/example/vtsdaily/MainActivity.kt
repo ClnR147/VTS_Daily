@@ -86,6 +86,8 @@ enum class TripViewMode {
 
 val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
 
+
+
 // MainActivity
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -248,6 +250,7 @@ fun PassengerApp() {
         mutableStateOf(InsertedTripStore.loadInsertedTrips(context, scheduleDate))
     }
 
+
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
@@ -386,6 +389,7 @@ fun PassengerApp() {
         PassengerTable(
             passengers = baseSchedule.passengers,
             insertedPassengers = insertedPassengers,
+            setInsertedPassengers = { insertedPassengers = it }, // ✅ Add this line
             scheduleDate = scheduleDate,
             viewMode = viewMode,
             context = context,
@@ -409,6 +413,7 @@ fun PassengerApp() {
             }
         )
 
+
         if (scrollToBottom) {
             LaunchedEffect(Unit) {
                 delay(100)
@@ -424,14 +429,17 @@ fun PassengerApp() {
 fun PassengerTable(
     passengers: List<Passenger>,
     insertedPassengers: List<Passenger>,
+    setInsertedPassengers: (List<Passenger>) -> Unit, // ✅ Add this
     scheduleDate: LocalDate,
     viewMode: TripViewMode,
     context: Context,
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit
-) {
+)
+ {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
-
+    var tripBeingEdited by remember { mutableStateOf<Passenger?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
     val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
@@ -530,6 +538,60 @@ fun PassengerTable(
             dismissButton = {}
         )
     }
+    if (tripBeingEdited != null) {
+        val passenger = tripBeingEdited!!
+
+        var id by remember { mutableStateOf(passenger.id) }
+        var name by remember { mutableStateOf(passenger.name) }
+        var typeTime by remember { mutableStateOf(passenger.typeTime) }
+        var pickup by remember { mutableStateOf(passenger.pickupAddress) }
+        var dropoff by remember { mutableStateOf(passenger.dropoffAddress) }
+
+        AlertDialog(
+            onDismissRequest = { tripBeingEdited = null },
+            title = { Text("Edit Trip") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = id, onValueChange = { id = it }, label = { Text("ID") }) // ← new field
+                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
+                    OutlinedTextField(value = typeTime, onValueChange = { typeTime = it }, label = { Text("Time (PR/PA hh:mm)") })
+                    OutlinedTextField(value = pickup, onValueChange = { pickup = it }, label = { Text("Pickup Address") })
+                    OutlinedTextField(value = dropoff, onValueChange = { dropoff = it }, label = { Text("Drop-off Address") })
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val updatedTrip = passenger.copy(
+                        id = id,
+                        name = name,
+                        typeTime = typeTime,
+                        pickupAddress = pickup,
+                        dropoffAddress = dropoff
+                    )
+
+                    val updatedList = insertedPassengers.toMutableList()
+                    val index = updatedList.indexOf(passenger)
+                    if (index != -1) {
+                        updatedList[index] = updatedTrip
+                        setInsertedPassengers(updatedList) // ✅ Trigger recomposition
+                        InsertedTripStore.overwriteInsertedTrips(context, scheduleDate, updatedList) // ✅ Save to disk
+                    }
+
+
+                    tripBeingEdited = null
+                }) {
+                    Text("Save")
+                }
+            }
+
+            ,
+            dismissButton = {
+                TextButton(onClick = { tripBeingEdited = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -580,11 +642,8 @@ fun PassengerTable(
                             .fillMaxWidth()
                             .combinedClickable(
                                 onClick = {
-                                    if (passenger.phone.isNotBlank()) {
-                                        val intent = Intent(Intent.ACTION_DIAL).apply {
-                                            data = Uri.parse("tel:${passenger.phone}")
-                                        }
-                                        context.startActivity(intent)
+                                    if (passenger in insertedPassengers && viewMode == TripViewMode.ACTIVE) {
+                                        tripBeingEdited = passenger
                                     }
                                 },
                                 onLongClick = {
@@ -611,6 +670,7 @@ fun PassengerTable(
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
+
 
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -740,4 +800,5 @@ fun InsertTripDialog(onDismiss: () -> Unit, onInsert: (Passenger) -> Unit) {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+
 }

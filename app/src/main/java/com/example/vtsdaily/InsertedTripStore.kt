@@ -34,6 +34,11 @@ object InsertedTripStore {
             emptyList()
         }
     }
+    fun overwriteInsertedTrips(context: Context, date: LocalDate, newTrips: List<Passenger>) {
+        val file = getFile(context, date)
+        val json = Gson().toJson(newTrips)
+        file.writeText(json)
+    }
 
     fun addInsertedTrip(context: Context, scheduleDate: LocalDate, trip: Passenger) {
         val existing = loadInsertedTrips(context, scheduleDate).toMutableList()
