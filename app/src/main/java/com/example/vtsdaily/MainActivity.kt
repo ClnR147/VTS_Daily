@@ -34,16 +34,19 @@ import kotlinx.coroutines.delay
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Card
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.AlertDialog
-import androidx.compose.material.Button
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
-import androidx.compose.material.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Card
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+
 
 
 
@@ -254,7 +257,7 @@ fun PassengerApp() {
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 color = Color(0xFF4A148C),
-                style = MaterialTheme.typography.h5.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.clickable { showDateListDialog = true }
             )
         }
@@ -278,7 +281,7 @@ fun PassengerApp() {
                 Text(
                     "AddTrip",
                     color = if (viewMode == TripViewMode.ACTIVE) Color(0xFF4A148C) else Color.Gray,
-                    style = MaterialTheme.typography.h6
+                    style = MaterialTheme.typography.titleMedium
                         .copy(fontWeight = FontWeight.Medium)
                 )
             }
@@ -300,7 +303,7 @@ fun PassengerApp() {
             Text(
                 text = "Trip Status:",
                 color = Color(0xFF4A148C),
-                style = MaterialTheme.typography.h6
+                style = MaterialTheme.typography.titleMedium
                     .copy(fontWeight = FontWeight.Medium),
                 modifier = Modifier.clickable {
                     viewMode = when (viewMode) {
@@ -316,7 +319,7 @@ fun PassengerApp() {
             Text(
                 text = statusLabel,
                 color = statusColor,
-                style = MaterialTheme.typography.h6
+                style = MaterialTheme.typography.titleMedium
                     .copy(fontWeight = FontWeight.Bold)
             )
         }
@@ -327,7 +330,7 @@ fun PassengerApp() {
         if (showDateListDialog) {
             AlertDialog(
                 onDismissRequest = { showDateListDialog = false },
-                title = { Text("Choose Date", style = MaterialTheme.typography.h6
+                title = { Text("Choose Date", style = MaterialTheme.typography.titleLarge
                 ) },
                 text = {
                     val pastDates = getAvailableScheduleDates()
@@ -341,7 +344,7 @@ fun PassengerApp() {
                             }) {
                                 Text(
                                     date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-                                    style = MaterialTheme.typography.body1
+                                    style = MaterialTheme.typography.bodyLarge
                                 )
                             }
                         }
@@ -350,7 +353,7 @@ fun PassengerApp() {
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { showDateListDialog = false }) {
-                        Text("Cancel", style = MaterialTheme.typography.body1)
+                        Text("Cancel", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             )
@@ -527,9 +530,9 @@ fun PassengerTable(
                 .background(Color.White)
                 .padding(vertical = 8.dp, horizontal = 12.dp)
         ) {
-            Text("Time", modifier = Modifier.weight(1f), style = MaterialTheme.typography.h6
+            Text("Time", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall
                 , color = Color(0xFF1A237E))
-            Text("Name", modifier = Modifier.weight(2f), style = MaterialTheme.typography.h6
+            Text("Name", modifier = Modifier.weight(2f), style = MaterialTheme.typography.titleSmall
                 , color = Color(0xFF1A237E))
         }
         Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
@@ -551,11 +554,11 @@ fun PassengerTable(
             }
 
             Card(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 6.dp)
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
@@ -582,12 +585,12 @@ fun PassengerTable(
                             text = passenger.typeTime,
                             modifier = Modifier.weight(1f),
                             color = labelColor,
-                            style = MaterialTheme.typography.body2
+                            style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
                             text = passenger.name + reasonText,
                             modifier = Modifier.weight(2f),
-                            style = MaterialTheme.typography.body1
+                            style = MaterialTheme.typography.bodyLarge
                         )
                     }
 
@@ -599,8 +602,8 @@ fun PassengerTable(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("From:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.caption)
-                            Text(passenger.pickupAddress, color = Color.DarkGray, style = MaterialTheme.typography.caption)
+                            Text("From:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                            Text(passenger.pickupAddress, color = Color.DarkGray, style = MaterialTheme.typography.bodySmall)
                         }
 
                         Spacer(modifier = Modifier.height(2.dp))
@@ -610,8 +613,8 @@ fun PassengerTable(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("To:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.caption)
-                            Text(passenger.dropoffAddress, color = Color.DarkGray, style = MaterialTheme.typography.caption)
+                            Text("To:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                            Text(passenger.dropoffAddress, color = Color.DarkGray, style = MaterialTheme.typography.bodySmall)
                         }
                     }
 
@@ -697,7 +700,7 @@ fun InsertTripDialog(onDismiss: () -> Unit, onInsert: (Passenger) -> Unit) {
                 OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time") })
                 OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") })
                 if (!isValid) {
-                    Text("Name, Pickup, Dropoff, and Time are required.", color = Color.Red, style = MaterialTheme.typography.caption)
+                    Text("Name, Pickup, Dropoff, and Time are required.", color = Color.Red, style = MaterialTheme.typography.bodySmall)
                 }
             }
         },
