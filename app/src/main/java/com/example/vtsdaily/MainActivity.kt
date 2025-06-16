@@ -109,6 +109,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
+
 fun toSortableTime(typeTime: String): LocalTime {
     return try {
         // Examples: "PA 09:00 - 10:00" → "09:00"
