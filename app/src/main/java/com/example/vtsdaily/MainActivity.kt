@@ -60,6 +60,15 @@ data class Passenger(
     val phone: String
 )
 
+data class CompletedTrip(
+    val name: String,
+    val pickupAddress: String,
+    val dropoffAddress: String,
+    val typeTime: String,
+    val date: String,
+    val completedAt: String? = null
+)
+
 data class Schedule(
     val date: String,
     val passengers: List<Passenger>
@@ -127,10 +136,12 @@ fun toSortableTime(typeTime: String): LocalTime {
 fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
     val passengers = mutableListOf<Passenger>()
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
-    val scheduleDateStr = scheduleDate.format(formatter) // Don't overwrite scheduleDate
-
+    val scheduleDateStr = scheduleDate.format(formatter)  // ← move this up
     try {
         val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
+        val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+        val scheduleDateStr = scheduleDate.format(formatter)
+
         val fileName = "VTS $scheduleDateStr.xls"
         val file = File(folder, fileName)
         if (!file.exists()) return Schedule(scheduleDateStr, emptyList())
@@ -235,11 +246,69 @@ class RemovedTripStore {
     }
 }
 
+class CompletedTripStore {
+    companion object {
+        private val gson = Gson()
+        private val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+
+        private fun getFile(context: Context, forDate: LocalDate): File {
+            val dateFolder = forDate.format(formatter)
+            val dir = File(context.filesDir, "completed-trips")
+            if (!dir.exists()) dir.mkdirs()
+            return File(dir, "$dateFolder.json")
+        }
+
+        fun getCompletedTrips(context: Context, forDate: LocalDate): List<CompletedTrip> {
+            val file = getFile(context, forDate)
+            if (!file.exists()) return emptyList()
+
+            val type = object : TypeToken<List<CompletedTrip>>() {}.type
+            return gson.fromJson(file.readText(), type)
+        }
+
+        fun isTripCompleted(context: Context, forDate: LocalDate, passenger: Passenger): Boolean {
+            return getCompletedTrips(context, forDate).any {
+                it.name == passenger.name &&
+                        it.pickupAddress == passenger.pickupAddress &&
+                        it.dropoffAddress == passenger.dropoffAddress &&
+                        it.typeTime == passenger.typeTime
+            }
+        }
+
+        fun addCompletedTrip(context: Context, forDate: LocalDate, passenger: Passenger) {
+            val file = getFile(context, forDate)
+            val type = object : TypeToken<MutableList<CompletedTrip>>() {}.type
+            val list: MutableList<CompletedTrip> =
+                if (file.exists()) gson.fromJson(file.readText(), type)
+                else mutableListOf()
+
+            if (list.none {
+                    it.name == passenger.name &&
+                            it.pickupAddress == passenger.pickupAddress &&
+                            it.dropoffAddress == passenger.dropoffAddress &&
+                            it.typeTime == passenger.typeTime
+                }) {
+                list.add(
+                    CompletedTrip(
+                        name = passenger.name,
+                        pickupAddress = passenger.pickupAddress,
+                        dropoffAddress = passenger.dropoffAddress,
+                        typeTime = passenger.typeTime,
+                        date = forDate.format(formatter),
+                        completedAt = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+                    )
+                )
+                file.writeText(gson.toJson(list))
+            }
+        }
+    }
+}
 
 
 @Composable
 fun PassengerApp() {
     val context = LocalContext.current
+    val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
     val defaultDate = getAvailableScheduleDates().firstOrNull() ?: LocalDate.now()
     var scheduleDate by rememberSaveable { mutableStateOf(defaultDate) }
@@ -398,11 +467,12 @@ fun PassengerApp() {
             onTripRemoved = { removedPassenger, reason ->
                 val formatter = DateTimeFormatter.ofPattern("M-d-yy")
                 val key = "${removedPassenger.name}-${removedPassenger.pickupAddress}-${removedPassenger.dropoffAddress}-${removedPassenger.typeTime}-${scheduleDate.format(formatter)}"
-                val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
+
 
                 when (reason) {
                     TripRemovalReason.COMPLETED -> {
-                        prefs.edit().putBoolean(key, true).apply()
+                        CompletedTripStore.addCompletedTrip(context, scheduleDate, removedPassenger)
+
                     }
                     else -> {
                         RemovedTripStore.addRemovedTrip(context, scheduleDate, removedPassenger, reason)
@@ -438,40 +508,37 @@ fun PassengerTable(
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit
 )
  {
-    var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
-    var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
-    var tripBeingEdited by remember { mutableStateOf<Passenger?>(null) }
-    var showEditDialog by remember { mutableStateOf(false) }
-    val prefs = context.getSharedPreferences("completedTrips", Context.MODE_PRIVATE)
-    val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
+     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
+     var tripBeingEdited by remember { mutableStateOf<Passenger?>(null) }
+     var showEditDialog by remember { mutableStateOf(false) }
 
-    val sortedPassengers = (passengers + insertedPassengers).sortedBy {toSortableTime(it.typeTime) }
+     val sortedPassengers = (passengers + insertedPassengers)
+         .sortedBy { toSortableTime(it.typeTime) }
 
-    val visiblePassengers = when (viewMode) {
-        TripViewMode.ACTIVE -> (passengers + insertedPassengers)
-            .filterNot {
-                val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(formatter)}"
-                prefs.getBoolean(key, false)
-            }
-            .sortedBy { toSortableTime(it.typeTime) }
+     val visiblePassengers = when (viewMode) {
+         TripViewMode.ACTIVE -> (passengers + insertedPassengers)
+             .filterNot {
+                 CompletedTripStore.isTripCompleted(context, scheduleDate, it)
+             }
+             .sortedBy { toSortableTime(it.typeTime) }
 
-        TripViewMode.COMPLETED -> (passengers + insertedPassengers)
-            .filter {
-                val key = "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}-${scheduleDate.format(formatter)}"
-                prefs.getBoolean(key, false)
-            }
-            .sortedBy { toSortableTime(it.typeTime) }
+         TripViewMode.COMPLETED -> (passengers + insertedPassengers)
+             .filter {
+                 CompletedTripStore.isTripCompleted(context, scheduleDate, it)
+             }
+             .sortedBy { toSortableTime(it.typeTime) }
 
-        TripViewMode.REMOVED -> RemovedTripStore.getRemovedTrips(context, scheduleDate)
-
-            .map {
-                Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "")
-            }
-            .sortedBy { toSortableTime(it.typeTime) }
-    }
+         TripViewMode.REMOVED -> RemovedTripStore.getRemovedTrips(context, scheduleDate)
+             .map {
+                 Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "")
+             }
+             .sortedBy { toSortableTime(it.typeTime) }
+     }
 
 
-    if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
+
+     if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
             onDismissRequest = { selectedPassenger = null },
             title = { Text("Navigate to...") },
@@ -505,8 +572,7 @@ fun PassengerTable(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(onClick = {
                         passengerToActOn?.let { passenger ->
-                            val key = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}-${scheduleDate.format(formatter)}"
-                            prefs.edit().putBoolean(key, true).apply()
+                            CompletedTripStore.addCompletedTrip(context, scheduleDate, passenger)
                             onTripRemoved(passenger, TripRemovalReason.COMPLETED)
                         }
                         passengerToActOn = null
