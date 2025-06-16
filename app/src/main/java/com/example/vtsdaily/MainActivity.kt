@@ -122,22 +122,21 @@ fun toSortableTime(typeTime: String): LocalTime {
     }
 }
 
-fun loadSchedule(forDate: LocalDate): Schedule {
+fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
     val passengers = mutableListOf<Passenger>()
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
-    val scheduleDate = forDate.format(formatter)
+    val scheduleDateStr = scheduleDate.format(formatter) // Don't overwrite scheduleDate
 
     try {
         val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
-        val fileName = "VTS $scheduleDate.xls"
+        val fileName = "VTS $scheduleDateStr.xls"
         val file = File(folder, fileName)
-        if (!file.exists()) return Schedule(scheduleDate, emptyList())
+        if (!file.exists()) return Schedule(scheduleDateStr, emptyList())
 
         val workbook = Workbook.getWorkbook(file)
         val sheet = workbook.getSheet(0)
 
-        // 🧠 Get removed trips for this date
-        val removedTrips = RemovedTripStore.getRemovedTrips(forDate)
+        val removedTrips = RemovedTripStore.getRemovedTrips(context, scheduleDate)
 
         for (i in 0 until sheet.rows) {
             val row = sheet.getRow(i)
@@ -151,7 +150,6 @@ fun loadSchedule(forDate: LocalDate): Schedule {
                     phone = row[5].contents.trim()
                 )
 
-                // ❌ Skip passengers that were removed
                 val isRemoved = removedTrips.any {
                     it.name == passenger.name &&
                             it.pickupAddress == passenger.pickupAddress &&
@@ -172,8 +170,9 @@ fun loadSchedule(forDate: LocalDate): Schedule {
         e.printStackTrace()
     }
 
-    return Schedule(scheduleDate, passengers)
+    return Schedule(scheduleDateStr, passengers)
 }
+
 
 
 
@@ -183,23 +182,25 @@ class RemovedTripStore {
         private val gson = Gson()
         private val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
-        private fun getFile(): File {
-            val dir = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
+        private fun getFile(context: Context, forDate: LocalDate): File {
+            val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+            val dateFolder = forDate.format(formatter)
+            val dir = File(context.filesDir, "removed-trips")
             if (!dir.exists()) dir.mkdirs()
-            return File(dir, "removed_trips.json")
+            return File(dir, "$dateFolder.json")
         }
 
-        fun getRemovedTrips(forDate: LocalDate): List<RemovedTrip> {
-            val file = getFile()
+
+        fun getRemovedTrips(context: Context, forDate: LocalDate): List<RemovedTrip> {
+            val file = getFile(context, forDate)
             if (!file.exists()) return emptyList()
 
-            val type = object : TypeToken<Map<String, List<RemovedTrip>>>() {}.type
-            val map: Map<String, List<RemovedTrip>> = gson.fromJson(file.readText(), type)
-            return map[forDate.format(formatter)] ?: emptyList()
+            val type = object : TypeToken<List<RemovedTrip>>() {}.type
+            return gson.fromJson(file.readText(), type)
         }
 
-        fun isTripRemoved(forDate: LocalDate, passenger: Passenger): Boolean {
-            return getRemovedTrips(forDate).any {
+        fun isTripRemoved(context: Context, forDate: LocalDate, passenger: Passenger): Boolean {
+            return getRemovedTrips(context, forDate).any {
                 it.name == passenger.name &&
                         it.pickupAddress == passenger.pickupAddress &&
                         it.dropoffAddress == passenger.dropoffAddress &&
@@ -207,15 +208,13 @@ class RemovedTripStore {
             }
         }
 
-        fun addRemovedTrip(forDate: LocalDate, passenger: Passenger, reason: TripRemovalReason) {
-            val file = getFile()
-            val type = object : TypeToken<MutableMap<String, MutableList<RemovedTrip>>>() {}.type
-            val map: MutableMap<String, MutableList<RemovedTrip>> =
-                if (file.exists()) gson.fromJson(file.readText(), type)
-                else mutableMapOf()
 
-            val key = forDate.format(formatter)
-            val list = map.getOrPut(key) { mutableListOf() }
+        fun addRemovedTrip(context: Context, forDate: LocalDate, passenger: Passenger, reason: TripRemovalReason) {
+            val file = getFile(context, forDate)
+            val type = object : TypeToken<MutableList<RemovedTrip>>() {}.type
+            val list: MutableList<RemovedTrip> =
+                if (file.exists()) gson.fromJson(file.readText(), type)
+                else mutableListOf()
 
             list.add(
                 RemovedTrip(
@@ -223,16 +222,17 @@ class RemovedTripStore {
                     pickupAddress = passenger.pickupAddress,
                     dropoffAddress = passenger.dropoffAddress,
                     typeTime = passenger.typeTime,
-                    date = key,
+                    date = forDate.format(formatter),
                     reason = reason
                 )
             )
 
-            file.writeText(gson.toJson(map))
+            file.writeText(gson.toJson(list))
         }
 
     }
 }
+
 
 
 @Composable
@@ -243,7 +243,7 @@ fun PassengerApp() {
     var scheduleDate by rememberSaveable { mutableStateOf(defaultDate) }
 
     var baseSchedule: Schedule by remember(scheduleDate) {
-        mutableStateOf(loadSchedule(scheduleDate))
+        mutableStateOf(loadSchedule(context, scheduleDate))
     }
 
     var insertedPassengers by remember(scheduleDate) {
@@ -351,7 +351,7 @@ fun PassengerApp() {
                         pastDates.forEach { date ->
                             TextButton(onClick = {
                                 scheduleDate = date
-                                baseSchedule = loadSchedule(date)
+                                baseSchedule = loadSchedule(context, date)
                                 insertedPassengers = InsertedTripStore.loadInsertedTrips(context, date)
                                 showDateListDialog = false
                             }) {
@@ -403,12 +403,12 @@ fun PassengerApp() {
                         prefs.edit().putBoolean(key, true).apply()
                     }
                     else -> {
-                        RemovedTripStore.addRemovedTrip(scheduleDate, removedPassenger, reason)
+                        RemovedTripStore.addRemovedTrip(context, scheduleDate, removedPassenger, reason)
                         InsertedTripStore.removeInsertedTrip(context, scheduleDate, removedPassenger)
                     }
                 }
 
-                baseSchedule = loadSchedule(scheduleDate)
+                baseSchedule = loadSchedule(context, scheduleDate)
                 insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
             }
         )
@@ -460,7 +460,8 @@ fun PassengerTable(
             }
             .sortedBy { toSortableTime(it.typeTime) }
 
-        TripViewMode.REMOVED -> RemovedTripStore.getRemovedTrips(scheduleDate)
+        TripViewMode.REMOVED -> RemovedTripStore.getRemovedTrips(context, scheduleDate)
+
             .map {
                 Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "")
             }
@@ -614,10 +615,11 @@ fun PassengerTable(
         Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
 
         val removedReasonMap = if (viewMode == TripViewMode.REMOVED) {
-            RemovedTripStore.getRemovedTrips(scheduleDate).associateBy {
+            RemovedTripStore.getRemovedTrips(context, scheduleDate).associateBy {
                 "${it.name}-${it.pickupAddress}-${it.dropoffAddress}-${it.typeTime}"
             }
         } else emptyMap()
+
 
         visiblePassengers.forEachIndexed { index, passenger ->
             val labelColor = Color(0xFF1A73E8)
