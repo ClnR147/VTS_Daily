@@ -646,8 +646,17 @@ fun PassengerTable(
                             .fillMaxWidth()
                             .combinedClickable(
                                 onClick = {
-                                    if (passenger in insertedPassengers && viewMode == TripViewMode.ACTIVE) {
-                                        tripBeingEdited = passenger
+                                    if (viewMode == TripViewMode.ACTIVE) {
+                                        if (passenger in insertedPassengers) {
+                                            tripBeingEdited = passenger
+                                        } else {
+                                            if (passenger.phone.isNotBlank()) {
+                                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${passenger.phone}"))
+                                                context.startActivity(intent)
+                                            } else {
+                                                Toast.makeText(context, "No phone number available", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
                                     }
                                 },
                                 onLongClick = {
@@ -655,7 +664,8 @@ fun PassengerTable(
                                         selectedPassenger = passenger
                                     }
                                 }
-                            ),
+                            )
+                        ,
                         verticalAlignment = Alignment.Top // Align at top to support baseline alignment
                     ) {
                         Text(
