@@ -47,6 +47,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.alpha
 
 
 // Data classes
@@ -275,9 +276,13 @@ fun PassengerApp() {
 
             // Right: Red + Add Trip control (only when active)
             if (viewMode == TripViewMode.ACTIVE) {
+                val canAddTrip = !scheduleDate.isBefore(LocalDate.now())
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { showInsertDialog = true }
+                    modifier = Modifier
+                        .clickable(enabled = canAddTrip) { showInsertDialog = true }
+                        .alpha(if (canAddTrip) 1f else 0.3f) // dim when disabled
                 ) {
                     Box(
                         modifier = Modifier
@@ -295,6 +300,7 @@ fun PassengerApp() {
                     )
                 }
             }
+
         }
 
 
