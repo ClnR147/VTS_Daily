@@ -45,6 +45,8 @@ import androidx.compose.material3.CardDefaults
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.unit.sp
 
 
 // Data classes
@@ -201,7 +203,6 @@ fun PassengerApp() {
         mutableStateOf(InsertedTripStore.loadInsertedTrips(context, scheduleDate))
     }
 
-
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
@@ -209,7 +210,7 @@ fun PassengerApp() {
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
 
-        // Top Banner
+        // ✅ Reinserted Date Header at the top
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -228,74 +229,81 @@ fun PassengerApp() {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Bottom Banner
+        // 🔄 Trip Status + Add Trip
+        val statusLabel = when (viewMode) {
+            TripViewMode.ACTIVE -> "Active"
+            TripViewMode.COMPLETED -> "Completed"
+            TripViewMode.REMOVED -> "No Show / Cancel"
+        }
+        val statusColor = when (viewMode) {
+            TripViewMode.ACTIVE -> Color(0xFF33691E)
+            TripViewMode.COMPLETED -> Color(0xFF01579B)
+            TripViewMode.REMOVED -> Color(0xFFEF6C00)
+        }
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .background(Color(0xFFE0E0E0))
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            TextButton(
-                onClick = { if (viewMode == TripViewMode.ACTIVE) showInsertDialog = true },
-                enabled = viewMode == TripViewMode.ACTIVE,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            // Left: Trip Status label & current status on same line
+            Row(
+                modifier = Modifier
+                    .clickable {
+                        viewMode = when (viewMode) {
+                            TripViewMode.ACTIVE -> TripViewMode.COMPLETED
+                            TripViewMode.COMPLETED -> TripViewMode.REMOVED
+                            TripViewMode.REMOVED -> TripViewMode.ACTIVE
+                        }
+                    },
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "AddTrip",
-                    color = if (viewMode == TripViewMode.ACTIVE) Color(0xFF4A148C) else Color.Gray,
-                    style = MaterialTheme.typography.titleMedium
-                        .copy(fontWeight = FontWeight.Medium)
+                    text = "Trip Status:",
+                    color = Color(0xFF4A148C),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = statusLabel,
+                    color = statusColor,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                 )
             }
 
-            Spacer(modifier = Modifier.width(24.dp))
-
-            val statusLabel = when (viewMode) {
-                TripViewMode.ACTIVE -> "Active"
-                TripViewMode.COMPLETED -> "Completed"
-                TripViewMode.REMOVED -> "NoShow/Cancel"
-            }
-
-            val statusColor = when (viewMode) {
-                TripViewMode.ACTIVE -> Color(0xFF33691E)
-                TripViewMode.COMPLETED -> Color(0xFF01579B)
-                TripViewMode.REMOVED -> Color(0xFFEF6C00)
-            }
-
-            Text(
-                text = "Trip Status:",
-                color = Color(0xFF4A148C),
-                style = MaterialTheme.typography.titleMedium
-                    .copy(fontWeight = FontWeight.Medium),
-                modifier = Modifier.clickable {
-                    viewMode = when (viewMode) {
-                        TripViewMode.ACTIVE -> TripViewMode.COMPLETED
-                        TripViewMode.COMPLETED -> TripViewMode.REMOVED
-                        TripViewMode.REMOVED -> TripViewMode.ACTIVE
+            // Right: Red + Add Trip control (only when active)
+            if (viewMode == TripViewMode.ACTIVE) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { showInsertDialog = true }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(Color.Red, shape = CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("+", color = Color.White, fontWeight = FontWeight.Bold)
                     }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Add Trip",
+                        fontSize = 14.sp,
+                        color = Color.Red
+                    )
                 }
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = statusLabel,
-                color = statusColor,
-                style = MaterialTheme.typography.titleMedium
-                    .copy(fontWeight = FontWeight.Bold)
-            )
+            }
         }
+
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Date picker dialog
         if (showDateListDialog) {
             AlertDialog(
                 onDismissRequest = { showDateListDialog = false },
-                title = { Text("Choose Date", style = MaterialTheme.typography.titleLarge
-                ) },
+                title = { Text("Choose Date", style = MaterialTheme.typography.titleLarge) },
                 text = {
                     val pastDates = getAvailableScheduleDates()
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -323,7 +331,6 @@ fun PassengerApp() {
             )
         }
 
-        // Insert trip dialog
         if (showInsertDialog) {
             InsertTripDialog(
                 onDismiss = { showInsertDialog = false },
@@ -336,11 +343,10 @@ fun PassengerApp() {
             )
         }
 
-        // Unified passenger table
         PassengerTable(
             passengers = baseSchedule.passengers,
             insertedPassengers = insertedPassengers,
-            setInsertedPassengers = { insertedPassengers = it }, // ✅ Add this line
+            setInsertedPassengers = { insertedPassengers = it },
             scheduleDate = scheduleDate,
             viewMode = viewMode,
             context = context,
@@ -348,11 +354,9 @@ fun PassengerApp() {
                 val formatter = DateTimeFormatter.ofPattern("M-d-yy")
                 val key = "${removedPassenger.name}-${removedPassenger.pickupAddress}-${removedPassenger.dropoffAddress}-${removedPassenger.typeTime}-${scheduleDate.format(formatter)}"
 
-
                 when (reason) {
                     TripRemovalReason.COMPLETED -> {
                         CompletedTripStore.addCompletedTrip(context, scheduleDate, removedPassenger)
-
                     }
                     else -> {
                         RemovedTripStore.addRemovedTrip(context, scheduleDate, removedPassenger, reason)
@@ -364,7 +368,6 @@ fun PassengerApp() {
                 insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
             }
         )
-
 
         if (scrollToBottom) {
             LaunchedEffect(Unit) {
