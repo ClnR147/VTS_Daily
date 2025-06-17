@@ -30,14 +30,12 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.delay
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Card
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -185,14 +183,6 @@ fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
 
     return Schedule(scheduleDateStr, passengers)
 }
-
-
-
-
-
-
-
-
 
 
 @Composable
@@ -558,7 +548,8 @@ fun PassengerTable(
             .padding(8.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
+        HorizontalDivider(color = Color(0xFF4285F4), thickness = 1.5.dp)
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -570,7 +561,8 @@ fun PassengerTable(
             Text("Name", modifier = Modifier.weight(2f), style = MaterialTheme.typography.titleSmall
                 , color = Color(0xFF1A237E))
         }
-        Divider(color = Color(0xFF4285F4), thickness = 1.5.dp)
+        HorizontalDivider(color = Color(0xFF4285F4), thickness = 1.5.dp)
+
 
         val removedReasonMap = if (viewMode == TripViewMode.REMOVED) {
             RemovedTripStore.getRemovedTrips(context, scheduleDate).associateBy {
