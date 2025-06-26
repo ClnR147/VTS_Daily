@@ -234,7 +234,7 @@ fun PassengerApp() {
         val statusLabel = when (viewMode) {
             TripViewMode.ACTIVE -> "Active"
             TripViewMode.COMPLETED -> "Completed"
-            TripViewMode.REMOVED -> "No Show / Cancel"
+            TripViewMode.REMOVED -> "No Show / Cancel / Removed"
         }
         val statusColor = when (viewMode) {
             TripViewMode.ACTIVE -> Color(0xFF33691E)
