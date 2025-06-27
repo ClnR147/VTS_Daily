@@ -349,7 +349,7 @@ fun PassengerApp() {
             )
         }
 
-        PassengerTable(
+        PassengerTableWithStaticHeader(
             passengers = baseSchedule.passengers,
             insertedPassengers = insertedPassengers,
             setInsertedPassengers = { insertedPassengers = it },
@@ -375,6 +375,7 @@ fun PassengerApp() {
             }
         )
 
+
         if (scrollToBottom) {
             LaunchedEffect(Unit) {
                 delay(100)
@@ -384,6 +385,52 @@ fun PassengerApp() {
     }
 }
 
+@Composable
+fun PassengerTableWithStaticHeader(
+    passengers: List<Passenger>,
+    insertedPassengers: List<Passenger>,
+    setInsertedPassengers: (List<Passenger>) -> Unit,
+    scheduleDate: LocalDate,
+    viewMode: TripViewMode,
+    context: Context,
+    onTripRemoved: (Passenger, TripRemovalReason) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+
+        // 🔒 Static Header Row
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .background(Color(0xFF9A7DAB)),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Time",
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFFFF5E1),
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Name",
+                modifier = Modifier.weight(2f),
+                color = Color(0xFFFFF5E1),
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // 🧾 Scrollable Passenger Rows (no header inside)
+        PassengerTable(
+            passengers = passengers,
+            insertedPassengers = insertedPassengers,
+            setInsertedPassengers = setInsertedPassengers,
+            scheduleDate = scheduleDate,
+            viewMode = viewMode,
+            context = context,
+            onTripRemoved = onTripRemoved
+        )
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -557,21 +604,6 @@ fun PassengerTable(
             .padding(8.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        HorizontalDivider(color = Color(0xFF4285F4), thickness = 1.5.dp)
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(vertical = 8.dp, horizontal = 12.dp)
-        ) {
-            Text("Time", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall
-                , color = Color(0xFF1A237E))
-            Text("Name", modifier = Modifier.weight(2f), style = MaterialTheme.typography.titleSmall
-                , color = Color(0xFF1A237E))
-        }
-        HorizontalDivider(color = Color(0xFF4285F4), thickness = 1.5.dp)
-
 
         val removedReasonMap = if (viewMode == TripViewMode.REMOVED) {
             RemovedTripStore.getRemovedTrips(context, scheduleDate).associateBy {
