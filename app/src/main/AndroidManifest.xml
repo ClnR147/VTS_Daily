@@ -31,6 +31,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ImportantContactsActivity"
+            android:exported="false"
+            android:label="Important Contacts"
+            android:theme="@style/Theme.VTSDaily" />
     </application>
+
 
 </manifest>

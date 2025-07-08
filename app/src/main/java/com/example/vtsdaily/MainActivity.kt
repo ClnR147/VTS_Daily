@@ -35,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Card
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -48,6 +47,10 @@ import java.util.Locale
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.alpha
+import com.example.vtsdaily.ImportantContactsActivity
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Contacts
+
 
 
 // Data classes
@@ -211,6 +214,7 @@ fun PassengerApp() {
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
 
+
         // ✅ Reinserted Date Header at the top
         Box(
             modifier = Modifier
@@ -280,26 +284,61 @@ fun PassengerApp() {
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clickable(enabled = canAddTrip) { showInsertDialog = true }
-                        .alpha(if (canAddTrip) 1f else 0.3f) // dim when disabled
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Box(
+                    // Add Trip button
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .size(24.dp)
-                            .background(Color.Red, shape = CircleShape),
-                        contentAlignment = Alignment.Center
+                            .clickable(enabled = canAddTrip) { showInsertDialog = true }
+                            .alpha(if (canAddTrip) 1f else 0.3f)
                     ) {
-                        Text("+", color = Color.White, fontWeight = FontWeight.Bold)
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .background(Color.Red, shape = CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("+", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Add Trip",
+                            fontSize = 14.sp,
+                            color = Color.Red
+                        )
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Add Trip",
-                        fontSize = 14.sp,
-                        color = Color.Red
-                    )
+
+                    // Contacts button (always enabled)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable {
+                            context.startActivity(Intent(context, ImportantContactsActivity::class.java))
+                        }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .background(Color.Blue, shape = CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Contacts,
+                                contentDescription = "Contacts",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Contacts",
+                            fontSize = 14.sp,
+                            color = Color.Blue
+                        )
+                    }
                 }
             }
+
 
         }
 

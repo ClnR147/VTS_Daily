@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm") version "1.8.10" apply false
     id("com.android.application") version "8.1.2"
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.8.10"  // ✅ Add this line
 }
 
 android {
@@ -72,6 +73,8 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material:material:1.5.0")
     implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
 
 
 
