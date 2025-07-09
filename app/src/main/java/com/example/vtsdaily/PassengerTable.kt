@@ -190,6 +190,31 @@ fun PassengerTable(
             dismissButton = {}
         )
     }
+    @Composable
+    fun PassengerTableWithStaticHeader(
+        passengers: List<Passenger>,
+        insertedPassengers: List<Passenger>,
+        setInsertedPassengers: (List<Passenger>) -> Unit,
+        scheduleDate: LocalDate,
+        viewMode: TripViewMode,
+        context: Context,
+        onTripRemoved: (Passenger, TripRemovalReason) -> Unit
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // header row here...
+
+            PassengerTable(
+                passengers = passengers,
+                insertedPassengers = insertedPassengers,
+                setInsertedPassengers = setInsertedPassengers,
+                scheduleDate = scheduleDate,
+                viewMode = viewMode,
+                context = context,
+                onTripRemoved = onTripRemoved
+            )
+        }
+    }
+
     if (tripBeingEdited != null) {
         val passenger = tripBeingEdited!!
 
