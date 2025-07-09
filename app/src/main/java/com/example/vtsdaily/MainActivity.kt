@@ -50,8 +50,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.material.icons.filled.Contacts
 import com.example.vtsdaily.ui.TripReinstateHelper
 
-val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
-
 // MainActivity
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,18 +73,7 @@ class MainActivity : ComponentActivity() {
 
 
 
-fun toSortableTime(typeTime: String): LocalTime {
-    return try {
-        // Examples: "PA 09:00 - 10:00" → "09:00"
-        val firstTime = typeTime.substringAfter(" ")
-            .substringBefore("-")
-            .trim()
-        LocalTime.parse(firstTime, DateTimeFormatter.ofPattern("HH:mm"))
-    } catch (e: Exception) {
-        Log.e("SortError", "Failed to parse time from: $typeTime")
-        LocalTime.MIDNIGHT
-    }
-}
+
 
 fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
     val passengers = mutableListOf<Passenger>()
@@ -757,42 +744,6 @@ fun PassengerTable(
         }
     }
 }
-
-
-
-
-fun launchWaze(context: Context, address: String) {
-    val encoded = Uri.encode(address)
-    val uri = Uri.parse("https://waze.com/ul?q=$encoded&navigate=yes")
-    val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-        setPackage("com.waze")
-    }
-    try {
-        context.startActivity(intent)
-
-    } catch (e: Exception) {
-        Toast.makeText(context, "Waze not installed", Toast.LENGTH_SHORT).show()
-    }
-}
-
-fun getAvailableScheduleDates(): List<LocalDate> {
-    val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
-    if (!folder.exists()) return emptyList()
-
-    val pattern = Regex("""VTS (\d{1,2}-\d{1,2}-\d{2})\.xls""")
-    return folder.listFiles()
-        ?.mapNotNull { file ->
-            pattern.find(file.name)?.groupValues?.get(1)?.let {
-                runCatching {
-                    LocalDate.parse(it, DateTimeFormatter.ofPattern("M-d-yy"))
-                }.getOrNull()
-            }
-        }
-        ?.sortedDescending()
-        ?: emptyList()
-}
-
-
 
 @Composable
 fun InsertTripDialog(onDismiss: () -> Unit, onInsert: (Passenger) -> Unit) {
