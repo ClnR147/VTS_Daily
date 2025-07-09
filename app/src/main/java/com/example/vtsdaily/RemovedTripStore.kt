@@ -55,4 +55,21 @@ object RemovedTripStore {
 
         file.writeText(gson.toJson(list))
     }
+    fun removeRemovedTrip(context: Context, forDate: LocalDate, passenger: Passenger) {
+        val file = getFile(context, forDate)
+        if (!file.exists()) return
+
+        val type = object : TypeToken<MutableList<RemovedTrip>>() {}.type
+        val list: MutableList<RemovedTrip> = gson.fromJson(file.readText(), type)
+
+        val updatedList = list.filterNot {
+            it.name == passenger.name &&
+                    it.pickupAddress == passenger.pickupAddress &&
+                    it.dropoffAddress == passenger.dropoffAddress &&
+                    it.typeTime == passenger.typeTime
+        }
+
+        file.writeText(gson.toJson(updatedList))
+    }
+
 }

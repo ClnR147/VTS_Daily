@@ -47,10 +47,8 @@ import java.util.Locale
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.alpha
-import com.example.vtsdaily.ImportantContactsActivity
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Contacts
-
+import com.example.vtsdaily.ui.TripReinstateHelper
 
 
 // Data classes
@@ -199,7 +197,8 @@ fun PassengerApp() {
     val defaultDate = getAvailableScheduleDates().firstOrNull() ?: LocalDate.now()
     var scheduleDate by rememberSaveable { mutableStateOf(defaultDate) }
 
-    var baseSchedule: Schedule by remember(scheduleDate) {
+    // ✅ must be var to support reassignment
+    var baseSchedule by remember(scheduleDate) {
         mutableStateOf(loadSchedule(context, scheduleDate))
     }
 
@@ -211,6 +210,12 @@ fun PassengerApp() {
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
     var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
+
+    // ✅ This gets called when a trip is reinstated
+    val handleTripReinstated = {
+        baseSchedule = loadSchedule(context, scheduleDate)
+    }
+
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
 
@@ -471,12 +476,13 @@ fun PassengerTableWithStaticHeader(
     }
 }
 
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PassengerTable(
     passengers: List<Passenger>,
     insertedPassengers: List<Passenger>,
-    setInsertedPassengers: (List<Passenger>) -> Unit, // ✅ Add this
+    setInsertedPassengers: (List<Passenger>) -> Unit,
     scheduleDate: LocalDate,
     viewMode: TripViewMode,
     context: Context,
@@ -539,7 +545,33 @@ fun PassengerTable(
         )
     }
 
-    if (passengerToActOn != null && viewMode == TripViewMode.ACTIVE) {
+     if (selectedPassenger != null && viewMode == TripViewMode.REMOVED) {
+         AlertDialog(
+             onDismissRequest = { selectedPassenger = null },
+             title = { Text("Reinstate Trip?") },
+             text = {
+                 Text("This will restore the trip to the active schedule.")
+             },
+             confirmButton = {
+                 TextButton(onClick = {
+                     TripReinstateHelper.reinstateTrip(context, scheduleDate, selectedPassenger!!)
+                     Toast.makeText(context, "Trip reinstated. Swipe down to refresh.", Toast.LENGTH_SHORT).show()
+                     selectedPassenger = null
+                 }) {
+                     Text("Reinstate")
+                 }
+             },
+             dismissButton = {
+                 TextButton(onClick = { selectedPassenger = null }) {
+                     Text("Cancel")
+                 }
+             }
+         )
+     }
+
+
+
+     if (passengerToActOn != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
             onDismissRequest = { passengerToActOn = null },
             title = { Text("Trip Action") },
@@ -688,7 +720,7 @@ fun PassengerTable(
                                     }
                                 },
                                 onLongClick = {
-                                    if (viewMode == TripViewMode.ACTIVE) {
+                                    if (viewMode == TripViewMode.ACTIVE || viewMode == TripViewMode.REMOVED) {
                                         selectedPassenger = passenger
                                     }
                                 }
