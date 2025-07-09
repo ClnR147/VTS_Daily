@@ -50,54 +50,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.material.icons.filled.Contacts
 import com.example.vtsdaily.ui.TripReinstateHelper
 
-
-// Data classes
-
-data class Passenger(
-    val name: String,
-    val id: String,
-    val pickupAddress: String,
-    val dropoffAddress: String,
-    val typeTime: String,
-    val phone: String
-)
-
-data class CompletedTrip(
-    val name: String,
-    val pickupAddress: String,
-    val dropoffAddress: String,
-    val typeTime: String,
-    val date: String,
-    val completedAt: String? = null
-)
-
-data class Schedule(
-    val date: String,
-    val passengers: List<Passenger>
-)
-
-enum class TripRemovalReason {
-    CANCELLED,
-    NO_SHOW,
-    REMOVED,
-    COMPLETED
-}
-data class RemovedTrip(
-    val name: String,
-    val pickupAddress: String,
-    val dropoffAddress: String,
-    val typeTime: String,
-    val date: String, // format "M-d-yy"
-    val reason: TripRemovalReason = TripRemovalReason.CANCELLED // default for legacy entries
-)
-
-enum class TripViewMode {
-    ACTIVE, COMPLETED, REMOVED
-}
-
 val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
-
-
 
 // MainActivity
 class MainActivity : ComponentActivity() {
