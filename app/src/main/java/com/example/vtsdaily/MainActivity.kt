@@ -546,19 +546,28 @@ fun PassengerTable(
     }
 
      if (selectedPassenger != null && viewMode == TripViewMode.REMOVED) {
+         val isToday = scheduleDate == LocalDate.now()
+
          AlertDialog(
              onDismissRequest = { selectedPassenger = null },
              title = { Text("Reinstate Trip?") },
              text = {
-                 Text("This will restore the trip to the active schedule.")
+                 Text(
+                     if (isToday)
+                         "This will restore the trip to the active schedule."
+                     else
+                         "You can only reinstate trips for today's schedule."
+                 )
              },
              confirmButton = {
-                 TextButton(onClick = {
-                     TripReinstateHelper.reinstateTrip(context, scheduleDate, selectedPassenger!!)
-                     Toast.makeText(context, "Trip reinstated. Swipe down to refresh.", Toast.LENGTH_SHORT).show()
-                     selectedPassenger = null
-                 }) {
-                     Text("Reinstate")
+                 if (isToday) {
+                     TextButton(onClick = {
+                         TripReinstateHelper.reinstateTrip(context, scheduleDate, selectedPassenger!!)
+                         Toast.makeText(context, "Trip reinstated. Swipe down to refresh.", Toast.LENGTH_SHORT).show()
+                         selectedPassenger = null
+                     }) {
+                         Text("Reinstate")
+                     }
                  }
              },
              dismissButton = {
