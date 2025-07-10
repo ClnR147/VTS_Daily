@@ -40,6 +40,19 @@ fun PassengerTable(
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
     var tripBeingEdited by remember { mutableStateOf<Passenger?>(null) }
 
+    fun launchWazeNavigation(context: Context, address: String) {
+        val encoded = Uri.encode(address)
+        val uri = Uri.parse("https://waze.com/ul?q=$encoded")
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to open Waze.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
     val visiblePassengers = when (viewMode) {
         TripViewMode.ACTIVE -> (passengers + insertedPassengers)
             .filterNot { CompletedTripStore.isTripCompleted(context, scheduleDate, it) }
@@ -63,6 +76,7 @@ fun PassengerTable(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFFF5F5F5)) // subtle gray to show card edges
             .padding(top = if (viewMode == TripViewMode.REMOVED) 0.dp else 4.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -79,14 +93,15 @@ fun PassengerTable(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(12.dp),
+                    .padding(horizontal = 6.dp, vertical = 4.dp), // 👈 vertical = 4.dp adds visible space
+                shape = RoundedCornerShape(8.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
+                Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+                Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                             .combinedClickable(
                                 onClick = {
                                     if (viewMode == TripViewMode.ACTIVE) {
@@ -108,25 +123,36 @@ fun PassengerTable(
                                     }
                                 }
                             ),
-                        verticalAlignment = Alignment.Top
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = passenger.typeTime,
-                            modifier = Modifier.weight(1f),
                             color = labelColor,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip,
+                            modifier = Modifier
+                                .width(120.dp)
+                                .alignByBaseline()
                         )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
                         Text(
                             text = passenger.name + reasonText,
-                            modifier = Modifier.weight(2f),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier
+                                .weight(1f)
+                                .alignByBaseline()
                         )
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.padding(start = 6.dp, top = 2.dp, bottom = 2.dp)) {
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 "From:",
                                 modifier = Modifier.width(52.dp),
@@ -161,7 +187,6 @@ fun PassengerTable(
                         }
                     }
 
-
                     if (viewMode == TripViewMode.ACTIVE) {
                         Row(
                             modifier = Modifier
@@ -186,7 +211,6 @@ fun PassengerTable(
         }
     }
 
-    // Trip Action Dialog
     if (passengerToActOn != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
             onDismissRequest = { passengerToActOn = null },
@@ -216,6 +240,44 @@ fun PassengerTable(
             dismissButton = {
                 TextButton(onClick = { passengerToActOn = null }) {
                     Text("Dismiss")
+                }
+            }
+        )
+    }
+
+    if (selectedPassenger != null) {
+        AlertDialog(
+            onDismissRequest = { selectedPassenger = null },
+            title = { Text("Navigate with Waze") },
+            text = { Text("Where do you want to go?") },
+            confirmButton = {
+                Column {
+                    Button(
+                        onClick = {
+                            launchWazeNavigation(context, selectedPassenger!!.pickupAddress)
+                            selectedPassenger = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Pickup Location")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            launchWazeNavigation(context, selectedPassenger!!.dropoffAddress)
+                            selectedPassenger = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Dropoff Location")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedPassenger = null }) {
+                    Text("Cancel")
                 }
             }
         )
