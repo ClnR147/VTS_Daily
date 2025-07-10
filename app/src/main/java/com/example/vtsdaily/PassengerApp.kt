@@ -1,35 +1,15 @@
 package com.example.vtsdaily
 
-
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Contacts
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -41,8 +21,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-
-
+import com.example.vtsdaily.TripViewMode
 
 @Composable
 fun PassengerApp() {
@@ -52,7 +31,6 @@ fun PassengerApp() {
     val defaultDate = getAvailableScheduleDates().firstOrNull() ?: LocalDate.now()
     var scheduleDate by rememberSaveable { mutableStateOf(defaultDate) }
 
-    // ✅ must be var to support reassignment
     var baseSchedule by remember(scheduleDate) {
         mutableStateOf(loadSchedule(context, scheduleDate))
     }
@@ -66,33 +44,31 @@ fun PassengerApp() {
     var showDateListDialog by remember { mutableStateOf(false) }
     var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
 
-    // ✅ This gets called when a trip is reinstated
-
-
+    val handleTripReinstated = {
+        baseSchedule = loadSchedule(context, scheduleDate)
+        insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
 
-
-        // ✅ Reinserted Date Header at the top
+        // Date Header – centered text with consistent layout
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp)
-                .background(Color(0xFFE0E0E0))
-                .padding(horizontal = 12.dp),
-            contentAlignment = Alignment.BottomCenter
+                .padding(vertical = 12.dp),
+            contentAlignment = Alignment.Center
         ) {
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 color = Color(0xFF4A148C),
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.clickable { showDateListDialog = true }
+                .padding(bottom = 4.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // 🔄 Trip Status + Add Trip
         val statusLabel = when (viewMode) {
             TripViewMode.ACTIVE -> "Active"
             TripViewMode.COMPLETED -> "Completed"
@@ -111,16 +87,15 @@ fun PassengerApp() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Left: Trip Status label & current status on same line
+            // Trip Status toggle (always clickable)
             Row(
-                modifier = Modifier
-                    .clickable {
-                        viewMode = when (viewMode) {
-                            TripViewMode.ACTIVE -> TripViewMode.COMPLETED
-                            TripViewMode.COMPLETED -> TripViewMode.REMOVED
-                            TripViewMode.REMOVED -> TripViewMode.ACTIVE
-                        }
-                    },
+                modifier = Modifier.clickable {
+                    viewMode = when (viewMode) {
+                        TripViewMode.ACTIVE -> TripViewMode.COMPLETED
+                        TripViewMode.COMPLETED -> TripViewMode.REMOVED
+                        TripViewMode.REMOVED -> TripViewMode.ACTIVE
+                    }
+                },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -136,15 +111,13 @@ fun PassengerApp() {
                 )
             }
 
-            // Right: Red + Add Trip control (only when active)
-            if (viewMode == TripViewMode.ACTIVE) {
-                val canAddTrip = !scheduleDate.isBefore(LocalDate.now())
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Add Trip button
+            // Right-side buttons
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (viewMode == TripViewMode.ACTIVE) {
+                    val canAddTrip = !scheduleDate.isBefore(LocalDate.now())
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -160,18 +133,20 @@ fun PassengerApp() {
                             Text("+", color = Color.White, fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Add Trip",
-                            fontSize = 14.sp,
-                            color = Color.Red
-                        )
+                        Text("Add Trip", fontSize = 14.sp, color = Color.Red)
                     }
+                }
 
-                    // Contacts button (always enabled)
+                if (viewMode == TripViewMode.ACTIVE) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable {
-                            context.startActivity(Intent(context, ImportantContactsActivity::class.java))
+                            context.startActivity(
+                                Intent(
+                                    context,
+                                    ImportantContactsActivity::class.java
+                                )
+                            )
                         }
                     ) {
                         Box(
@@ -188,20 +163,37 @@ fun PassengerApp() {
                             )
                         }
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Contacts",
-                            fontSize = 14.sp,
-                            color = Color.Blue
-                        )
+                        Text("Contacts", fontSize = 14.sp, color = Color.Blue)
                     }
                 }
             }
-
-
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
 
-        Spacer(modifier = Modifier.height(12.dp))
+        PassengerTableWithStaticHeader(
+            passengers = baseSchedule.passengers,
+            insertedPassengers = insertedPassengers,
+            setInsertedPassengers = { insertedPassengers = it },
+            scheduleDate = scheduleDate,
+            viewMode = viewMode,
+            context = context,
+            onTripRemoved = { removedPassenger, reason ->
+                val key = "${removedPassenger.name}-${removedPassenger.pickupAddress}-${removedPassenger.dropoffAddress}-${removedPassenger.typeTime}-${scheduleDate.format(formatter)}"
+
+                when (reason) {
+                    TripRemovalReason.COMPLETED -> CompletedTripStore.addCompletedTrip(context, scheduleDate, removedPassenger)
+                    else -> {
+                        RemovedTripStore.addRemovedTrip(context, scheduleDate, removedPassenger, reason)
+                        InsertedTripStore.removeInsertedTrip(context, scheduleDate, removedPassenger)
+                    }
+                }
+
+                baseSchedule = loadSchedule(context, scheduleDate)
+                insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
+            },
+            onTripReinstated = handleTripReinstated
+        )
 
         if (showDateListDialog) {
             AlertDialog(
@@ -213,7 +205,7 @@ fun PassengerApp() {
                         pastDates.forEach { date ->
                             TextButton(onClick = {
                                 scheduleDate = date
-                                baseSchedule = loadSchedule(context, date)
+                                baseSchedule = loadSchedule(context, scheduleDate)
                                 insertedPassengers = InsertedTripStore.loadInsertedTrips(context, date)
                                 showDateListDialog = false
                             }) {
@@ -246,7 +238,6 @@ fun PassengerApp() {
             )
         }
 
-
         if (scrollToBottom) {
             LaunchedEffect(Unit) {
                 delay(100)
@@ -255,4 +246,3 @@ fun PassengerApp() {
         }
     }
 }
-

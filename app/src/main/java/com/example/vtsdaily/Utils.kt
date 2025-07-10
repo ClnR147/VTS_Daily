@@ -13,6 +13,9 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import android.util.Log
+
+
 
 val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
 
@@ -41,20 +44,25 @@ fun launchWaze(context: Context, address: String) {
 fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
     val passengers = mutableListOf<Passenger>()
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
-    val scheduleDateStr = scheduleDate.format(formatter)  // ← move this up
+    val scheduleDateStr = scheduleDate.format(formatter)
+
     try {
         val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
-        val formatter = DateTimeFormatter.ofPattern("M-d-yy")
-        val scheduleDateStr = scheduleDate.format(formatter)
-
         val fileName = "VTS $scheduleDateStr.xls"
         val file = File(folder, fileName)
-        if (!file.exists()) return Schedule(scheduleDateStr, emptyList())
+
+        if (!file.exists()) {
+            Log.d("DEBUG", "Schedule file not found: ${file.absolutePath}")
+            return Schedule(scheduleDateStr, emptyList())
+        }
 
         val workbook = Workbook.getWorkbook(file)
         val sheet = workbook.getSheet(0)
 
         val removedTrips = RemovedTripStore.getRemovedTrips(context, scheduleDate)
+        Log.d("DEBUG", "Removed trips for $scheduleDateStr: ${removedTrips.size}")
+
+
 
         for (i in 0 until sheet.rows) {
             val row = sheet.getRow(i)
@@ -77,6 +85,8 @@ fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
 
                 if (!isRemoved) {
                     passengers.add(passenger)
+                } else {
+                    Log.d("DEBUG", "Skipping removed passenger: ${passenger.name} ${passenger.typeTime}")
                 }
             }
         }
@@ -87,9 +97,10 @@ fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
     } catch (e: BiffException) {
         e.printStackTrace()
     }
-
+    Log.d("DEBUG", "Loaded ${passengers.size} passengers from $scheduleDateStr")
     return Schedule(scheduleDateStr, passengers)
 }
+
 
 fun getAvailableScheduleDates(): List<LocalDate> {
     val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")

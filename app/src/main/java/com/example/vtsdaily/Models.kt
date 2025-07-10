@@ -37,7 +37,9 @@ data class RemovedTrip(
 )
 
 enum class TripViewMode {
-    ACTIVE, COMPLETED, REMOVED
+    ACTIVE,
+    COMPLETED,
+    REMOVED
 }
 
 
