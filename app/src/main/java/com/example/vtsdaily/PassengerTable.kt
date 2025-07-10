@@ -19,7 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -124,20 +126,41 @@ fun PassengerTable(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("From:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold)
-                            Text(passenger.pickupAddress, color = Color.DarkGray)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "From:",
+                                modifier = Modifier.width(52.dp),
+                                color = Color(0xFF5F6368),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                passenger.pickupAddress,
+                                fontSize = 13.sp,
+                                color = Color.DarkGray,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
+
                         Spacer(modifier = Modifier.height(2.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("To:", modifier = Modifier.width(52.dp), color = Color(0xFF5F6368), fontWeight = FontWeight.Bold)
-                            Text(passenger.dropoffAddress, color = Color.DarkGray)
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "To:",
+                                modifier = Modifier.width(52.dp),
+                                color = Color(0xFF5F6368),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                passenger.dropoffAddress,
+                                fontSize = 13.sp,
+                                color = Color.DarkGray,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
+
 
                     if (viewMode == TripViewMode.ACTIVE) {
                         Row(

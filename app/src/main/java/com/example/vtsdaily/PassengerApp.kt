@@ -169,7 +169,7 @@ fun PassengerApp() {
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         PassengerTableWithStaticHeader(
             passengers = baseSchedule.passengers,
