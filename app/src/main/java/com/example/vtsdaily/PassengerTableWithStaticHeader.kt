@@ -51,9 +51,9 @@ fun PassengerTableWithStaticHeader(
             )
         }
 
-        if (viewMode != TripViewMode.REMOVED) {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+        Spacer(modifier = Modifier.height(if (viewMode == TripViewMode.REMOVED) 12.dp else 8.dp))
+
+
 
         PassengerTable(
             passengers = passengers,

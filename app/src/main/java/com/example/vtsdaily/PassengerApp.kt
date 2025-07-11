@@ -71,16 +71,6 @@ fun PassengerApp() {
                 .padding(bottom = 2.dp)
             )
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .background(Color(0xFF9A7DAB)), // Same purple background
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Spacer(modifier = Modifier.height(16.dp)) // Matches typical row height without text
-        }
-
 
         val statusLabel = when (viewMode) {
             TripViewMode.ACTIVE -> "Active"
@@ -123,7 +113,7 @@ fun PassengerApp() {
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                 )
             }
-
+            Spacer(modifier = Modifier.height(8.dp))
             // Right-side buttons
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -182,8 +172,9 @@ fun PassengerApp() {
             }
         }
 
-        Spacer(modifier = Modifier.height(2.dp))
-
+        if (viewMode == TripViewMode.REMOVED) {
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         PassengerTableWithStaticHeader(
             passengers = baseSchedule.passengers,
             insertedPassengers = insertedPassengers,
