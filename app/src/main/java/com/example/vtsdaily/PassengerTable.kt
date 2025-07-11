@@ -126,7 +126,11 @@ fun PassengerTable(
                                             selectedPassenger = passenger // triggers Waze dialog
                                         }
                                         TripViewMode.REMOVED -> {
-                                            selectedPassenger = passenger // triggers reinstate confirmation dialog
+                                            if (scheduleDate == LocalDate.now()) {
+                                                selectedPassenger = passenger // triggers reinstate confirmation dialog
+                                            } else {
+                                                Toast.makeText(context, "Reinstatements are only allowed for today's schedule.", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                         else -> {}
                                     }
