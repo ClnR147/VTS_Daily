@@ -68,11 +68,19 @@ fun PassengerApp() {
                 color = Color(0xFF4A148C),
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.clickable { showDateListDialog = true }
-                .padding(bottom = 4.dp)
+                .padding(bottom = 2.dp)
             )
         }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .background(Color(0xFF9A7DAB)), // Same purple background
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Spacer(modifier = Modifier.height(16.dp)) // Matches typical row height without text
+        }
 
-        Spacer(modifier = Modifier.height(8.dp))
 
         val statusLabel = when (viewMode) {
             TripViewMode.ACTIVE -> "Active"
