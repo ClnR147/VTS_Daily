@@ -23,6 +23,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
+import androidx.compose.material3.AlertDialog  // ✅ Material 3 - correct
+
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -34,7 +37,7 @@ fun PassengerTable(
     viewMode: TripViewMode,
     context: Context,
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit,
-    onTripReinstated: () -> Unit
+    onTripReinstated: (Passenger) -> Unit  // ✅ FIXED
 ) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
@@ -118,10 +121,17 @@ fun PassengerTable(
                                     }
                                 },
                                 onLongClick = {
-                                    if (viewMode == TripViewMode.ACTIVE || viewMode == TripViewMode.REMOVED) {
-                                        selectedPassenger = passenger
+                                    when (viewMode) {
+                                        TripViewMode.ACTIVE -> {
+                                            selectedPassenger = passenger // triggers Waze dialog
+                                        }
+                                        TripViewMode.REMOVED -> {
+                                            selectedPassenger = passenger // triggers reinstate confirmation dialog
+                                        }
+                                        else -> {}
                                     }
                                 }
+
                             ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -245,7 +255,7 @@ fun PassengerTable(
         )
     }
 
-    if (selectedPassenger != null) {
+    if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
             onDismissRequest = { selectedPassenger = null },
             title = { Text("Navigate with Waze") },
@@ -282,4 +292,30 @@ fun PassengerTable(
             }
         )
     }
+
+    if (selectedPassenger != null && viewMode == TripViewMode.REMOVED) {
+        AlertDialog(
+            onDismissRequest = { selectedPassenger = null },
+            title = { Text("Reinstate Trip?") },
+            text = { Text("This will move the trip back to the Active list.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onTripReinstated(selectedPassenger!!)
+                    selectedPassenger = null
+                }) {
+                    Text("Reinstate")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedPassenger = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+
+
 }
+
+

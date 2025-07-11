@@ -1,6 +1,8 @@
 package com.example.vtsdaily.ui
 
 import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog  // ✅ Material 3 - correct
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.layout.*

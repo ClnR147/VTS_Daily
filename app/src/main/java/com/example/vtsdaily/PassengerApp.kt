@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import androidx.compose.material3.AlertDialog  // ✅ Material 3 - correct
+
 import com.example.vtsdaily.TripViewMode
 
 @Composable
@@ -44,10 +46,13 @@ fun PassengerApp() {
     var showDateListDialog by remember { mutableStateOf(false) }
     var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
 
-    val handleTripReinstated = {
+    val handleTripReinstated: (Passenger) -> Unit = { passenger ->
+        RemovedTripStore.removeRemovedTrip(context, scheduleDate, passenger)
         baseSchedule = loadSchedule(context, scheduleDate)
         insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
     }
+
+
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
 

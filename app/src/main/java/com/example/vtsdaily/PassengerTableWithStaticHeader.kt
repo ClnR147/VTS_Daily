@@ -21,7 +21,8 @@ fun PassengerTableWithStaticHeader(
     viewMode: TripViewMode,
     context: Context,
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit,
-    onTripReinstated: () -> Unit
+    onTripReinstated: (Passenger) -> Unit
+
 ) {
     Column(
         modifier = Modifier
