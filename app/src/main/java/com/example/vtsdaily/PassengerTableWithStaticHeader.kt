@@ -34,7 +34,7 @@ fun PassengerTableWithStaticHeader(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
-                .background(Color(0xFF9A7DAB)),
+                .background(Color(0xFF4CAF50)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
