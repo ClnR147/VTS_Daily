@@ -8,6 +8,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
+import com.example.vtsdaily.ui.theme.VTSDailyTheme
 
 // MainActivity
 class MainActivity : ComponentActivity() {
@@ -23,8 +24,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme {
-                PassengerApp()
+            VTSDailyTheme {
+                PassengerApp() // your main Composable
             }
         }
     }

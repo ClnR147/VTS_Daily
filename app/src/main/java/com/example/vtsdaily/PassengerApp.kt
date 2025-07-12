@@ -23,7 +23,12 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import androidx.compose.material3.AlertDialog  // ✅ Material 3 - correct
 
-import com.example.vtsdaily.TripViewMode
+import com.example.vtsdaily.ui.theme.ActiveColor
+import com.example.vtsdaily.ui.theme.AppBackground
+import com.example.vtsdaily.ui.theme.CompletedColor
+import com.example.vtsdaily.ui.theme.PrimaryGreen
+import com.example.vtsdaily.ui.theme.PrimaryPurple
+import com.example.vtsdaily.ui.theme.RemovedColor
 
 @Composable
 fun PassengerApp() {
@@ -54,7 +59,12 @@ fun PassengerApp() {
 
 
 
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppBackground) // light greenish background
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
 
         // Date Header – centered text with consistent layout
         Box(
@@ -65,7 +75,7 @@ fun PassengerApp() {
         ) {
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-                color = Color(0xFF4A148C),
+                color = PrimaryPurple,
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.clickable { showDateListDialog = true }
                 .padding(bottom = 2.dp)
@@ -76,7 +86,7 @@ fun PassengerApp() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
-                .background(Color(0xFF4CAF50))
+                .background(PrimaryGreen)
                 .height(8.dp) // optional, to give it visible height
         )
 
@@ -86,9 +96,9 @@ fun PassengerApp() {
             TripViewMode.REMOVED -> "No Show / Cancelled / Removed"
         }
         val statusColor = when (viewMode) {
-            TripViewMode.ACTIVE -> Color(0xFF33691E)
-            TripViewMode.COMPLETED -> Color(0xFF01579B)
-            TripViewMode.REMOVED -> Color(0xFFEF6C00)
+            TripViewMode.ACTIVE -> ActiveColor
+            TripViewMode.COMPLETED -> CompletedColor
+            TripViewMode.REMOVED -> RemovedColor
         }
 
         Row(
@@ -111,7 +121,7 @@ fun PassengerApp() {
             ) {
                 Text(
                     text = "Trip Status:",
-                    color = Color(0xFF4A148C),
+                    color = PrimaryPurple,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
                 )
                 Spacer(modifier = Modifier.width(8.dp))

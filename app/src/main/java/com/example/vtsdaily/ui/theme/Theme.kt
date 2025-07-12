@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -23,15 +24,25 @@ val Shapes = Shapes(
 
 // Material 3 Color Schemes
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = PrimaryPurple,
+    secondary = PrimaryGreen,
+    background = Color(0xFF121212),
+    surface = Color(0xFF1E1E1E),
+    onPrimary = OnPrimaryText,
+    onSecondary = Color.White,
+    onBackground = Color.White,
+    onSurface = Color.White
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = PrimaryPurple,
+    secondary = PrimaryGreen,
+    background = AppBackground,
+    surface = SurfaceWhite,
+    onPrimary = OnPrimaryText,
+    onSecondary = Color.White,
+    onBackground = OnSurfaceText,
+    onSurface = OnSurfaceText
 )
 
 

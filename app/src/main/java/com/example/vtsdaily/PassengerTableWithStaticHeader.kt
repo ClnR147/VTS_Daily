@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.vtsdaily.ui.theme.OnPrimaryText
 
 @Composable
 fun PassengerTableWithStaticHeader(
@@ -34,19 +34,19 @@ fun PassengerTableWithStaticHeader(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
-                .background(Color(0xFF4CAF50)),
+                .background(OnPrimaryText),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "Time",
                 modifier = Modifier.weight(1f),
-                color = Color(0xFFFFF5E1),
+                color = OnPrimaryText,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = "Name",
                 modifier = Modifier.weight(2f),
-                color = Color(0xFFFFF5E1),
+                color = OnPrimaryText,
                 fontWeight = FontWeight.Bold
             )
         }

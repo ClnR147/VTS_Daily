@@ -24,7 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import androidx.compose.material3.AlertDialog  // ✅ Material 3 - correct
-
+import com.example.vtsdaily.ui.theme.ActionGreen
+import com.example.vtsdaily.ui.theme.CardHighlight
+import com.example.vtsdaily.ui.theme.FromGrey
+import com.example.vtsdaily.ui.theme.SubtleGrey
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -79,12 +82,12 @@ fun PassengerTable(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5)) // subtle gray to show card edges
+            .background(SubtleGrey) // subtle gray to show card edges
             .padding(top = if (viewMode == TripViewMode.REMOVED) 0.dp else 4.dp)
             .verticalScroll(rememberScrollState())
     ) {
         visiblePassengers.forEach { passenger ->
-            val labelColor = Color(0xFF1A73E8)
+            val labelColor = CardHighlight
             val passengerKey = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}"
             val reasonText = when (removedReasonMap[passengerKey]?.reason) {
                 TripRemovalReason.CANCELLED -> " (Cancelled)"
@@ -170,7 +173,7 @@ fun PassengerTable(
                             Text(
                                 "From:",
                                 modifier = Modifier.width(52.dp),
-                                color = Color(0xFF5F6368),
+                                color = FromGrey,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
@@ -188,7 +191,7 @@ fun PassengerTable(
                             Text(
                                 "To:",
                                 modifier = Modifier.width(52.dp),
-                                color = Color(0xFF5F6368),
+                                color = FromGrey,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
@@ -215,7 +218,7 @@ fun PassengerTable(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Mark as completed or cancel",
-                                    tint = Color(0xFF2E7D32)
+                                    tint = ActionGreen
                                 )
                             }
                         }
