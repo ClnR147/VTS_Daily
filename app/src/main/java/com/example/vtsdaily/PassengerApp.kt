@@ -128,9 +128,13 @@ fun PassengerApp() {
                 Text(
                     text = statusLabel,
                     color = statusColor,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp // 👈 adjust this to whatever size you want
+                    )
                 )
             }
+
             Spacer(modifier = Modifier.height(8.dp))
             // Right-side buttons
             Row(
