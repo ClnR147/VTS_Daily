@@ -151,7 +151,7 @@ fun PassengerApp() {
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(24.dp)
+                                .size(20.dp)
                                 .background(Color.Red, shape = CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
@@ -176,7 +176,7 @@ fun PassengerApp() {
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(24.dp)
+                                .size(18.dp)
                                 .background(Color.Blue, shape = CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
@@ -184,7 +184,7 @@ fun PassengerApp() {
                                 imageVector = Icons.Default.Contacts,
                                 contentDescription = "Contacts",
                                 tint = Color.White,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(10.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(6.dp))

@@ -44,6 +44,7 @@ fun launchWaze(context: Context, address: String) {
 fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
     val passengers = mutableListOf<Passenger>()
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+    val timeFormatter = DateTimeFormatter.ofPattern("H:mm") // 24-hour format
     val scheduleDateStr = scheduleDate.format(formatter)
 
     try {
@@ -62,8 +63,6 @@ fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
         val removedTrips = RemovedTripStore.getRemovedTrips(context, scheduleDate)
         Log.d("DEBUG", "Removed trips for $scheduleDateStr: ${removedTrips.size}")
 
-
-
         for (i in 0 until sheet.rows) {
             val row = sheet.getRow(i)
             if (row.size >= 6 && row[0].contents.isNotBlank()) {
@@ -72,7 +71,7 @@ fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
                     id = row[1].contents.trim(),
                     pickupAddress = row[2].contents.trim(),
                     dropoffAddress = row[3].contents.trim(),
-                    typeTime = row[4].contents.trim(),
+                    typeTime = row[4].contents.trim(),  // assumed to be a time string like "13:45"
                     phone = row[5].contents.trim()
                 )
 
@@ -97,9 +96,19 @@ fun loadSchedule(context: Context, scheduleDate: LocalDate): Schedule {
     } catch (e: BiffException) {
         e.printStackTrace()
     }
-    Log.d("DEBUG", "Loaded ${passengers.size} passengers from $scheduleDateStr")
-    return Schedule(scheduleDateStr, passengers)
+
+    val sortedPassengers = passengers.sortedBy {
+        try {
+            LocalTime.parse(it.typeTime.trim(), timeFormatter)
+        } catch (e: Exception) {
+            LocalTime.MIDNIGHT // fallback if time format is invalid
+        }
+    }
+
+    Log.d("DEBUG", "Loaded ${sortedPassengers.size} passengers from $scheduleDateStr (sorted)")
+    return Schedule(scheduleDateStr, sortedPassengers)
 }
+
 
 
 fun getAvailableScheduleDates(): List<LocalDate> {

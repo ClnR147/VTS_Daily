@@ -24,8 +24,18 @@ object CompletedTripStore {
         if (!file.exists()) return emptyList()
 
         val type = object : TypeToken<List<CompletedTrip>>() {}.type
-        return gson.fromJson(file.readText(), type)
+        val trips: List<CompletedTrip> = gson.fromJson(file.readText(), type)
+
+        val formatter = DateTimeFormatter.ofPattern("H:mm")
+        return trips.sortedBy {
+            try {
+                LocalTime.parse(it.typeTime.trim(), formatter)
+            } catch (e: Exception) {
+                LocalTime.MIDNIGHT
+            }
+        }
     }
+
 
     fun isTripCompleted(context: Context, forDate: LocalDate, passenger: Passenger): Boolean {
         return getCompletedTrips(context, forDate).any {

@@ -6,6 +6,9 @@ import com.google.gson.reflect.TypeToken
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.LocalTime
+
+
 
 object RemovedTripStore {
     private val gson = Gson()
@@ -23,8 +26,18 @@ object RemovedTripStore {
         if (!file.exists()) return emptyList()
 
         val type = object : TypeToken<List<RemovedTrip>>() {}.type
-        return gson.fromJson(file.readText(), type)
+        val trips: List<RemovedTrip> = gson.fromJson(file.readText(), type)
+
+        val formatter = DateTimeFormatter.ofPattern("H:mm")
+        return trips.sortedBy {
+            try {
+                LocalTime.parse(it.typeTime.trim(), formatter)
+            } catch (e: Exception) {
+                LocalTime.MIDNIGHT
+            }
+        }
     }
+
 
     fun isTripRemoved(context: Context, forDate: LocalDate, passenger: Passenger): Boolean {
         return getRemovedTrips(context, forDate).any {
