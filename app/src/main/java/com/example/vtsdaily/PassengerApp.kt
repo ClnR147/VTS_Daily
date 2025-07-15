@@ -4,7 +4,9 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material3.*
@@ -29,6 +31,10 @@ import com.example.vtsdaily.ui.theme.CompletedColor
 import com.example.vtsdaily.ui.theme.PrimaryGreen
 import com.example.vtsdaily.ui.theme.PrimaryPurple
 import com.example.vtsdaily.ui.theme.RemovedColor
+
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+
 
 @Composable
 fun PassengerApp() {
@@ -227,8 +233,13 @@ fun PassengerApp() {
                 title = { Text("Choose Date", style = MaterialTheme.typography.titleLarge) },
                 text = {
                     val pastDates = getAvailableScheduleDates()
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        pastDates.forEach { date ->
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 400.dp), // constrains height so it scrolls
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(pastDates) { date ->
                             TextButton(onClick = {
                                 scheduleDate = date
                                 baseSchedule = loadSchedule(context, scheduleDate)
@@ -242,7 +253,8 @@ fun PassengerApp() {
                             }
                         }
                     }
-                },
+                }
+                ,
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { showDateListDialog = false }) {
@@ -250,6 +262,7 @@ fun PassengerApp() {
                     }
                 }
             )
+
         }
 
         if (showInsertDialog) {

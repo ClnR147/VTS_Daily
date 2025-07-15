@@ -5,11 +5,14 @@ import java.time.LocalDate
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.vtsdaily.ui.theme.ActionGreen
 import com.example.vtsdaily.ui.theme.OnPrimaryText
 import com.example.vtsdaily.ui.theme.PrimaryGreen
@@ -37,22 +40,34 @@ fun PassengerTableWithStaticHeader(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
-                .background(PrimaryGreen), // dark purple
+                .background(PrimaryGreen),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "Time",
-                modifier = Modifier.weight(1f),
-                color = OnPrimaryText, // light text on dark background
-                fontWeight = FontWeight.Bold
+                color = OnPrimaryText,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                modifier = Modifier
+                    .padding(start = 5.dp) // ← shift slightly to the right
+                    .width(120.dp)
+                    .alignByBaseline()
             )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
             Text(
                 text = "Name",
-                modifier = Modifier.weight(2f),
+                style = MaterialTheme.typography.bodyLarge,
                 color = OnPrimaryText,
-                fontWeight = FontWeight.Bold
+                modifier = Modifier
+                    .weight(1f)
+                    .alignByBaseline()
             )
         }
+
 
         Spacer(modifier = Modifier.height(if (viewMode == TripViewMode.REMOVED) 12.dp else 8.dp))
 
