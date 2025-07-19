@@ -28,6 +28,17 @@ import com.example.vtsdaily.ui.theme.ActionGreen
 import com.example.vtsdaily.ui.theme.CardHighlight
 import com.example.vtsdaily.ui.theme.FromGrey
 import com.example.vtsdaily.ui.theme.SubtleGrey
+@Composable
+fun ActionButton(label: String, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .padding(4.dp) // Remove weight
+    ) {
+        Text(label)
+    }
+}
+
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -232,35 +243,54 @@ fun PassengerTable(
         AlertDialog(
             onDismissRequest = { passengerToActOn = null },
             title = { Text("Select Action") },
-            text = { Text("What do you want to do with this trip?") },
-            confirmButton = {
-                Column(modifier = Modifier.padding(top = 8.dp)) {
-                    listOf(
-                        "Complete" to TripRemovalReason.COMPLETED,
-                        "No Show" to TripRemovalReason.NO_SHOW,
-                        "Cancel" to TripRemovalReason.CANCELLED,
-                        "Remove" to TripRemovalReason.REMOVED
-                    ).forEachIndexed { index, (label, reason) ->
-                        TextButton(
-                            onClick = {
-                                onTripRemoved(passengerToActOn!!, reason)
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("What do you want to do with this trip?")
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        )
+                        {
+                            ActionButton("Complete") {
+                                onTripRemoved(passengerToActOn!!, TripRemovalReason.COMPLETED)
                                 passengerToActOn = null
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(label)
+                            }
+                            ActionButton("No Show") {
+                                onTripRemoved(passengerToActOn!!, TripRemovalReason.NO_SHOW)
+                                passengerToActOn = null
+                            }
                         }
-                        if (index < 3) Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        )
+                        {
+                            ActionButton("Cancel") {
+                                onTripRemoved(passengerToActOn!!, TripRemovalReason.CANCELLED)
+                                passengerToActOn = null
+                            }
+                            ActionButton("Remove") {
+                                onTripRemoved(passengerToActOn!!, TripRemovalReason.REMOVED)
+                                passengerToActOn = null
+                            }
+                        }
                     }
                 }
             },
+            confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { passengerToActOn = null }) {
-                    Text("Dismiss")
+                    Text("Cancel")
                 }
             }
         )
     }
+
 
     if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(

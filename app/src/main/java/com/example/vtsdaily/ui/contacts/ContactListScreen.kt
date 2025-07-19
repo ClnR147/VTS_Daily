@@ -25,39 +25,46 @@ fun ContactListScreen(context: Context) {
     var editing by remember { mutableStateOf<ContactEntry?>(null) }
     var showDialog by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         Text("Important Contacts", style = MaterialTheme.typography.headlineSmall)
 
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(contacts, key = { it.id }) { contact ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                        .clickable {
-                            val intent = Intent(Intent.ACTION_DIAL).apply {
-                                data = Uri.parse("tel:${contact.phoneNumber}")
-                            }
-                            context.startActivity(intent)
-                        },
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(contact.name, fontWeight = FontWeight.Bold)
-                        Text(contact.phoneNumber, fontSize = 14.sp)
-                    }
-                    Row {
-                        IconButton(onClick = {
-                            editing = contact
-                            showDialog = true
-                        }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+        // 👇 Use Box to apply weight safely within Column scope
+        Box(modifier = Modifier.weight(1f)) {
+            LazyColumn {
+                items(contacts, key = { it.id }) { contact ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .clickable {
+                                val intent = Intent(Intent.ACTION_DIAL).apply {
+                                    data = Uri.parse("tel:${contact.phoneNumber}")
+                                }
+                                context.startActivity(intent)
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(contact.name, fontWeight = FontWeight.Bold)
+                            Text(contact.phoneNumber, fontSize = 14.sp)
                         }
-                        IconButton(onClick = {
-                            ContactStore.delete(context, contact.id)
-                            contacts = ContactStore.load(context)
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        Row {
+                            IconButton(onClick = {
+                                editing = contact
+                                showDialog = true
+                            }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit")
+                            }
+                            IconButton(onClick = {
+                                ContactStore.delete(context, contact.id)
+                                contacts = ContactStore.load(context)
+                            }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                            }
                         }
                     }
                 }
