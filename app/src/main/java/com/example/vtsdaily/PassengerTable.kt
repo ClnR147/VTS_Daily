@@ -244,41 +244,26 @@ fun PassengerTable(
             onDismissRequest = { passengerToActOn = null },
             title = { Text("Select Action") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("What do you want to do with this trip?")
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        )
-                        {
-                            ActionButton("Complete") {
-                                onTripRemoved(passengerToActOn!!, TripRemovalReason.COMPLETED)
-                                passengerToActOn = null
-                            }
-                            ActionButton("No Show") {
-                                onTripRemoved(passengerToActOn!!, TripRemovalReason.NO_SHOW)
-                                passengerToActOn = null
-                            }
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        )
-                        {
-                            ActionButton("Cancel") {
-                                onTripRemoved(passengerToActOn!!, TripRemovalReason.CANCELLED)
-                                passengerToActOn = null
-                            }
-                            ActionButton("Remove") {
-                                onTripRemoved(passengerToActOn!!, TripRemovalReason.REMOVED)
-                                passengerToActOn = null
-                            }
-                        }
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    ActionButton("Complete") {
+                        onTripRemoved(passengerToActOn!!, TripRemovalReason.COMPLETED)
+                        passengerToActOn = null
+                    }
+                    ActionButton("No Show") {
+                        onTripRemoved(passengerToActOn!!, TripRemovalReason.NO_SHOW)
+                        passengerToActOn = null
+                    }
+                    ActionButton("Cancel") {
+                        onTripRemoved(passengerToActOn!!, TripRemovalReason.CANCELLED)
+                        passengerToActOn = null
+                    }
+                    ActionButton("Remove") {
+                        onTripRemoved(passengerToActOn!!, TripRemovalReason.REMOVED)
+                        passengerToActOn = null
                     }
                 }
             },
@@ -290,6 +275,7 @@ fun PassengerTable(
             }
         )
     }
+
 
 
     if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
