@@ -1,0 +1,607 @@
+[33mcommit 4a97553c05c90d7c27b60a88e5ea4fd845f100b0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaterial2_restore_point[m[33m, [m[1;31morigin/material2_restore_point[m[33m)[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Wed Jul 30 10:19:07 2025 -0700
+
+    Allow phone call on past completed schedules
+
+[33mcommit 9e6d7afcd05ee82cf2dc388ba453396d8340c40b[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jul 20 09:08:42 2025 -0700
+
+    Tighten up select panel
+
+[33mcommit e2abe800e38122adf59dc9d2d112fcf610d357e4[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat Jul 19 12:06:23 2025 -0700
+
+    Modify selection screen v2
+
+[33mcommit f198c158e7c746d333984c2fd67dfca7b5d80288[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Fri Jul 18 17:18:53 2025 -0700
+
+    Modify selection screen
+
+[33mcommit 5e03b53bd69e6917a414f66745da19b7c4277794[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jul 14 17:58:03 2025 -0700
+
+    Add LazyColumn to Choose Date
+
+[33mcommit c726f75652ec14118bb1acbd70f0ea014a02a543[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jul 14 15:57:21 2025 -0700
+
+    fix sorting for all screens
+
+[33mcommit 38479f37a13760f9aa01143a59933a4ee3adf10d[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat Jul 12 11:21:17 2025 -0700
+
+    Some slight color changes
+
+[33mcommit 4dd644a12feaa072f410d44e2770c4b18b13ae86[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat Jul 12 07:18:30 2025 -0700
+
+    Modify Color and add Color Theme
+
+[33mcommit 9e5ec1f8d9df8ab5e6b928784b97e75f1334558c[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Fri Jul 11 20:48:07 2025 -0700
+
+    Add Date Banner - Change Color to Green
+
+[33mcommit 9841b40c34beff840f950a466f4ddd330a287bf6[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Fri Jul 11 10:50:58 2025 -0700
+
+    Fix banner spacing
+
+[33mcommit 02056bcc8336dad59e64772b4f3006d0f95e5af8[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Fri Jul 11 05:01:49 2025 -0700
+
+    Restrict reinstatement
+
+[33mcommit ec3667366d754cdfb936923876b866c0c723464d[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jul 10 19:23:20 2025 -0700
+
+    Add banner under date
+
+[33mcommit cff5f9307ad107f2694f961d4b4f173d22cfac44[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jul 10 18:39:59 2025 -0700
+
+    Reinstate fixed
+
+[33mcommit 15564ad39dd9b1216ce245d545c0869b4c78f8d7[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jul 10 11:06:58 2025 -0700
+
+    Modify cards
+
+[33mcommit 7b989e4ab29ff6c2518126b8afd742196b297c17[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jul 10 06:02:53 2025 -0700
+
+    Reduce text size
+
+[33mcommit 1da9b363441c7876bd7293b8143bf0fbbff9fdfa[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jul 10 04:57:30 2025 -0700
+
+    Fix spacing on removed screen
+
+[33mcommit a638e00006dad8d069b4b2abda59b5c24a54f674[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Wed Jul 9 15:40:57 2025 -0700
+
+     Fix type inference and imports in PassengerApp.kt
+
+[33mcommit 7e2e6c2b2eadcd231622e2a42e054affde329669[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Wed Jul 9 15:17:22 2025 -0700
+
+     Modularized PassengerTable into its own file
+
+[33mcommit 8a2e34f6971cadec986dbb6c452dacfaafcfeddd[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Wed Jul 9 12:15:26 2025 -0700
+
+     Moved InsertTripDialog to its own module
+
+[33mcommit 40957d177af031ca221796136cda10ca5238ef79[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Wed Jul 9 12:12:00 2025 -0700
+
+     Moved utility functions to utils.kt
+
+[33mcommit a66b24f5cef2bb2de6e00ba6bcfe6b178424d82b[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Wed Jul 9 12:07:12 2025 -0700
+
+     Moved data models to models.kt
+
+[33mcommit 48a4c8d4f64806482b492db06504fc23dbb49a7e[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Wed Jul 9 05:05:21 2025 -0700
+
+    Restrict reinstatement to current date
+
+[33mcommit 82bf7552d1ed71dc3259c5d36e2797ca0a774fd2[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Tue Jul 8 20:55:49 2025 -0700
+
+    Add Reinstatement for No Shows
+
+[33mcommit 3fcdebfbb032831ff23a313d0128338927d1de5b[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jul 7 19:44:02 2025 -0700
+
+    Add Impotant Numbers Functionality
+
+[33mcommit 969dfa556a245da627ec682e048c3b4a4f0c6a79[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Fri Jun 27 10:31:26 2025 -0700
+
+    Add non-scrollable header for Time Name.
+
+[33mcommit a5e658230b2ffba998a1a492a0479d13de4c9532[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 26 19:44:39 2025 -0700
+
+    Update Cancel-No Show heading v1
+
+[33mcommit 1b4514a59d444b079716a712642da1fa721aed17[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 26 15:11:07 2025 -0700
+
+    Update Cancel-No Show heading
+
+[33mcommit 9f2b490e5eca165a5a711b630609fb2b6727217d[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Tue Jun 17 11:08:47 2025 -0700
+
+    Disable addtrip from prior dates
+
+[33mcommit 300b2abba1bd8151ca985c7f8116079c7625537a[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Tue Jun 17 07:02:53 2025 -0700
+
+    Label changes - Addtrip move right
+
+[33mcommit 3c878a37d3aed8f0aa09a21f32c48542a30453cb[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 16 21:17:23 2025 -0700
+
+    Fix Horizontal Divider
+
+[33mcommit 4e85aa5535f7bbdabe4002aa1705e7837b14ecb0[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 16 20:52:33 2025 -0700
+
+    Migrate objects to kt files
+
+[33mcommit 6c3dae03651e328ba74bb7b7f32cb2b95848f54a[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 16 20:14:30 2025 -0700
+
+    Change some classes to Objects
+
+[33mcommit 169d60880687c5d7cca02c3364157023205a267b[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 16 14:58:27 2025 -0700
+
+    Replace SharedPreferences with CompletedTripStore for completed tripsRestore Phone Dialing
+
+[33mcommit be0840fbfe163f71cfd4e5368e14590137540205[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 16 12:40:28 2025 -0700
+
+    Restore Phone Dialing
+
+[33mcommit 3dcf2d584ffab1f12feca347d16b667230c63044[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 15 19:29:52 2025 -0700
+
+    Migration Removed
+
+[33mcommit f46d5fbe8243bcf86baf6c2abd0a58153047f370[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 15 18:38:08 2025 -0700
+
+    Move removed trip json
+
+[33mcommit 0051aa83a72f43bdb581763f3c5b92e57cd15a3a[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 15 11:34:27 2025 -0700
+
+    Edit Added Trips
+
+[33mcommit 4dd67ad79484a198ae85ee33b21d6149b83deaa3[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 15 08:37:29 2025 -0700
+
+    Passenger Name Alignment
+
+[33mcommit 9eff46171c460581932c3a232588dac262452ff3[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat Jun 14 20:46:15 2025 -0700
+
+    Sort
+
+[33mcommit acc294d962384c547887b6483b7fa5f65a3b95cd[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat Jun 14 19:52:35 2025 -0700
+
+    Migrate to Material3 and resize headings
+
+[33mcommit 92228af3d31f466686d2341077fed37881a0edc5[m[33m ([m[1;31morigin/Restore_Point[m[33m, [m[1;32mRestore_Point[m[33m)[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat Jun 14 13:26:16 2025 -0700
+
+    UI 3 - Cards
+
+[33mcommit b0f47740b17d280541b64cb5a16efc19b5d21f9c[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat Jun 14 10:57:52 2025 -0700
+
+    UI 2 - Spacing
+
+[33mcommit 67a02c1c267f0f1251164527d1965f080fe0f325[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat Jun 14 08:03:22 2025 -0700
+
+    UI 1 - Font change
+
+[33mcommit 78ad56bda4c311ba017fb1375d0aadea1d830b82[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat Jun 14 06:54:16 2025 -0700
+
+    Added trips now act the same as all others
+
+[33mcommit dfe021c6ee0846fe74eec4277cc4448aab3e46a9[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat Jun 14 05:46:46 2025 -0700
+
+    Change logic to show inserted trips as complete
+
+[33mcommit 23cbfac80432bbfda55b281494d75434e21a2872[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Fri Jun 13 20:42:03 2025 -0700
+
+    Add persistent insert
+
+[33mcommit 40cd1d40dd31279b6248d4a4b638d6df6fb90197[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Fri Jun 13 19:26:29 2025 -0700
+
+    Add logic to seperate removed to cancel or noshow
+
+[33mcommit 13e79f0e8386a45a4bba6f796b14d48f8fba76f4[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Wed Jun 11 20:47:36 2025 -0700
+
+    Add logic to seperate removed to cancel or noshow
+
+[33mcommit fb04b2d4f03b101e3f8b92f56bf111abfd36f711[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 9 18:59:57 2025 -0700
+
+    delete remove trip from navigation pane
+
+[33mcommit 29f16b90e2f414f11253690a4ddd3924c58facb2[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 9 18:54:12 2025 -0700
+
+    move complete cancel to same dialog
+
+[33mcommit fc3839350592e6dbcba6524f33d0b779071c6dd5[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 8 07:14:45 2025 -0700
+
+    Disable Add trip on complete/no show screens
+
+[33mcommit ffe1f86bcf1f23dc3f5823a61eede40fdf4ed4d2[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 5 20:50:59 2025 -0700
+
+    Change banners to light grey, auto load apk
+
+[33mcommit 1fb3106ab17083538a578fa9df38a75784f40aec[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 5 19:10:46 2025 -0700
+
+    Change banners to blue
+
+[33mcommit ea00579574e4ba572517aee11be41298d25ff4a1[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 5 18:22:19 2025 -0700
+
+    Change clickable to label only
+
+[33mcommit 97c6f2e8f0810236ac8fc335dd62d792e28f2c12[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 5 13:47:11 2025 -0700
+
+    Colors - enlarge heading text
+
+[33mcommit 73184093ae8f00d548f5b7411374e397d75c6260[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 5 13:41:44 2025 -0700
+
+    Adjust headings v.2
+
+[33mcommit 5492b60b7f28a3bd4f1e6e4287b80360efe3ae76[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 5 12:02:35 2025 -0700
+
+    Adjust headings v.2
+
+[33mcommit e9d5b06f775c6bd523455b7d026ed266b11e55d1[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 5 08:33:22 2025 -0700
+
+    Adjust headings
+
+[33mcommit 3aef73865f7ac73e0a304ba46d07f7a7004b65a5[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 5 07:17:23 2025 -0700
+
+    take the button off the header
+
+[33mcommit f528b609ef3e8ac090df020f7784085480031987[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Thu Jun 5 06:11:57 2025 -0700
+
+    Remove schedDate - make date clickable
+
+[33mcommit 50bc256e107b9f93728c0e984a54b6d406904973[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Wed Jun 4 19:43:27 2025 -0700
+
+    Modify header to see everything
+
+[33mcommit 80d1d0826a7933eb8b4ebb35dde8af8ca60f8c9c[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Wed Jun 4 19:26:39 2025 -0700
+
+    Made schedule header changes
+
+[33mcommit 0f17341fec75a27001a30810ea34f24aca26fcb7[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmaster[m[33m)[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Tue Jun 3 19:49:44 2025 -0700
+
+    Fix Enum Logic
+
+[33mcommit d362dffa4c4b07e21c98c34ea46babcc06518c18[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Tue Jun 3 19:42:23 2025 -0700
+
+    Fix completed vs removed
+
+[33mcommit fe93e9ca844dc3ae0a51c605276c6064dc3bbd1e[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Tue Jun 3 05:09:43 2025 -0700
+
+    More tweaks to From/To
+
+[33mcommit 17bbb076346bc9479eb44e684b15f70d60d317d6[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Tue Jun 3 01:36:59 2025 -0700
+
+    Change from/to address alignment
+
+[33mcommit 1021069eb871bd2d49d377f8fda8a8efa819f6cd[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 2 20:27:29 2025 -0700
+
+    Move Trip to detail line
+
+[33mcommit 31380d33ddbe2358092596567587ce78a352cfa4[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 2 20:00:58 2025 -0700
+
+    Add ability to see removed trips V.1
+
+[33mcommit 9e54c783acba2b26231e2305ca44acb9a23aa6ff[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 2 19:55:49 2025 -0700
+
+    Add ability to see removed trips
+
+[33mcommit 3d718662e02313d08f05aab42fda6b07cd6a125c[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 2 18:45:45 2025 -0700
+
+    Stable Commit
+
+[33mcommit 96aa2df82147704bdbd0e5082a11830a1af88bbb[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Mon Jun 2 14:52:04 2025 -0700
+
+    Fix Complete trip logic
+
+[33mcommit e890dcc684870a41347940890a603ad2564aeab1[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 19:50:57 2025 -0700
+
+    Modify Passenger Info Look
+
+[33mcommit ce6a9bba389283c8f31c9f4d1c6038bf55fe3c4d[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 19:05:54 2025 -0700
+
+    Modify header Solid Good Code
+
+[33mcommit 51fb849209cceaa4be786f13f5eceea8ba938bb9[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 18:28:33 2025 -0700
+
+    Modify header V.1
+
+[33mcommit 801e4ff651802c601526a69474627f816c0a393f[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 18:22:13 2025 -0700
+
+    Revert "Modify header"
+    
+    This reverts commit bd9fd405470489966cb83647c7b9d81184fe7523.
+
+[33mcommit bd9fd405470489966cb83647c7b9d81184fe7523[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 17:46:55 2025 -0700
+
+    Modify header
+
+[33mcommit 3eced32d3d1fe63faeec1707732caf6b8230b491[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 15:58:48 2025 -0700
+
+    Load top file
+
+[33mcommit 06c201bc6cc5691674db270bf1e2d4e9813c81be[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 15:51:30 2025 -0700
+
+    Switch location of buttons
+
+[33mcommit a8d2f107ee490eccfce972a33b8526bc9599a6cc[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 10:22:41 2025 -0700
+
+    Add support for removed trips via JSON storage using RemovedTrip data class and Gson utilities v7
+
+[33mcommit 18258cd8d8907114b1bae00fc94a71665942ed6e[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 07:07:40 2025 -0700
+
+    Add support for removed trips via JSON storage using RemovedTrip data class and Gson utilities v6
+
+[33mcommit de544b25d60fcb2e87c7dfb0c087c7191e88ab6a[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 07:07:01 2025 -0700
+
+    Add support for removed trips via JSON storage using RemovedTrip data class and Gson utilities v5
+
+[33mcommit 02c517c12b821651be752f312c583fba76753c1e[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 07:03:00 2025 -0700
+
+    Add support for removed trips via JSON storage using RemovedTrip data class and Gson utilities v5
+
+[33mcommit 003cbe64b17fc93e381732cd7bb64d33cd6ad43e[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 06:20:38 2025 -0700
+
+    Add support for removed trips via JSON storage using RemovedTrip data class and Gson utilities v4
+
+[33mcommit 9cd13634e2396c81a5b2e33b28e2111cae2642c8[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 06:19:59 2025 -0700
+
+    Add support for removed trips via JSON storage using RemovedTrip data class and Gson utilities v4
+
+[33mcommit c8ecd63677f0efceceb0fc8314ffe52f12b54506[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 06:17:43 2025 -0700
+
+    Add support for removed trips via JSON storage using RemovedTrip data class and Gson utilities v3
+
+[33mcommit 8da3a3e4930af28692325051f3b9c3994f6a5f02[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sun Jun 1 05:47:05 2025 -0700
+
+    Add support for removed trips via JSON storage using RemovedTrip data class and Gson utilities v2
+
+[33mcommit 9d9e67f60f6257b28b56658f20f601ac18384864[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 23:46:11 2025 -0700
+
+    Add support for removed trips via JSON storage using RemovedTrip data class and Gson utilities
+
+[33mcommit 82214ca07fcbc38c1eabf246d7e636173ea71ff0[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 20:53:10 2025 -0700
+
+    Drop down only includes date in the folder
+
+[33mcommit 62a12d31cab4eb486a29c1d7f827fb8b008492a0[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 20:52:35 2025 -0700
+
+    Drop down only includes date in the folder
+
+[33mcommit 319ec50154887d33cd2e52678d271d1be290a621[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 20:47:54 2025 -0700
+
+    Remove calendar v4
+
+[33mcommit 4e00d15e770be62358bbf626e4abbdf86457761b[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 20:04:42 2025 -0700
+
+    Remove calendar
+
+[33mcommit 57634332010269552f25225e4294f4b0a7c8bdfe[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 19:57:08 2025 -0700
+
+    Add ability to select any date within past 7 days
+
+[33mcommit b4742fca8c3e2e33c1df2d2d5d9bc8089f277971[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 16:39:39 2025 -0700
+
+    Add UI enhancements for trip insertion
+
+[33mcommit 245513c653cb14059d7c89de7d4d4812398f72d9[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 14:07:27 2025 -0700
+
+    Remove complete trip logic from completed trips
+
+[33mcommit 113496ed57cc5b7e325aaf14ed3ed6e0f130bc07[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 12:21:40 2025 -0700
+
+    Add Insert Logic
+
+[33mcommit 96e4c3df41a7ef5c927aba31d4aa606882c8e4dd[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 11:46:06 2025 -0700
+
+    Add fix to date toggle
+
+[33mcommit 0cddb3e0a70f8bc80e8b19936a05d2c907b7a5e6[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 06:09:05 2025 -0700
+
+    Add ability to toggle completed trips seen/unseen
+
+[33mcommit 79227efa391285f1c99f3a872172874c122c3cb4[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 05:33:47 2025 -0700
+
+    Add ability to select which date to show
+
+[33mcommit a567dd765a7ad14fae16cfdb80decc5c0a16d964[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Sat May 31 05:04:11 2025 -0700
+
+    Add show competed trips toggle
+
+[33mcommit af0c1d1e6ab570f2b61a63eeae313e5bcf21ec5d[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Fri May 30 23:08:43 2025 -0700
+
+    Restore date toggle feature with per-date schedule loading
+
+[33mcommit 8af28b664aad03897e6c7dc8fe7ab110cfa4e656[m
+Author: Keith Biggs <kbiggs@accentz.com>
+Date:   Fri May 30 20:46:47 2025 -0700
+
+    Initial commit of working VTS app
