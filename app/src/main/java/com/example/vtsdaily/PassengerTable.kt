@@ -121,16 +121,15 @@ fun PassengerTable(
                             .heightIn(min = 48.dp)
                             .combinedClickable(
                                 onClick = {
-                                    if (viewMode == TripViewMode.ACTIVE) {
-                                        if (passenger in insertedPassengers) {
-                                            tripBeingEdited = passenger
+                                    if (viewMode == TripViewMode.ACTIVE && passenger in insertedPassengers) {
+                                        // Edit inserted trips only in ACTIVE mode
+                                        tripBeingEdited = passenger
+                                    } else {
+                                        if (passenger.phone.isNotBlank()) {
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${passenger.phone}"))
+                                            context.startActivity(intent)
                                         } else {
-                                            if (passenger.phone.isNotBlank()) {
-                                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${passenger.phone}"))
-                                                context.startActivity(intent)
-                                            } else {
-                                                Toast.makeText(context, "No phone number available", Toast.LENGTH_SHORT).show()
-                                            }
+                                            Toast.makeText(context, "No phone number available", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 },
