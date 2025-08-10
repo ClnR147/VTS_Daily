@@ -176,9 +176,9 @@ fun PassengerTable(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(1.dp))
 
-                    Column(modifier = Modifier.padding(start = 6.dp, top = 2.dp, bottom = 2.dp)) {
+                    Column(modifier = Modifier.padding(bottom = 1.dp)) {
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
