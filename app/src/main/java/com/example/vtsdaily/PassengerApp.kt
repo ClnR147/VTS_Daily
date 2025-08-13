@@ -34,10 +34,11 @@ import com.example.vtsdaily.ui.theme.RemovedColor
 
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import com.example.vtsdaily.data.PassengersDao
 
 
 @Composable
-fun PassengerApp() {
+fun PassengerApp(dao: PassengersDao) {
     val context = LocalContext.current
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 

@@ -28,6 +28,10 @@ import com.example.vtsdaily.ui.theme.ActionGreen
 import com.example.vtsdaily.ui.theme.CardHighlight
 import com.example.vtsdaily.ui.theme.FromGrey
 import com.example.vtsdaily.ui.theme.SubtleGrey
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.material3.Text
+
 @Composable
 fun ActionButton(label: String, onClick: () -> Unit) {
     Button(
@@ -219,10 +223,11 @@ fun PassengerTable(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = Arrangement.End  // Align items to the right
                         ) {
+                            // Check mark icon button to mark the trip as completed or canceled
                             IconButton(
-                                onClick = { passengerToActOn = passenger },
+                                onClick = { passengerToActOn = passenger },  // Handle the action
                                 modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(
@@ -233,6 +238,8 @@ fun PassengerTable(
                             }
                         }
                     }
+
+
                 }
             }
         }
