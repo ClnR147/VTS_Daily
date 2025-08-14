@@ -1,0 +1,61 @@
+# gradle/libs.versions.toml
+
+[versions]
+agp                = "8.1.2"
+kotlin             = "1.9.0"
+ksp                = "1.9.0-1.0.13"
+composeCompiler    = "1.5.0"
+composeBom         = "2023.10.01"
+room               = "2.6.1"
+coroutines         = "1.8.1"
+lifecycle          = "2.8.4"
+activityCompose    = "1.9.2"
+coreKtx            = "1.13.1"
+materialComponents = "1.12.0"
+constraintlayout   = "2.1.4"
+gson               = "2.10.1"
+serializationJson  = "1.6.3"
+accompanistFlow    = "0.30.1"
+junit4             = "4.13.2"
+androidxTestJunit  = "1.1.5"
+espresso           = "3.5.1"
+monitor            = "1.8.0"
+jexcel             = "2.6.12"
+
+[libraries]
+kotlinx-coroutines-core     = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core",     version.ref = "coroutines" }
+kotlinx-coroutines-android  = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android",  version.ref = "coroutines" }
+
+androidx-core-ktx           = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-activity-compose   = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+
+room-runtime                = { module = "androidx.room:room-runtime",  version.ref = "room" }
+room-ktx                    = { module = "androidx.room:room-ktx",      version.ref = "room" }
+room-compiler               = { module = "androidx.room:room-compiler", version.ref = "room" }
+
+androidx-compose-bom        = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+androidx-compose-ui         = { module = "androidx.compose.ui:ui" }
+androidx-compose-ui-graphics= { module = "androidx.compose.ui:ui-graphics" }
+androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+androidx-compose-material   = { module = "androidx.compose.material:material" }
+androidx-compose-icons      = { module = "androidx.compose.material:material-icons-extended" }
+androidx-compose-material3  = { module = "androidx.compose.material3:material3" }
+
+material-components         = { module = "com.google.android.material:material", version.ref = "materialComponents" }
+constraintlayout            = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
+gson                        = { module = "com.google.code.gson:gson", version.ref = "gson" }
+kotlinx-serialization-json  = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationJson" }
+accompanist-flowlayout      = { module = "com.google.accompanist:accompanist-flowlayout", version.ref = "accompanistFlow" }
+jexcelapi                   = { module = "net.sourceforge.jexcelapi:jxl", version.ref = "jexcel" }
+
+junit4                      = { module = "junit:junit", version.ref = "junit4" }
+androidx-test-ext-junit     = { module = "androidx.test.ext:junit", version.ref = "androidxTestJunit" }
+androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
+androidx-test-monitor       = { module = "androidx.test:monitor", version.ref = "monitor" }
+
+[plugins]
+android-application         = { id = "com.android.application",                 version.ref = "agp" }
+kotlin-android              = { id = "org.jetbrains.kotlin.android",            version.ref = "kotlin" }
+kotlin-serialization        = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp                         = { id = "com.google.devtools.ksp",                 version.ref = "ksp" }

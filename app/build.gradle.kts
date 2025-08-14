@@ -1,9 +1,14 @@
+// app/build.gradle.kts
+
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
 }
+
+// Capture catalog versions at top-level (safe in any scope below)
+val composeCompilerVersion = libs.versions.composeCompiler.get()
 
 android {
     namespace = "com.example.vtsdaily"
@@ -15,6 +20,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }
@@ -37,7 +43,8 @@ android {
     buildFeatures { compose = true }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.0" // for Kotlin 1.9.0
+        // Use captured version to avoid 'implicit receiver' error
+        kotlinCompilerExtensionVersion = composeCompilerVersion
     }
 
     kotlinOptions { jvmTarget = "17" }
@@ -48,61 +55,60 @@ android {
 }
 
 dependencies {
-    // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // --- Kotlin coroutines ---
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
 
-    // Core / lifecycle / activity
-    // (Optional) remove the non-ktx line below if you want to declutter:
-    // implementation("androidx.core:core:1.13.1")
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
-    implementation("androidx.activity:activity-compose:1.9.2")
+    // --- Core / lifecycle / activity ---
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
 
-    // Room (KSP)
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    // --- Room (KSP) ---
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
-    // Compose (BOM-managed)
-    implementation(platform("androidx.compose:compose-bom:2023.10.01"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material:material")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.compose.material3:material3")
+    // --- Compose (managed by BOM) ---
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.compose.icons)
+    implementation(libs.androidx.compose.material3)
 
-    // Other libs
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("com.google.code.gson:gson:2.10.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-    implementation("com.google.accompanist:accompanist-flowlayout:0.30.1")
-    implementation("net.sourceforge.jexcelapi:jxl:2.6.12")
+    // --- Other libs ---
+    implementation(libs.constraintlayout)
+    implementation(libs.material.components)
+    implementation(libs.gson)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.accompanist.flowlayout)
+    implementation(libs.jexcelapi)
 
-    // Tests
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.test:monitor:1.8.0") // moved from implementation
+    // --- Tests ---
+    testImplementation(libs.junit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.androidx.test.monitor)
+
+    // --- Dev-only compose tooling ---
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
-
 }
 
+/*
+// Optional: prevent RC core artifacts from sneaking in (uses captured or project.libs)
+val coreKtxVersion = libs.versions.coreKtx.get()
 configurations.all {
     resolutionStrategy {
-        force("androidx.core:core-ktx:1.13.1")
-        // force("androidx.core:core:1.13.1") // only if you keep the non-ktx line
+        force("androidx.core:core-ktx:$coreKtxVersion")
     }
 }
+*/
 
+// ====== Your custom APK copy tasks (unchanged) ======
 
-
-
-// Automatically copy the debug APK to a custom folder after build
-// Copy debug APK task
 tasks.register<Copy>("copyDebugApkToCustomFolder") {
     val apkPath = "$buildDir/outputs/apk/debug/app-debug.apk"
     val destinationDir = file("C:/AutoSyncToPhone/PassengerSchedules")
@@ -110,12 +116,9 @@ tasks.register<Copy>("copyDebugApkToCustomFolder") {
     from(apkPath)
     into(destinationDir)
 
-    doLast {
-        println("✅ Debug APK copied to: $destinationDir")
-    }
+    doLast { println("✅ Debug APK copied to: $destinationDir") }
 }
 
-// Copy release APK task
 tasks.register<Copy>("copyReleaseApkToCustomFolder") {
     val apkPath = "$buildDir/outputs/apk/release/app-release.apk"
     val destinationDir = file("C:/AutoSyncToPhone/PassengerSchedules")
@@ -123,17 +126,10 @@ tasks.register<Copy>("copyReleaseApkToCustomFolder") {
     from(apkPath)
     into(destinationDir)
 
-    doLast {
-        println("✅ Release APK copied to: $destinationDir")
-    }
+    doLast { println("✅ Release APK copied to: $destinationDir") }
 }
 
-// Hook into assemble tasks *after* they exist
 afterEvaluate {
-    tasks.named("assembleDebug").configure {
-        finalizedBy("copyDebugApkToCustomFolder")
-    }
-    tasks.named("assembleRelease").configure {
-        finalizedBy("copyReleaseApkToCustomFolder")
-    }
+    tasks.named("assembleDebug").configure { finalizedBy("copyDebugApkToCustomFolder") }
+    tasks.named("assembleRelease").configure { finalizedBy("copyReleaseApkToCustomFolder") }
 }
