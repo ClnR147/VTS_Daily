@@ -15,8 +15,10 @@ data class CompletedTrip(
     val dropoffAddress: String,
     val typeTime: String,
     val date: String,
-    val completedAt: String? = null
+    val completedAt: String? = null,
+    val phone: String? = null   // NEW
 )
+
 
 data class Schedule(
     val date: String,
@@ -33,7 +35,8 @@ data class RemovedTrip(
     val dropoffAddress: String,
     val typeTime: String,
     val date: String,
-    val reason: TripRemovalReason = TripRemovalReason.CANCELLED
+    val reason: TripRemovalReason = TripRemovalReason.CANCELLED,
+    val phone: String? = null      // <- NEW, safe default
 )
 
 enum class TripViewMode {

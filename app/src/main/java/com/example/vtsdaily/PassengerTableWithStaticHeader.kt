@@ -29,7 +29,9 @@ fun PassengerTableWithStaticHeader(
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit,
     onTripReinstated: (Passenger) -> Unit
 
-) {
+)
+
+{
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -66,6 +68,18 @@ fun PassengerTableWithStaticHeader(
                     .weight(1f)
                     .alignByBaseline()
             )
+
+            if (viewMode == TripViewMode.COMPLETED) {
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Phone",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = OnPrimaryText,
+                    modifier = Modifier
+                        .width(140.dp)       // <-- keep this width in the row too
+                        .alignByBaseline()
+                )
+            }
         }
 
 

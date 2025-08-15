@@ -3,15 +3,35 @@ package com.example.vtsdaily
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Contacts
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -20,20 +40,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import androidx.compose.material3.AlertDialog  // ✅ Material 3 - correct
-
 import com.example.vtsdaily.ui.theme.ActiveColor
 import com.example.vtsdaily.ui.theme.AppBackground
 import com.example.vtsdaily.ui.theme.CompletedColor
 import com.example.vtsdaily.ui.theme.PrimaryGreen
 import com.example.vtsdaily.ui.theme.PrimaryPurple
 import com.example.vtsdaily.ui.theme.RemovedColor
+import kotlinx.coroutines.delay
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import jxl.Sheet
+import jxl.Workbook
+import java.io.File
+import android.os.Environment
+import android.util.Log
 
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+
 
 
 @Composable
@@ -61,6 +83,23 @@ fun PassengerApp() {
         RemovedTripStore.removeRemovedTrip(context, scheduleDate, passenger)
         baseSchedule = loadSchedule(context, scheduleDate)
         insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
+    }
+// Choose which list to show in the table:
+// - Active/Removed -> today's schedule (as before)
+// - Completed      -> the trips you marked completed (from CompletedTripStore), mapped to Passenger
+    val passengersForTable = if (viewMode == TripViewMode.COMPLETED) {
+        CompletedTripStore.getCompletedTrips(context, scheduleDate).map { ct ->
+            Passenger(
+                name = ct.name,
+                id = "", // not needed for display here
+                pickupAddress = ct.pickupAddress,
+                dropoffAddress = ct.dropoffAddress,
+                typeTime = ct.typeTime,
+                phone = ct.phone.orEmpty()
+            )
+        }
+    } else {
+        baseSchedule.passengers
     }
 
 
@@ -203,8 +242,9 @@ fun PassengerApp() {
         if (viewMode == TripViewMode.REMOVED) {
             Spacer(modifier = Modifier.height(8.dp))
         }
+
         PassengerTableWithStaticHeader(
-            passengers = baseSchedule.passengers,
+            passengers = passengersForTable,
             insertedPassengers = insertedPassengers,
             setInsertedPassengers = { insertedPassengers = it },
             scheduleDate = scheduleDate,
@@ -285,3 +325,97 @@ fun PassengerApp() {
         }
     }
 }
+
+private fun headersOf(sheet: Sheet): List<String> =
+    (0 until sheet.columns).map { c -> sheet.getCell(c, 0).contents.trim() }
+
+private fun formatPhone(raw: String?): String {
+    if (raw.isNullOrBlank()) return "—"
+    val d = raw.filter(Char::isDigit)
+    return if (d.length == 10)
+        "(${d.substring(0,3)}) ${d.substring(3,6)}-${d.substring(6)}"
+    else raw
+}
+
+private fun idxOf(headers: List<String>, vararg candidates: String): Int =
+    headers.indexOfFirst { h -> candidates.any { cand -> h.equals(cand, ignoreCase = true) } }
+
+/**
+ * Build a name->phone lookup from schedule passengers (if you have them).
+ * Case/space insensitive match on passenger name.
+ */
+private fun buildPhoneBookFromSchedule(passengers: List<Passenger>?): Map<String, String> =
+    passengers.orEmpty()
+        .mapNotNull { p ->
+            val key = p.name.trim().lowercase()
+            val value = p.phone?.trim()?.takeIf { it.isNotEmpty() }
+            if (key.isNotEmpty() && value != null) key to value else null
+        }
+        .toMap()
+
+/**
+ * Load Completed trips from the same XLS.
+ * - Looks for a sheet named "Completed" first; falls back to the first sheet if not found.
+ * - Reads a "Phone" column if present; otherwise optionally uses schedulePhones to fill it.
+ */
+fun loadCompletedTrips(
+    scheduleDate: LocalDate,
+    schedulePhonesFromPassengers: List<Passenger>? = null
+): List<CompletedTrip> {
+    val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+    val scheduleDateStr = scheduleDate.format(formatter)
+
+    val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
+    val fileName = "VTS $scheduleDateStr.xls"
+    val file = File(folder, fileName)
+    if (!file.exists()) {
+        Log.d("DEBUG", "Completed: file not found ${file.absolutePath}")
+        return emptyList()
+    }
+
+    val wb = Workbook.getWorkbook(file)
+    try {
+        // Prefer a sheet literally named "Completed"; otherwise use the first sheet.
+        val sheet = wb.sheets.firstOrNull { it.name.equals("Completed", ignoreCase = true) }
+            ?: wb.getSheet(0)
+
+        val headers = headersOf(sheet)
+
+        val nameIdx   = idxOf(headers, "Passenger", "Name")
+        val puIdx     = idxOf(headers, "PAddress", "Pickup", "Pickup Address")
+        val doIdx     = idxOf(headers, "DAddress", "Dropoff", "Dropoff Address")
+        val typeIdx   = idxOf(headers, "PUTimeAppt", "Type/Time", "TypeTime")
+        val dateIdx   = idxOf(headers, "DriveDate", "Date")
+        val doneIdx   = idxOf(headers, "CompletedAt", "Completed")
+        val phoneIdx  = idxOf(headers, "Phone", "Phone Number") // optional
+
+        fun cell(r: Int, c: Int): String =
+            if (c >= 0) sheet.getCell(c, r).contents.trim() else ""
+
+        val phoneBook = buildPhoneBookFromSchedule(schedulePhonesFromPassengers)
+
+        val out = ArrayList<CompletedTrip>(sheet.rows.coerceAtLeast(1))
+        for (r in 1 until sheet.rows) { // skip header row
+            val name = cell(r, nameIdx)
+            if (name.isEmpty()) continue
+
+            val phoneFromCol = cell(r, phoneIdx).ifBlank { null }
+            val phone = phoneFromCol ?: phoneBook[name.trim().lowercase()]
+
+            out += CompletedTrip(
+                name           = name,
+                pickupAddress  = cell(r, puIdx),
+                dropoffAddress = cell(r, doIdx),
+                typeTime       = cell(r, typeIdx),
+                date           = cell(r, dateIdx).ifEmpty { scheduleDateStr },
+                completedAt    = cell(r, doneIdx).ifBlank { null },
+                phone          = phone
+            )
+        }
+        return out
+    } finally {
+        wb.close()
+    }
+}
+
+

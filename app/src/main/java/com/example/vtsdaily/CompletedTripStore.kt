@@ -50,15 +50,16 @@ object CompletedTripStore {
         val file = getFile(context, forDate)
         val type = object : TypeToken<MutableList<CompletedTrip>>() {}.type
         val list: MutableList<CompletedTrip> =
-            if (file.exists()) gson.fromJson(file.readText(), type)
-            else mutableListOf()
+            if (file.exists()) gson.fromJson(file.readText(), type) else mutableListOf()
 
-        if (list.none {
-                it.name == passenger.name &&
-                        it.pickupAddress == passenger.pickupAddress &&
-                        it.dropoffAddress == passenger.dropoffAddress &&
-                        it.typeTime == passenger.typeTime
-            }) {
+        val exists = list.any {
+            it.name == passenger.name &&
+                    it.pickupAddress == passenger.pickupAddress &&
+                    it.dropoffAddress == passenger.dropoffAddress &&
+                    it.typeTime == passenger.typeTime
+        }
+
+        if (!exists) {
             list.add(
                 CompletedTrip(
                     name = passenger.name,
@@ -66,10 +67,12 @@ object CompletedTripStore {
                     dropoffAddress = passenger.dropoffAddress,
                     typeTime = passenger.typeTime,
                     date = forDate.format(formatter),
-                    completedAt = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+                    completedAt = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")),
+                    phone = passenger.phone?.takeUnless { it.isBlank() }   // ← include phone if present
                 )
             )
             file.writeText(gson.toJson(list))
         }
     }
+
 }

@@ -174,7 +174,23 @@ fun PassengerTable(
                                 .weight(1f)
                                 .alignByBaseline()
                         )
+                    // Only show phone in Completed view (aligns with header "Phone")
+                    if (viewMode == TripViewMode.COMPLETED) {
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = formatPhone(passenger.phone),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier
+                                .width(140.dp)   // match the header width
+                                .alignByBaseline()
+                        )
                     }
+
+
+
+                }
+
+
 
                     Spacer(modifier = Modifier.height(1.dp))
 
@@ -337,8 +353,15 @@ fun PassengerTable(
         )
     }
 
-
-
 }
+
+private fun formatPhone(raw: String?): String {
+    if (raw.isNullOrBlank()) return "—"
+    val d = raw.filter(Char::isDigit)
+    return if (d.length == 10)
+        "(${d.substring(0,3)}) ${d.substring(3,6)}-${d.substring(6)}"
+    else raw
+}
+
 
 
