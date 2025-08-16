@@ -69,7 +69,7 @@ fun PassengerTableWithStaticHeader(
                     .alignByBaseline()
             )
 
-            if (viewMode == TripViewMode.COMPLETED) {
+            if (viewMode == TripViewMode.COMPLETED || viewMode == TripViewMode.REMOVED) {
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "Phone",

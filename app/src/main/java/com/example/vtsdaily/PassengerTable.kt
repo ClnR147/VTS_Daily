@@ -23,6 +23,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
+import jxl.Workbook
+import java.io.File
+import android.os.Environment
+import java.time.format.DateTimeFormatter
 import androidx.compose.material3.AlertDialog  // ✅ Material 3 - correct
 import com.example.vtsdaily.ui.theme.ActionGreen
 import com.example.vtsdaily.ui.theme.CardHighlight
@@ -79,9 +83,23 @@ fun PassengerTable(
             .filter { CompletedTripStore.isTripCompleted(context, scheduleDate, it) }
             .sortedBy { toSortableTime(it.typeTime) }
 
-        TripViewMode.REMOVED -> RemovedTripStore.getRemovedTrips(context, scheduleDate)
-            .map { Passenger(it.name, "", it.pickupAddress, it.dropoffAddress, it.typeTime, "") }
-            .sortedBy { toSortableTime(it.typeTime) }
+        TripViewMode.REMOVED -> {
+            val phoneLookup = phoneLookupFromXls(scheduleDate) // read once for the date
+            RemovedTripStore.getRemovedTrips(context, scheduleDate)
+                .map { rt ->
+                    val key = "${rt.name.trim().lowercase()}|${rt.pickupAddress.trim().lowercase()}|${rt.dropoffAddress.trim().lowercase()}|${rt.typeTime.trim().lowercase()}"
+                    val phone = phoneLookup[key].orEmpty()
+                    Passenger(
+                        name = rt.name,
+                        id = "",
+                        pickupAddress = rt.pickupAddress,
+                        dropoffAddress = rt.dropoffAddress,
+                        typeTime = rt.typeTime,
+                        phone = phone
+                    )
+                }
+                .sortedBy { toSortableTime(it.typeTime) }
+        }
     }
 
     val removedReasonMap = if (viewMode == TripViewMode.REMOVED) {
@@ -175,7 +193,7 @@ fun PassengerTable(
                                 .alignByBaseline()
                         )
                     // Only show phone in Completed view (aligns with header "Phone")
-                    if (viewMode == TripViewMode.COMPLETED) {
+                    if (viewMode == TripViewMode.COMPLETED || viewMode == TripViewMode.REMOVED) {
                         Spacer(Modifier.width(12.dp))
                         Text(
                             text = formatPhone(passenger.phone),
@@ -361,6 +379,49 @@ private fun formatPhone(raw: String?): String {
     return if (d.length == 10)
         "(${d.substring(0,3)}) ${d.substring(3,6)}-${d.substring(6)}"
     else raw
+}
+
+private fun phoneLookupFromXls(date: LocalDate): Map<String, String> {
+    fun keyOf(name: String, pu: String, d: String, t: String) =
+        "${name.trim().lowercase()}|${pu.trim().lowercase()}|${d.trim().lowercase()}|${t.trim().lowercase()}"
+
+    val formatter = DateTimeFormatter.ofPattern("M-d-yy")
+    val fileName = "VTS ${date.format(formatter)}.xls"
+    val file = File(Environment.getExternalStorageDirectory(), "PassengerSchedules/$fileName")
+    if (!file.exists()) return emptyMap()
+
+    val wb = Workbook.getWorkbook(file)
+    return try {
+        val sheet = wb.getSheet(0)
+        if (sheet.rows == 0) return emptyMap()
+
+        // read header row (r = 0)
+        val headers = (0 until sheet.columns).map { c -> sheet.getCell(c, 0).contents.trim() }
+        fun idxOf(vararg candidates: String): Int =
+            headers.indexOfFirst { h -> candidates.any { cand -> h.equals(cand, ignoreCase = true) } }
+
+        val nameIdx  = idxOf("Passenger", "Name")
+        val puIdx    = idxOf("PAddress", "Pickup", "Pickup Address", "From")
+        val doIdx    = idxOf("DAddress", "Dropoff", "Dropoff Address", "To")
+        val timeIdx  = idxOf("PUTimeAppt", "Type/Time", "TypeTime", "Time", "Appt", "ApptTime")
+        val phoneIdx = idxOf("Phone", "Phone Number", "Phone#", "Phone #")
+
+        fun cell(r: Int, c: Int) = if (c >= 0) sheet.getCell(c, r).contents.trim() else ""
+
+        buildMap<String, String> {
+            for (r in 1 until sheet.rows) {
+                val name = cell(r, nameIdx)
+                if (name.isBlank()) continue
+                val pu    = cell(r, puIdx)
+                val d     = cell(r, doIdx)
+                val t     = cell(r, timeIdx)
+                val phone = cell(r, phoneIdx)
+                if (phone.isNotBlank()) put(keyOf(name, pu, d, t), phone)
+            }
+        }
+    } finally {
+        wb.close()
+    }
 }
 
 
