@@ -72,7 +72,7 @@ fun PassengerTable(
         }
     }
 
-    // Build name→phone from XLS, robust to missing headers; used for REMOVED view.
+    // Build name→phone from XLS (robust to missing headers); used for COMPLETED & REMOVED.
     val namePhones = remember(scheduleDate) { phoneNameMapFromXls(scheduleDate) }
 
     val visiblePassengers = when (viewMode) {
@@ -82,6 +82,14 @@ fun PassengerTable(
 
         TripViewMode.COMPLETED -> (passengers + insertedPassengers)
             .filter { CompletedTripStore.isTripCompleted(context, scheduleDate, it) }
+            // 🔹 NEW: if phone missing, backfill from XLS by name-only (trim at '(' or '+', lowercase)
+            .map { p ->
+                if (p.phone.isNullOrBlank()) {
+                    val key = cleanedName(p.name)
+                    val lookedUp = namePhones[key]
+                    if (!lookedUp.isNullOrBlank()) p.copy(phone = lookedUp) else p
+                } else p
+            }
             .sortedBy { toSortableTime(it.typeTime) }
 
         TripViewMode.REMOVED -> {
@@ -395,21 +403,21 @@ private fun phoneNameMapFromXls(date: LocalDate): Map<String, String> {
                 sheet.getCell(c, r).contents.trim()
             else ""
 
+        // Try header detection (row 0). If not present, treat row 0 as data.
         val headers = (0 until sheet.columns).map { c -> cell(0, c) }
         val nameHeaderIdx = headers.indexOfFirst { it.equals("Passenger", true) || it.equals("Name", true) }
         val phoneHeaderIdx = headers.indexOfFirst { it.contains("phone", true) }
 
         val usingHeaders = nameHeaderIdx >= 0 || phoneHeaderIdx >= 0
         val startRow = if (usingHeaders) 1 else 0
-        val nameCol = if (nameHeaderIdx >= 0) nameHeaderIdx else 0
+        val nameCol = if (usingHeaders && nameHeaderIdx >= 0) nameHeaderIdx else 0
 
         val out = LinkedHashMap<String, String>()
-
         for (r in startRow until sheet.rows) {
             val nameRaw = cell(r, nameCol)
             if (nameRaw.isBlank()) continue
 
-            var phone = if (phoneHeaderIdx >= 0) cell(r, phoneHeaderIdx) else ""
+            var phone = if (usingHeaders && phoneHeaderIdx >= 0) cell(r, phoneHeaderIdx) else ""
             if (phone.isBlank()) {
                 for (c in 0 until sheet.columns) {
                     val v = cell(r, c)
@@ -419,15 +427,14 @@ private fun phoneNameMapFromXls(date: LocalDate): Map<String, String> {
             if (phone.isBlank()) continue
 
             val key = cleanedName(nameRaw)
-            if (key.isNotEmpty() && !out.containsKey(key)) {
-                out[key] = phone
-            }
+            if (key.isNotEmpty() && !out.containsKey(key)) out[key] = phone
         }
         out
     } finally {
         wb.close()
     }
 }
+
 
 
 
