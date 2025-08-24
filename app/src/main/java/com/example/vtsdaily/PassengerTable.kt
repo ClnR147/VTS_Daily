@@ -72,6 +72,9 @@ fun PassengerTable(
         }
     }
 
+    // Build name→phone from XLS, robust to missing headers; used for REMOVED view.
+    val namePhones = remember(scheduleDate) { phoneNameMapFromXls(scheduleDate) }
+
     val visiblePassengers = when (viewMode) {
         TripViewMode.ACTIVE -> (passengers + insertedPassengers)
             .filterNot { CompletedTripStore.isTripCompleted(context, scheduleDate, it) }
@@ -82,16 +85,17 @@ fun PassengerTable(
             .sortedBy { toSortableTime(it.typeTime) }
 
         TripViewMode.REMOVED -> {
-            // Safe baseline: just render removed trips; do NOT try to populate phone here
             RemovedTripStore.getRemovedTrips(context, scheduleDate)
                 .map { rt ->
+                    val key = cleanedName(rt.name) // trim at '(' or '+', lowercase
+                    val lookedUp = namePhones[key]
                     Passenger(
                         name = rt.name,
                         id = "",
                         pickupAddress = rt.pickupAddress,
                         dropoffAddress = rt.dropoffAddress,
                         typeTime = rt.typeTime,
-                        phone = rt.phone.orEmpty() // if your store has it; otherwise remains blank
+                        phone = lookedUp ?: rt.phone.orEmpty()
                     )
                 }
                 .sortedBy { toSortableTime(it.typeTime) }
@@ -159,9 +163,7 @@ fun PassengerTable(
                                 },
                                 onLongClick = {
                                     when (viewMode) {
-                                        TripViewMode.ACTIVE -> {
-                                            selectedPassenger = passenger
-                                        }
+                                        TripViewMode.ACTIVE -> selectedPassenger = passenger
                                         TripViewMode.REMOVED -> {
                                             if (scheduleDate == LocalDate.now()) {
                                                 selectedPassenger = passenger
@@ -201,7 +203,7 @@ fun PassengerTable(
                                 .alignByBaseline()
                         )
 
-                        // Phone column (Completed & Removed screens show this column; may be blank for Removed)
+                        // Phone column for Completed & Removed
                         if (viewMode == TripViewMode.COMPLETED || viewMode == TripViewMode.REMOVED) {
                             Spacer(Modifier.width(12.dp))
                             Text(
@@ -306,9 +308,7 @@ fun PassengerTable(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { passengerToActOn = null }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { passengerToActOn = null }) { Text("Cancel") }
             }
         )
     }
@@ -326,9 +326,7 @@ fun PassengerTable(
                             selectedPassenger = null
                         },
                         modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Pickup Location")
-                    }
+                    ) { Text("Pickup Location") }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -338,15 +336,11 @@ fun PassengerTable(
                             selectedPassenger = null
                         },
                         modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Dropoff Location")
-                    }
+                    ) { Text("Dropoff Location") }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { selectedPassenger = null }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { selectedPassenger = null }) { Text("Cancel") }
             }
         )
     }
@@ -360,61 +354,80 @@ fun PassengerTable(
                 TextButton(onClick = {
                     onTripReinstated(selectedPassenger!!)
                     selectedPassenger = null
-                }) {
-                    Text("Reinstate")
-                }
+                }) { Text("Reinstate") }
             },
             dismissButton = {
-                TextButton(onClick = { selectedPassenger = null }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { selectedPassenger = null }) { Text("Cancel") }
             }
         )
     }
 }
 
-/* ===== Keep your original XLS reader available (unchanged) ===== */
+/* ===================== XLS helpers ===================== */
 
-private fun phoneLookupFromXls(date: LocalDate): Map<String, String> {
-    fun keyOf(name: String, pu: String, d: String, t: String) =
-        "${name.trim().lowercase()}|${pu.trim().lowercase()}|${d.trim().lowercase()}|${t.trim().lowercase()}"
+// Trim at '(' or '+', then lowercase and trim spaces.
+private fun cleanedName(raw: String): String {
+    val cut = raw.indexOfAny(charArrayOf('(', '+'))
+    val base = if (cut >= 0) raw.substring(0, cut) else raw
+    return base.trim().lowercase()
+}
 
+private fun phoneNameMapFromXls(date: LocalDate): Map<String, String> {
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
-    val fileName = "VTS ${date.format(formatter)}.xls"
-    val file = File(Environment.getExternalStorageDirectory(), "PassengerSchedules/$fileName")
-    if (!file.exists()) return emptyMap()
+    val wantedName = "VTS ${date.format(formatter)}.xls"
+    val dir = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
+    val file = File(dir, wantedName)
+
+    fun isPhone(s: String): Boolean {
+        if (s.isBlank()) return false
+        val re = Regex("""\(?\d{3}\)?[.\-\s]?\d{3}[.\-\s]?\d{4}""")
+        return re.containsMatchIn(s)
+    }
+
+    if (!dir.exists() || !file.exists()) return emptyMap()
 
     val wb = Workbook.getWorkbook(file)
     return try {
-        val sheet = wb.getSheet(0)
-        if (sheet.rows == 0) return emptyMap()
+        val sheet = wb.getSheet(0) ?: return emptyMap()
 
-        // read header row (r = 0)
-        val headers = (0 until sheet.columns).map { c -> sheet.getCell(c, 0).contents.trim() }
-        fun idxOf(vararg candidates: String): Int =
-            headers.indexOfFirst { h -> candidates.any { cand -> h.equals(cand, ignoreCase = true) } }
+        fun cell(r: Int, c: Int): String =
+            if (r in 0 until sheet.rows && c in 0 until sheet.columns)
+                sheet.getCell(c, r).contents.trim()
+            else ""
 
-        val nameIdx  = idxOf("Passenger", "Name")
-        val puIdx    = idxOf("PAddress", "Pickup", "Pickup Address", "From")
-        val doIdx    = idxOf("DAddress", "Dropoff", "Dropoff Address", "To")
-        val timeIdx  = idxOf("PUTimeAppt", "Type/Time", "TypeTime", "Time", "Appt", "ApptTime")
-        val phoneIdx = idxOf("Phone", "Phone Number", "Phone#", "Phone #")
+        val headers = (0 until sheet.columns).map { c -> cell(0, c) }
+        val nameHeaderIdx = headers.indexOfFirst { it.equals("Passenger", true) || it.equals("Name", true) }
+        val phoneHeaderIdx = headers.indexOfFirst { it.contains("phone", true) }
 
-        fun cell(r: Int, c: Int) = if (c >= 0) sheet.getCell(c, r).contents.trim() else ""
+        val usingHeaders = nameHeaderIdx >= 0 || phoneHeaderIdx >= 0
+        val startRow = if (usingHeaders) 1 else 0
+        val nameCol = if (nameHeaderIdx >= 0) nameHeaderIdx else 0
 
-        buildMap<String, String> {
-            for (r in 1 until sheet.rows) {
-                val name = cell(r, nameIdx)
-                if (name.isBlank()) continue
-                val pu    = cell(r, puIdx)
-                val d     = cell(r, doIdx)
-                val t     = cell(r, timeIdx)
-                val phone = cell(r, phoneIdx)
-                if (phone.isNotBlank()) put(keyOf(name, pu, d, t), phone)
+        val out = LinkedHashMap<String, String>()
+
+        for (r in startRow until sheet.rows) {
+            val nameRaw = cell(r, nameCol)
+            if (nameRaw.isBlank()) continue
+
+            var phone = if (phoneHeaderIdx >= 0) cell(r, phoneHeaderIdx) else ""
+            if (phone.isBlank()) {
+                for (c in 0 until sheet.columns) {
+                    val v = cell(r, c)
+                    if (isPhone(v)) { phone = v; break }
+                }
+            }
+            if (phone.isBlank()) continue
+
+            val key = cleanedName(nameRaw)
+            if (key.isNotEmpty() && !out.containsKey(key)) {
+                out[key] = phone
             }
         }
+        out
     } finally {
         wb.close()
     }
 }
+
+
 
