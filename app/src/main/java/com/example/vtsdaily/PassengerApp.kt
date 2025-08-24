@@ -70,6 +70,7 @@ fun PassengerApp() {
         mutableStateOf(loadSchedule(context, scheduleDate))
     }
 
+    val phoneBook = remember(baseSchedule) { buildPhoneBookFromSchedule(baseSchedule.passengers) }
     var insertedPassengers by remember(scheduleDate) {
         mutableStateOf(InsertedTripStore.loadInsertedTrips(context, scheduleDate))
     }
@@ -243,6 +244,8 @@ fun PassengerApp() {
             Spacer(modifier = Modifier.height(8.dp))
         }
 
+        
+
         PassengerTableWithStaticHeader(
             passengers = passengersForTable,
             insertedPassengers = insertedPassengers,
@@ -264,7 +267,11 @@ fun PassengerApp() {
                 baseSchedule = loadSchedule(context, scheduleDate)
                 insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
             },
-            onTripReinstated = handleTripReinstated
+            onTripReinstated = handleTripReinstated,
+
+            // 🔹 NEW: give the table access to the XLS passengers for phone lookup
+            schedulePassengers = baseSchedule.passengers,
+            phoneBook = phoneBook
         )
 
         if (showDateListDialog) {
@@ -329,13 +336,17 @@ fun PassengerApp() {
 private fun headersOf(sheet: Sheet): List<String> =
     (0 until sheet.columns).map { c -> sheet.getCell(c, 0).contents.trim() }
 
-private fun formatPhone(raw: String?): String {
+fun formatPhone(raw: String?): String {
     if (raw.isNullOrBlank()) return "—"
     val d = raw.filter(Char::isDigit)
     return if (d.length == 10)
         "(${d.substring(0,3)}) ${d.substring(3,6)}-${d.substring(6)}"
     else raw
 }
+private fun baseName(n: String) =
+    n.replace(Regex("\\s*\\(.*?\\)"), "") // strip (XLWC), (Cancelled), etc.
+        .trim()
+
 
 private fun idxOf(headers: List<String>, vararg candidates: String): Int =
     headers.indexOfFirst { h -> candidates.any { cand -> h.equals(cand, ignoreCase = true) } }
@@ -352,6 +363,29 @@ private fun buildPhoneBookFromSchedule(passengers: List<Passenger>?): Map<String
             if (key.isNotEmpty() && value != null) key to value else null
         }
         .toMap()
+// Find a phone for a RemovedTrip by matching against XLS-loaded schedule passengers.
+fun resolvePhoneFromSchedule(trip: RemovedTrip, schedulePassengers: List<Passenger>): String? {
+    fun norm(s: String?) = s?.lowercase()?.replace(Regex("[^a-z0-9]"), "") ?: ""
+    val nName = norm(trip.name)
+    val nPU   = norm(trip.pickupAddress)
+    val nDO   = norm(trip.dropoffAddress)
+    val nTT   = norm(trip.typeTime)
+
+    val candidates = schedulePassengers.filter { p ->
+        norm(p.name) == nName &&
+                (nPU.isEmpty() || norm(p.pickupAddress)  == nPU) &&
+                (nDO.isEmpty() || norm(p.dropoffAddress) == nDO)
+    }
+
+    // 1) Best: also matches type/time
+    candidates.firstOrNull { norm(it.typeTime) == nTT }?.phone?.let { return it }
+
+    // 2) Any candidate with a phone
+    candidates.firstOrNull { !it.phone.isNullOrBlank() }?.phone?.let { return it }
+
+    // 3) Fallback: match on name only
+    return schedulePassengers.firstOrNull { norm(it.name) == nName && !it.phone.isNullOrBlank() }?.phone
+}
 
 /**
  * Load Completed trips from the same XLS.

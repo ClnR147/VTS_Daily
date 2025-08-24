@@ -55,7 +55,7 @@ fun PassengerTable(
     viewMode: TripViewMode,
     context: Context,
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit,
-    onTripReinstated: (Passenger) -> Unit  // ✅ FIXED
+    onTripReinstated: (Passenger) -> Unit
 ) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
@@ -65,14 +65,12 @@ fun PassengerTable(
         val encoded = Uri.encode(address)
         val uri = Uri.parse("https://waze.com/ul?q=$encoded")
         val intent = Intent(Intent.ACTION_VIEW, uri)
-
         try {
             context.startActivity(intent)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(context, "Failed to open Waze.", Toast.LENGTH_SHORT).show()
         }
     }
-
 
     val visiblePassengers = when (viewMode) {
         TripViewMode.ACTIVE -> (passengers + insertedPassengers)
@@ -84,18 +82,16 @@ fun PassengerTable(
             .sortedBy { toSortableTime(it.typeTime) }
 
         TripViewMode.REMOVED -> {
-            val phoneLookup = phoneLookupFromXls(scheduleDate) // read once for the date
+            // Safe baseline: just render removed trips; do NOT try to populate phone here
             RemovedTripStore.getRemovedTrips(context, scheduleDate)
                 .map { rt ->
-                    val key = "${rt.name.trim().lowercase()}|${rt.pickupAddress.trim().lowercase()}|${rt.dropoffAddress.trim().lowercase()}|${rt.typeTime.trim().lowercase()}"
-                    val phone = phoneLookup[key].orEmpty()
                     Passenger(
                         name = rt.name,
                         id = "",
                         pickupAddress = rt.pickupAddress,
                         dropoffAddress = rt.dropoffAddress,
                         typeTime = rt.typeTime,
-                        phone = phone
+                        phone = rt.phone.orEmpty() // if your store has it; otherwise remains blank
                     )
                 }
                 .sortedBy { toSortableTime(it.typeTime) }
@@ -111,13 +107,14 @@ fun PassengerTable(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SubtleGrey) // subtle gray to show card edges
+            .background(SubtleGrey)
             .padding(top = if (viewMode == TripViewMode.REMOVED) 0.dp else 4.dp)
             .verticalScroll(rememberScrollState())
     ) {
         visiblePassengers.forEach { passenger ->
             val labelColor = CardHighlight
-            val passengerKey = "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}"
+            val passengerKey =
+                "${passenger.name}-${passenger.pickupAddress}-${passenger.dropoffAddress}-${passenger.typeTime}"
             val reasonText = when (removedReasonMap[passengerKey]?.reason) {
                 TripRemovalReason.CANCELLED -> " (Cancelled)"
                 TripRemovalReason.NO_SHOW -> " (No Show)"
@@ -128,12 +125,13 @@ fun PassengerTable(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 4.dp), // 👈 vertical = 4.dp adds visible space
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 shape = RoundedCornerShape(8.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
-                Row(
+
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
@@ -144,10 +142,17 @@ fun PassengerTable(
                                             tripBeingEdited = passenger
                                         } else {
                                             if (passenger.phone.isNotBlank()) {
-                                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${passenger.phone}"))
+                                                val intent = Intent(
+                                                    Intent.ACTION_DIAL,
+                                                    Uri.parse("tel:${passenger.phone}")
+                                                )
                                                 context.startActivity(intent)
                                             } else {
-                                                Toast.makeText(context, "No phone number available", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "No phone number available",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                             }
                                         }
                                     }
@@ -155,19 +160,22 @@ fun PassengerTable(
                                 onLongClick = {
                                     when (viewMode) {
                                         TripViewMode.ACTIVE -> {
-                                            selectedPassenger = passenger // triggers Waze dialog
+                                            selectedPassenger = passenger
                                         }
                                         TripViewMode.REMOVED -> {
                                             if (scheduleDate == LocalDate.now()) {
-                                                selectedPassenger = passenger // triggers reinstate confirmation dialog
+                                                selectedPassenger = passenger
                                             } else {
-                                                Toast.makeText(context, "Reinstatements are only allowed for today's schedule.", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "Reinstatements are only allowed for today's schedule.",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                             }
                                         }
                                         else -> {}
                                     }
                                 }
-
                             ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -192,29 +200,24 @@ fun PassengerTable(
                                 .weight(1f)
                                 .alignByBaseline()
                         )
-                    // Only show phone in Completed view (aligns with header "Phone")
-                    if (viewMode == TripViewMode.COMPLETED || viewMode == TripViewMode.REMOVED) {
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = formatPhone(passenger.phone),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier
-                                .width(140.dp)   // match the header width
-                                .alignByBaseline()
-                        )
+
+                        // Phone column (Completed & Removed screens show this column; may be blank for Removed)
+                        if (viewMode == TripViewMode.COMPLETED || viewMode == TripViewMode.REMOVED) {
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = formatPhone(passenger.phone),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier
+                                    .width(140.dp)
+                                    .alignByBaseline()
+                            )
+                        }
                     }
-
-
-
-                }
-
-
 
                     Spacer(modifier = Modifier.height(1.dp))
 
                     Column(modifier = Modifier.padding(bottom = 1.dp)) {
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 "From:",
                                 modifier = Modifier.width(52.dp),
@@ -310,8 +313,6 @@ fun PassengerTable(
         )
     }
 
-
-
     if (selectedPassenger != null && viewMode == TripViewMode.ACTIVE) {
         AlertDialog(
             onDismissRequest = { selectedPassenger = null },
@@ -370,16 +371,9 @@ fun PassengerTable(
             }
         )
     }
-
 }
 
-private fun formatPhone(raw: String?): String {
-    if (raw.isNullOrBlank()) return "—"
-    val d = raw.filter(Char::isDigit)
-    return if (d.length == 10)
-        "(${d.substring(0,3)}) ${d.substring(3,6)}-${d.substring(6)}"
-    else raw
-}
+/* ===== Keep your original XLS reader available (unchanged) ===== */
 
 private fun phoneLookupFromXls(date: LocalDate): Map<String, String> {
     fun keyOf(name: String, pu: String, d: String, t: String) =
@@ -423,6 +417,4 @@ private fun phoneLookupFromXls(date: LocalDate): Map<String, String> {
         wb.close()
     }
 }
-
-
 

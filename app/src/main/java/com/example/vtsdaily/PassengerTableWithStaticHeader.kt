@@ -27,7 +27,10 @@ fun PassengerTableWithStaticHeader(
     viewMode: TripViewMode,
     context: Context,
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit,
-    onTripReinstated: (Passenger) -> Unit
+    onTripReinstated: (Passenger) -> Unit,
+    schedulePassengers: List<Passenger> = emptyList(),
+    // 🔹 NEW (default keeps other calls compiling)
+    phoneBook: Map<String, String> = emptyMap()
 
 )
 
