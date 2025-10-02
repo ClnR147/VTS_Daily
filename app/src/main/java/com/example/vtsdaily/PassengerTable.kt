@@ -32,18 +32,17 @@ import com.example.vtsdaily.ui.theme.ActionGreen
 import com.example.vtsdaily.ui.theme.CardHighlight
 import com.example.vtsdaily.ui.theme.FromGrey
 import com.example.vtsdaily.ui.theme.SubtleGrey
+
 @Composable
 fun ActionButton(label: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier
-            .padding(4.dp) // Remove weight
+            .padding(4.dp)
     ) {
         Text(label)
     }
 }
-
-
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -95,7 +94,7 @@ fun PassengerTable(
         TripViewMode.REMOVED -> {
             RemovedTripStore.getRemovedTrips(context, scheduleDate)
                 .map { rt ->
-                    val key = cleanedName(rt.name) // trim at '(' or '+', lowercase
+                    val key = cleanedName(rt.name)
                     val lookedUp = namePhones[key]
                     Passenger(
                         name = rt.name,
@@ -183,7 +182,18 @@ fun PassengerTable(
                                                 ).show()
                                             }
                                         }
-                                        else -> {}
+                                        // 🔹 NEW: allow reinstatement from COMPLETED via long-press
+                                        TripViewMode.COMPLETED -> {
+                                            if (scheduleDate == LocalDate.now()) {
+                                                selectedPassenger = passenger
+                                            } else {
+                                                Toast.makeText(
+                                                    context,
+                                                    "Reinstatements are only allowed for today's schedule.",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
                                     }
                                 }
                             ),
@@ -369,6 +379,34 @@ fun PassengerTable(
             }
         )
     }
+
+    // 🔹 NEW: Reinstate from COMPLETED
+    if (selectedPassenger != null && viewMode == TripViewMode.COMPLETED) {
+        AlertDialog(
+            onDismissRequest = { selectedPassenger = null },
+            title = { Text("Reinstate Completed Trip?") },
+            text = { Text("Move this trip back to the Active list and remove it from Completed?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val ok = CompletedTripStore.removeCompletedTrip(
+                        context = context,
+                        forDate = scheduleDate,
+                        passenger = selectedPassenger!!
+                    )
+                    if (ok) {
+                        onTripReinstated(selectedPassenger!!)
+                        Toast.makeText(context, "Reinstated to Active.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Couldn’t find completed record to remove.", Toast.LENGTH_SHORT).show()
+                    }
+                    selectedPassenger = null
+                }) { Text("Reinstate") }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedPassenger = null }) { Text("Cancel") }
+            }
+        )
+    }
 }
 
 /* ===================== XLS helpers ===================== */
@@ -434,7 +472,3 @@ private fun phoneNameMapFromXls(date: LocalDate): Map<String, String> {
         wb.close()
     }
 }
-
-
-
-
