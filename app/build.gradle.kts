@@ -1,8 +1,7 @@
 plugins {
-    kotlin("jvm") version "1.8.10" apply false
-    id("com.android.application") version "8.1.2"
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.8.10"  // ✅ Add this line
+    id("com.android.application")
+    kotlin("android")
+    kotlin("plugin.serialization")
 }
 
 android {
@@ -17,9 +16,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
+        vectorDrawables { useSupportLibrary = true }
     }
 
     buildTypes {
@@ -32,21 +29,22 @@ android {
         }
     }
 
+    // AGP 8.x -> use Java 17
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 
     buildFeatures {
         compose = true
     }
 
+    // Match your Kotlin/Compose toolchain; 1.5.3 is safe with AGP 8.1.x + Kotlin 1.9.x
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.3"
+        kotlinCompilerExtensionVersion = "1.5.11"
     }
 
     packaging {
@@ -73,6 +71,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material:material:1.5.0")
     implementation("androidx.compose.material3:material3:1.2.1")
+
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.google.accompanist:accompanist-flowlayout:0.30.1")
 
@@ -85,39 +84,22 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
-// Automatically copy the debug APK to a custom folder after build
-// Copy debug APK task
+// --- Copy APK tasks ---
 tasks.register<Copy>("copyDebugApkToCustomFolder") {
     val apkPath = "$buildDir/outputs/apk/debug/app-debug.apk"
     val destinationDir = file("C:/AutoSyncToPhone/PassengerSchedules")
-
-    from(apkPath)
-    into(destinationDir)
-
-    doLast {
-        println("✅ Debug APK copied to: $destinationDir")
-    }
+    from(apkPath); into(destinationDir)
+    doLast { println("✅ Debug APK copied to: $destinationDir") }
 }
 
-// Copy release APK task
 tasks.register<Copy>("copyReleaseApkToCustomFolder") {
     val apkPath = "$buildDir/outputs/apk/release/app-release.apk"
     val destinationDir = file("C:/AutoSyncToPhone/PassengerSchedules")
-
-    from(apkPath)
-    into(destinationDir)
-
-    doLast {
-        println("✅ Release APK copied to: $destinationDir")
-    }
+    from(apkPath); into(destinationDir)
+    doLast { println("✅ Release APK copied to: $destinationDir") }
 }
 
-// Hook into assemble tasks *after* they exist
 afterEvaluate {
-    tasks.named("assembleDebug").configure {
-        finalizedBy("copyDebugApkToCustomFolder")
-    }
-    tasks.named("assembleRelease").configure {
-        finalizedBy("copyReleaseApkToCustomFolder")
-    }
+    tasks.named("assembleDebug").configure { finalizedBy("copyDebugApkToCustomFolder") }
+    tasks.named("assembleRelease").configure { finalizedBy("copyReleaseApkToCustomFolder") }
 }
