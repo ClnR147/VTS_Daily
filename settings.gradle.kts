@@ -5,10 +5,10 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        id("com.android.application") version "8.1.2"
-        id("com.android.library") version "8.1.2"
-        kotlin("android") version "1.9.23"
-        kotlin("jvm") version "1.9.23"
+        id("com.android.application") version "8.3.2"
+        id("com.android.library")     version "8.3.2"
+        kotlin("android")             version "1.9.23"
+        kotlin("jvm")                 version "1.9.23"
         kotlin("plugin.serialization") version "1.9.23"
     }
 }
@@ -18,3 +18,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "VTSDaily"
 include(":app")
+include(":drivervans")
