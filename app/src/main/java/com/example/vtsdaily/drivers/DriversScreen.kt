@@ -2,7 +2,10 @@ package com.example.vtsdaily.drivers
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,102 +14,224 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val VtsBanner = Color(0xFF9A7DAB)
+private val VtsBannerText = Color(0xFFFFF5E1)
+private val RowStripe = Color(0xFFF7F5FA)
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun DriversScreen() {
-    val context = LocalContext.current
-    var query by rememberSaveable { mutableStateOf("") }
+    val context = androidx.compose.ui.platform.LocalContext.current
     var drivers by remember { mutableStateOf(DriverStore.load(context)) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var selected by remember { mutableStateOf<Driver?>(null) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     val filtered = remember(drivers, query) {
         val q = query.trim().lowercase()
-        if (q.isEmpty()) drivers
-        else drivers.filter { it.name.lowercase().contains(q) || it.van.lowercase().contains(q) }
+        if (q.isEmpty()) drivers else drivers.filter { d ->
+            d.name.lowercase().contains(q) ||
+                    d.van.lowercase().contains(q)  ||
+                    "${d.make} ${d.model}".lowercase().contains(q)
+        }
     }
 
     Scaffold(
-        topBar = { CenterAlignedTopAppBar(title = { Text("Drivers") }) }
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Drivers", color = VtsBannerText, fontWeight = FontWeight.SemiBold) },
+                actions = {
+                    TextButton(
+                        onClick = {
+                            val guesses = listOf(
+                                "/storage/emulated/0/PassengerSchedules/driver.xls",
+                                "C:/Users/kbigg/CrossDevice/KEITH's S25+ (1)/storage/PassengerSchedules/driver.xls"
+                            ).map(::File)
+
+                            val found = guesses.firstOrNull { it.exists() }
+                            if (found == null) {
+                                scope.launch { snackbarHostState.showSnackbar("driver.xls not found in default locations.") }
+                            } else {
+                                runCatching { DriverStore.importFromXls(found) }
+                                    .onSuccess {
+                                        drivers = it
+                                        DriverStore.save(context, it)
+                                        scope.launch { snackbarHostState.showSnackbar("Imported ${it.size} drivers.") }
+                                    }
+                                    .onFailure { e ->
+                                        scope.launch { snackbarHostState.showSnackbar("Import failed: ${e.message}") }
+                                    }
+                            }
+                        }
+                    ) { Text("Import XLS", color = VtsBannerText) }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = VtsBanner)
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.padding(padding).fillMaxSize()) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("Search by name or van") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(12.dp)
+                label = { Text("Search (name, van, make/model)") }
             )
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(12.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(filtered, key = { it.id }) { d ->
+                items(filtered) { d ->
                     DriverRow(
                         driver = d,
-                        onCall = {
-                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${d.phone}"))
+                        onClick = { selected = d },
+                        onCall = { phone ->
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
                             context.startActivity(intent)
-                        },
-                        onToggleActive = {
-                            DriverStore.toggleActive(context, d.id)
-                            drivers = DriverStore.load(context)
                         }
                     )
                 }
             }
         }
+
+        if (selected != null) {
+            DriverDetailsDialog(
+                driver = selected!!,
+                onDismiss = { selected = null },
+                onCall = { phone ->
+                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                    context.startActivity(intent)
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DriverRow(
+    driver: Driver,
+    onClick: () -> Unit,
+    onCall: (String) -> Unit
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { onCall(driver.phone) }
+            )
+    ) {
+        Row(
+            modifier = Modifier
+                .background(RowStripe)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(color = VtsBanner, shape = MaterialTheme.shapes.large)
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(driver.van, color = VtsBannerText, fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    driver.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+                val sub = buildString {
+                    if (driver.year != null) append("${driver.year} ")
+                    append(driver.make)
+                    if (driver.model.isNotBlank()) append(" ${driver.model}")
+                }.trim()
+                if (sub.isNotBlank()) {
+                    Text(
+                        sub,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF56536A),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Text(
+                text = driver.phone,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { onCall(driver.phone) },
+                maxLines = 1, overflow = TextOverflow.Clip
+            )
+        }
     }
 }
 
 @Composable
-private fun DriverRow(
+private fun DriverDetailsDialog(
     driver: Driver,
-    onCall: () -> Unit,
-    onToggleActive: () -> Unit
+    onDismiss: () -> Unit,
+    onCall: (String) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onCall() }
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AssistChip(
-                onClick = onCall,
-                label = { Text("Van ${driver.van}") }
-            )
-            Spacer(Modifier.width(12.dp))
-
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = driver.name,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "${driver.year} ${driver.makeModel}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis
-                )
-                val status = if (driver.active) "Active" else "Inactive"
-                Text(text = status, style = MaterialTheme.typography.labelMedium)
-            }
-
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onCall) { Text("Call") }
-                Spacer(Modifier.width(4.dp))
-                TextButton(onClick = onToggleActive) { Text(if (driver.active) "Deactivate" else "Activate") }
+                Box(
+                    modifier = Modifier
+                        .background(color = VtsBanner, shape = MaterialTheme.shapes.large)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(driver.van, color = VtsBannerText, fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = buildString {
+                        append("• ")
+                        if (driver.year != null) append("${driver.year} ")
+                        append(driver.make)
+                        if (driver.model.isNotBlank()) append(" ${driver.model}")
+                    }.trim(),
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+        },
+        text = {
+            Column {
+                Text(driver.name, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Phone: ", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        driver.phone,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable { onCall(driver.phone) }
+                    )
+                }
             }
         }
-    }
+    )
 }

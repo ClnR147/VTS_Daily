@@ -3,10 +3,11 @@ package com.example.vtsdaily.drivers
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import jxl.Workbook
+import jxl.Sheet
 import java.io.File
-import java.util.UUID
 
-object DriverStore {
+internal object DriverStore {
     private const val FILE_NAME = "drivers.json"
     private val gson = Gson()
 
@@ -14,40 +15,104 @@ object DriverStore {
 
     fun load(context: Context): List<Driver> {
         val f = file(context)
-        if (!f.exists() || f.length() == 0L) return demo()
+        if (!f.exists()) return emptyList()
         val type = object : TypeToken<List<Driver>>() {}.type
-        return runCatching { gson.fromJson<List<Driver>>(f.readText(), type) }.getOrElse { demo() }
+        return runCatching { gson.fromJson<List<Driver>>(f.readText(), type) ?: emptyList() }
+            .getOrElse { emptyList() }
     }
 
-    fun save(context: Context, list: List<Driver>) {
-        val f = file(context)
-        val tmp = File(f.parentFile ?: f, f.name + ".tmp")
-        tmp.writeText(gson.toJson(list))
-        if (f.exists()) f.delete()
-        tmp.renameTo(f)
+    fun save(context: Context, drivers: List<Driver>) {
+        file(context).writeText(gson.toJson(drivers))
     }
 
-    fun upsert(context: Context, driver: Driver) {
-        val list = load(context).toMutableList()
-        val idx = list.indexOfFirst { it.id == driver.id }
-        if (idx >= 0) list[idx] = driver else list.add(driver)
-        save(context, list)
-    }
+    /**
+     * Import from .xls with headers: Name | Van | Year | Make | Model | Phone
+     * - No id, no active.
+     */
+    fun importFromXls(xlsFile: File, sheetName: String? = null): List<Driver> {
+        require(xlsFile.exists()) { "XLS not found: ${xlsFile.absolutePath}" }
 
-    fun toggleActive(context: Context, id: String) {
-        val list = load(context).toMutableList()
-        val idx = list.indexOfFirst { it.id == id }
-        if (idx >= 0) {
-            val d = list[idx]
-            list[idx] = d.copy(active = !d.active)
-            save(context, list)
+        val wb = Workbook.getWorkbook(xlsFile)
+        val sheet: Sheet = sheetName?.let { name ->
+            wb.sheets.firstOrNull { it.name.equals(name, ignoreCase = true) }
+                ?: throw IllegalArgumentException(
+                    "Sheet '$name' not found in ${xlsFile.name}. Available: ${
+                        wb.sheets.joinToString { it.name }
+                    }"
+                )
+        } ?: wb.getSheet(0)
+
+        if (sheet.rows == 0 || sheet.columns == 0) {
+            wb.close(); return emptyList()
+        }
+
+        val headerIndex = buildHeaderIndex(sheet)
+        val required = listOf("name","van","year","make","model","phone")
+        val missing = required.filter { it !in headerIndex }
+        if (missing.isNotEmpty()) {
+            wb.close()
+            throw IllegalArgumentException(
+                "Missing columns: ${missing.joinToString()} — found: ${headerIndex.keys.joinToString()} (sheet '${sheet.name}')."
+            )
+        }
+
+        val list = mutableListOf<Driver>()
+        for (r in 1 until sheet.rows) {
+            fun cell(key: String) = sheet.getCell(headerIndex[key]!!, r).contents?.trim().orEmpty()
+
+            val name  = cell("name")
+            val van   = cell("van")
+            val year  = cell("year").toIntOrNull()
+            val make  = cell("make")
+            val model = cell("model")
+            val phone = normalizePhone(cell("phone"))
+
+            if (name.isBlank() && van.isBlank() && phone.isBlank() && make.isBlank() && model.isBlank()) continue
+
+            list += Driver(
+                name = name,
+                van = van,
+                year = year,
+                make = make,
+                model = model,
+                phone = phone
+            )
+        }
+        wb.close()
+
+        // Dedupe by (name|van)
+        val seen = HashSet<String>()
+        return list.filter { d ->
+            val k = "${d.name.trim().lowercase()}|${d.van.trim().lowercase()}"
+            seen.add(k)
         }
     }
 
-    private fun demo(): List<Driver> = listOf(
-        Driver(UUID.randomUUID().toString(), "Ray Alvarez", "805-555-0111", "964", 2022, "Ford Transit", true),
-        Driver(UUID.randomUUID().toString(), "Dana Kim",    "805-555-0144", "951", 2020, "Ford Transit", true),
-        Driver(UUID.randomUUID().toString(), "Luis Perez",  "805-555-0188", "947", 2021, "Ford Transit", false),
-    )
-}
+    private fun buildHeaderIndex(sheet: Sheet): Map<String, Int> {
+        val map = mutableMapOf<String, Int>()
+        fun norm(h: String) = h.trim().lowercase()
+            .replace("\u00A0", " ")
+            .replace(Regex("\\s+"), " ")
 
+        for (c in 0 until sheet.columns) {
+            when (norm(sheet.getCell(c, 0).contents ?: "")) {
+                "name"  -> map["name"] = c
+                "van"   -> map["van"] = c
+                "year"  -> map["year"] = c
+                "make"  -> map["make"] = c
+                "model" -> map["model"] = c
+                "phone" -> map["phone"] = c
+            }
+        }
+        return map
+    }
+
+    private fun normalizePhone(raw: String): String {
+        val digits = raw.filter { it.isDigit() }
+        return when {
+            digits.length == 10 -> "(${digits.substring(0,3)}) ${digits.substring(3,6)}-${digits.substring(6)}"
+            digits.length == 11 && digits.startsWith("1") -> "(${digits.substring(1,4)}) ${digits.substring(4,7)}-${digits.substring(7)}"
+            else -> raw.trim()
+        }
+    }
+}

@@ -1,12 +1,10 @@
 package com.example.vtsdaily.drivers
 
 data class Driver(
-    val id: String,
     val name: String,
-    val phone: String,
     val van: String,
-    val year: Int,
-    val makeModel: String,
-    val active: Boolean = true
+    val year: Int?,   // allow blank
+    val make: String,
+    val model: String,
+    val phone: String
 )
-
