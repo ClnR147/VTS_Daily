@@ -21,7 +21,12 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import java.io.File
 
-private val VtsBanner = Color(0xFF9A7DAB)
+// Icons
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material3.HorizontalDivider
+
+private val VtsBanner = Color(0xFF4CAF50)   // green
 private val VtsBannerText = Color(0xFFFFF5E1)
 private val RowStripe = Color(0xFFF7F5FA)
 
@@ -45,54 +50,73 @@ fun DriversScreen() {
         }
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Drivers", color = VtsBannerText, fontWeight = FontWeight.SemiBold) },
-                actions = {
-                    TextButton(
-                        onClick = {
-                            val guesses = listOf(
-                                "/storage/emulated/0/PassengerSchedules/driver.xls",
-                                "C:/Users/kbigg/CrossDevice/KEITH's S25+ (1)/storage/PassengerSchedules/driver.xls"
-                            ).map(::File)
+    fun doImport() {
+        val guesses = listOf(
+            "/storage/emulated/0/PassengerSchedules/driver.xls",
+            "C:/Users/kbigg/CrossDevice/KEITH's S25+ (1)/storage/PassengerSchedules/driver.xls"
+        ).map(::File)
 
-                            val found = guesses.firstOrNull { it.exists() }
-                            if (found == null) {
-                                scope.launch { snackbarHostState.showSnackbar("driver.xls not found in default locations.") }
-                            } else {
-                                runCatching { DriverStore.importFromXls(found) }
-                                    .onSuccess {
-                                        drivers = it
-                                        DriverStore.save(context, it)
-                                        scope.launch { snackbarHostState.showSnackbar("Imported ${it.size} drivers.") }
-                                    }
-                                    .onFailure { e ->
-                                        scope.launch { snackbarHostState.showSnackbar("Import failed: ${e.message}") }
-                                    }
-                            }
-                        }
-                    ) { Text("Import XLS", color = VtsBannerText) }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = VtsBanner)
-            )
+        val found = guesses.firstOrNull { it.exists() }
+        if (found == null) {
+            scope.launch { snackbarHostState.showSnackbar("driver.xls not found in default locations.") }
+        } else {
+            runCatching { DriverStore.importFromXls(found) }
+                .onSuccess {
+                    drivers = it
+                    DriverStore.save(context, it)
+                    scope.launch { snackbarHostState.showSnackbar("Imported ${it.size} drivers.") }
+                }
+                .onFailure { e ->
+                    scope.launch { snackbarHostState.showSnackbar("Import failed: ${e.message}") }
+                }
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { doImport() },
+                containerColor = VtsBanner,
+                contentColor = VtsBannerText
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Upload,
+                    contentDescription = "Import XLS"
+                )
+            }
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        floatingActionButtonPosition = FabPosition.End
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        Column(
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
+            // divider under the main app bar (match Schedule feel)
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 12.dp),  // aligns with search bar edges
+                thickness = 8.dp,
+                color = VtsBanner
+            )
+
+            // Search
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 singleLine = true,
                 label = { Text("Search (name, van, make/model)") }
             )
 
+            // List (extra bottom padding so rows don't hide behind the FAB)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(
+                    start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(filtered) { d ->
@@ -145,9 +169,10 @@ private fun DriverRow(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Van pill
             Box(
                 modifier = Modifier
-                    .background(color = VtsBanner, shape = MaterialTheme.shapes.large)
+                    .background(VtsBanner, shape = MaterialTheme.shapes.large)
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(driver.van, color = VtsBannerText, fontWeight = FontWeight.SemiBold)
