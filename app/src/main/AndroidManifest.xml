@@ -33,7 +33,7 @@
 
         <activity
             android:name=".ImportantContactsActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="Important Contacts"
             android:theme="@style/Theme.VTSDaily" />
     </application>
