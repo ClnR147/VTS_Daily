@@ -59,7 +59,7 @@ import android.util.Log
 
 
 @Composable
-fun PassengerApp() {
+    fun PassengerApp() {
     val context = LocalContext.current
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
@@ -244,7 +244,7 @@ fun PassengerApp() {
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        
+
 
         PassengerTableWithStaticHeader(
             passengers = passengersForTable,
