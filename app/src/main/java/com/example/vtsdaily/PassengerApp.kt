@@ -116,15 +116,16 @@ fun PassengerApp() {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(top = 4.dp, bottom = 0.dp), // was vertical = 12.dp
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                 color = PrimaryPurple,
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.clickable { showDateListDialog = true }
-                .padding(bottom = 2.dp)
+                modifier = Modifier
+                    .clickable { showDateListDialog = true }
+                    .padding(bottom = 2.dp)
             )
         }
 

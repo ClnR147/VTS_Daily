@@ -55,6 +55,16 @@ private fun parseDateOrNull(s: String): LocalDate? {
     }
     return null
 }
+
+private fun groupTripsByDate(rows: List<LookupRow>): Map<LocalDate, List<LookupRow>> {
+    return rows
+        .mapNotNull { row ->
+            parseDateOrNull(row.driveDate)?.let { it to row }
+        }
+        .groupBy({ it.first }, { it.second })
+        .toSortedMap(compareByDescending { it }) // newest → oldest
+}
+
 private fun formatDate(d: LocalDate) = d.format(dateFormats.first())
 
 /* --- CSV importer (headers: DriveDate, Passenger, PAddress, DAddress, Phone) --- */
@@ -248,18 +258,33 @@ fun PassengerLookupScreen() {
 
                     Page.DETAILS -> {
                         val name = selectedName ?: ""
+
+                        // Group passenger's trips by date
+                        val groupedTrips = remember(allRows, selectedName) {
+                            val trips = allRows.filter { it.passenger.equals(selectedName, ignoreCase = true) }
+                            groupTripsByDate(trips)
+                        }
+
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp) // tightened
                         ) {
                             item {
                                 ElevatedCard(Modifier.fillMaxWidth()) {
-                                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        // Header: name + first available phone
-                                        Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 2)
+                                    Column(
+                                        Modifier.padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        // Header: passenger name + phone
+                                        Text(
+                                            name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            maxLines = 2
+                                        )
 
-                                        val phone = tripsForPassenger.firstOrNull { it.phone.isNotBlank() }?.phone
+                                        val phone = groupedTrips.values.flatten()
+                                            .firstOrNull { it.phone.isNotBlank() }?.phone
                                         if (!phone.isNullOrBlank()) {
                                             Text(
                                                 "Phone: $phone",
@@ -271,37 +296,85 @@ fun PassengerLookupScreen() {
                                                 }
                                             )
                                         }
+// Header → first detail divider (same spacing style)
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(top = 8.dp, start = 12.dp, end = 12.dp),
+                                            thickness = 3.dp,
+                                            color = VtsGreen
+                                        )
 
-                                        // All trips (newest → oldest), each row shows DATE + addresses
-                                        Spacer(Modifier.height(4.dp))
-                                        tripsForPassenger.forEach { r ->
+                                        // 🔹 Grouped trips by date (newest → oldest)
+                                        groupedTrips.entries.forEachIndexed { index, (date, trips) ->
+                                            if (index > 0) {
+                                                // Small VTSGreen divider between date groups
+                                                HorizontalDivider(
+                                                    modifier = Modifier
+                                                        .padding(top = 8.dp, bottom = 0.dp, start = 12.dp, end = 12.dp),
+                                                    thickness = 3.dp,
+                                                    color = VtsGreen
+                                                )
+                                            }
+
                                             Column(
                                                 Modifier
                                                     .fillMaxWidth()
                                                     .background(RowStripe)
-                                                    .padding(8.dp)
+                                                    .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 0.dp) // ← no bottom pad
                                             ) {
-                                                parseDateOrNull(r.driveDate)?.let { d ->
-                                                    Text("Date: ${formatDate(d)}", style = MaterialTheme.typography.bodySmall)
-                                                } ?: run {
-                                                    if (r.driveDate.isNotBlank()) {
-                                                        Text("Date: ${r.driveDate}", style = MaterialTheme.typography.bodySmall)
+                                                Text(
+                                                    "Date: ${formatDate(date)}",
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                )
+                                                Spacer(Modifier.height(4.dp))
+
+                                                val labelIndent = 70.dp  // consistent column alignment
+
+                                                trips.forEachIndexed { i, r ->
+                                                    Row(Modifier.fillMaxWidth()) {
+                                                        if (r.pAddress.isNotBlank()) {
+                                                            Text(
+                                                                text = "Pickup:",
+                                                                style = MaterialTheme.typography.bodyMedium,
+                                                                modifier = Modifier.width(labelIndent)
+                                                            )
+                                                            Text(
+                                                                text = r.pAddress,
+                                                                style = MaterialTheme.typography.bodyMedium
+                                                            )
+                                                        }
+                                                    }
+
+                                                    Row(Modifier.fillMaxWidth()) {
+                                                        if (r.dAddress.isNotBlank()) {
+                                                            Text(
+                                                                text = "Drop-off:",
+                                                                style = MaterialTheme.typography.bodyMedium,
+                                                                modifier = Modifier.width(labelIndent)
+                                                            )
+                                                            Text(
+                                                                text = r.dAddress,
+                                                                style = MaterialTheme.typography.bodyMedium
+                                                            )
+                                                        }
+                                                    }
+
+                                                    // 👇 add space only between trips, not after the last one
+                                                    if (i < trips.lastIndex) {
+                                                        Spacer(Modifier.height(4.dp))
                                                     }
                                                 }
-                                                if (r.pAddress.isNotBlank()) {
-                                                    Text("Pickup: ${r.pAddress}", style = MaterialTheme.typography.bodyMedium)
-                                                }
-                                                if (r.dAddress.isNotBlank()) {
-                                                    Text("Drop-off: ${r.dAddress}", style = MaterialTheme.typography.bodyMedium)
-                                                }
+
                                             }
-                                            Spacer(Modifier.height(6.dp))
                                         }
                                     }
                                 }
                             }
                         }
                     }
+
+
                 }
             }
 
