@@ -53,38 +53,52 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
-    implementation("androidx.activity:activity-compose:1.7.2")
-    implementation("androidx.compose.material:material-icons-extended")
+    // Compose BOM (single source of truth)
     implementation(platform("androidx.compose:compose-bom:2024.10.00"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
+
+    // Core / lifecycle / activity
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.navigation:navigation-compose:2.8.3")
-    implementation("com.google.code.gson:gson:2.11.0")
 
-    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
-    implementation("net.sourceforge.jexcelapi:jxl:2.6.12")
-    implementation("com.google.android.material:material:1.9.0")
-    implementation("com.google.code.gson:gson:2.10.1")
-
-    implementation(platform("androidx.compose:compose-bom:2023.10.01"))
+    // Compose UI + Material
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material:material:1.5.0")
-    implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.navigation:navigation-compose:2.8.3")
+
+    // ✅ Stable window-size-class + window override (kills AAR metadata issue)
+    implementation("androidx.compose.material3:material3-window-size-class-android:1.3.0")
+    implementation("androidx.window:window:1.3.0")
+
+    // Your other libs (deduped)
+    implementation("com.google.code.gson:gson:2.11.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+    implementation("net.sourceforge.jexcelapi:jxl:2.6.12")
+    implementation("com.google.android.material:material:1.9.0") // keep only if you use XML views
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.google.accompanist:accompanist-flowlayout:0.30.1")
 
+    // Tests
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2023.10.01"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.10.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+
+    // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Belt-and-suspenders: force window 1.3.0 if anything tries to pull 1.0.0
+    constraints {
+        implementation("androidx.window:window:1.3.0") {
+            because("material3-window-size-class can pull window:1.0.0 transitively")
+        }
+    }
 }
 
 // --- Copy APK tasks ---
