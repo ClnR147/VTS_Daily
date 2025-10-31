@@ -59,7 +59,7 @@ import android.util.Log
 
 
 @Composable
-fun PassengerApp() {
+    fun PassengerApp() {
     val context = LocalContext.current
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
@@ -75,7 +75,6 @@ fun PassengerApp() {
         mutableStateOf(InsertedTripStore.loadInsertedTrips(context, scheduleDate))
     }
 
-    var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
     var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
@@ -188,24 +187,7 @@ fun PassengerApp() {
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (viewMode == TripViewMode.ACTIVE) {
-                    val canAddTrip = !scheduleDate.isBefore(LocalDate.now())
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clickable(enabled = canAddTrip) { showInsertDialog = true }
-                            .alpha(if (canAddTrip) 1f else 0.3f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .background(Color.Red, shape = CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("+", color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Add Trip", fontSize = 14.sp, color = Color.Red)
-                    }
+                    Spacer(modifier = Modifier.height(0.dp)) // no-op placeholder
                 }
 
                 if (viewMode == TripViewMode.ACTIVE) {
@@ -244,7 +226,7 @@ fun PassengerApp() {
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        
+
 
         PassengerTableWithStaticHeader(
             passengers = passengersForTable,
@@ -312,17 +294,6 @@ fun PassengerApp() {
 
         }
 
-        if (showInsertDialog) {
-            InsertTripDialog(
-                onDismiss = { showInsertDialog = false },
-                onInsert = { newPassenger ->
-                    insertedPassengers = insertedPassengers + newPassenger
-                    InsertedTripStore.addInsertedTrip(context, scheduleDate, newPassenger)
-                    showInsertDialog = false
-                    scrollToBottom = true
-                }
-            )
-        }
 
         if (scrollToBottom) {
             LaunchedEffect(Unit) {
