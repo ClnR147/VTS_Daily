@@ -201,8 +201,8 @@ fun PassengerLookupScreen() {
             Column(Modifier.fillMaxSize()) {
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 12.dp),
-                    thickness = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
+                    thickness = 8.dp,
+                    color = VtsGreen
                 )
 
                 if (page == Page.NAMES) {
@@ -380,15 +380,18 @@ fun PassengerLookupScreen() {
 
             // FLOATING "Back to names" on DETAILS page (bottom-start)
             if (page == Page.DETAILS) {
-                ExtendedFloatingActionButton(
+                SmallFloatingActionButton(
                     onClick = { page = Page.NAMES },
-                    icon = { Icon(Icons.Filled.ArrowBack, contentDescription = null) },
-                    text = { Text("Back to names") },
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(start = 16.dp, bottom = 16.dp)
-                )
+                        .padding(10.dp), // tighter to corner
+                    containerColor = VtsGreen,
+                    contentColor = VtsCream
+                ) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                }
             }
+
         }
     }
 }

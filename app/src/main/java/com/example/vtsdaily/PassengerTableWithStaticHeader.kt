@@ -31,23 +31,20 @@ fun PassengerTableWithStaticHeader(
     schedulePassengers: List<Passenger> = emptyList(),
     // 🔹 NEW (default keeps other calls compiling)
     phoneBook: Map<String, String> = emptyMap()
-
-)
-
-{
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = if (viewMode == TripViewMode.REMOVED) 0.dp else 8.dp)
     ) {
-        // Static header row
+        // Static header row — banner width matches card width (8.dp gutters)
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .background(PrimaryGreen),
+                .background(PrimaryGreen)          // paint full width first
+                .padding(horizontal = 8.dp, vertical = 4.dp), // then add gutters for content
             verticalAlignment = Alignment.CenterVertically
-        ) {
+        )  {
             Text(
                 text = "Time",
                 color = OnPrimaryText,
@@ -56,7 +53,7 @@ fun PassengerTableWithStaticHeader(
                 maxLines = 1,
                 overflow = TextOverflow.Clip,
                 modifier = Modifier
-                    .padding(start = 5.dp) // ← shift slightly to the right
+                    .padding(start = 5.dp)
                     .width(120.dp)
                     .alignByBaseline()
             )
@@ -79,16 +76,13 @@ fun PassengerTableWithStaticHeader(
                     style = MaterialTheme.typography.bodyLarge,
                     color = OnPrimaryText,
                     modifier = Modifier
-                        .width(140.dp)       // <-- keep this width in the row too
+                        .width(140.dp)
                         .alignByBaseline()
                 )
             }
         }
 
-
         Spacer(modifier = Modifier.height(if (viewMode == TripViewMode.REMOVED) 12.dp else 8.dp))
-
-
 
         PassengerTable(
             passengers = passengers,

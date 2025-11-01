@@ -26,7 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.HorizontalDivider
 
-private val VtsBanner = Color(0xFF4CAF50)   // green
+private val VtsGreen = Color(0xFF4CAF50)   // green
 private val VtsBannerText = Color(0xFFFFF5E1)
 private val RowStripe = Color(0xFFF7F5FA)
 
@@ -77,7 +77,7 @@ fun DriversScreen() {
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { doImport() },
-                containerColor = VtsBanner,
+                containerColor = VtsGreen,
                 contentColor = VtsBannerText
             ) {
                 Icon(
@@ -97,7 +97,7 @@ fun DriversScreen() {
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 12.dp),  // aligns with search bar edges
                 thickness = 8.dp,
-                color = VtsBanner
+                color = VtsGreen
             )
 
             // Search
@@ -172,7 +172,7 @@ private fun DriverRow(
             // Van pill
             Box(
                 modifier = Modifier
-                    .background(VtsBanner, shape = MaterialTheme.shapes.large)
+                    .background(VtsGreen, shape = MaterialTheme.shapes.large)
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(driver.van, color = VtsBannerText, fontWeight = FontWeight.SemiBold)
@@ -227,7 +227,7 @@ private fun DriverDetailsDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .background(color = VtsBanner, shape = MaterialTheme.shapes.large)
+                        .background(color = VtsGreen, shape = MaterialTheme.shapes.large)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(driver.van, color = VtsBannerText, fontWeight = FontWeight.SemiBold)

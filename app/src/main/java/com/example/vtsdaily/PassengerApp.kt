@@ -132,10 +132,12 @@ fun PassengerApp() {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(vertical = 2.dp)
                 .background(PrimaryGreen)
-                .height(8.dp) // optional, to give it visible height
+                .height(1.dp)
         )
+
+
 
         val statusLabel = when (viewMode) {
             TripViewMode.ACTIVE -> "Active"
