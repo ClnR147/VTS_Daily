@@ -40,14 +40,14 @@ fun LookupResultRow(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = row.passenger,
+                    text = row.passenger.orEmpty(),
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (row.phone.isNotBlank()) {
+                row.phone?.trim()?.takeIf { it.isNotBlank() }?.let { phone ->
                     Text(
-                        text = row.phone,
+                        text = phone,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Clip
@@ -56,9 +56,10 @@ fun LookupResultRow(
             }
 
             // Pickup
-            if (row.pAddress.isNotBlank()) {
+            val pickup = row.pAddress.orEmpty()
+            if (pickup.isNotBlank()) {
                 Text(
-                    text = row.pAddress,
+                    text = pickup,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -66,14 +67,16 @@ fun LookupResultRow(
             }
 
             // Drop-off
-            if (row.dAddress.isNotBlank()) {
+            val dest = row.dAddress.orEmpty()
+            if (dest.isNotBlank()) {
                 Text(
-                    text = row.dAddress,
+                    text = dest,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
+
         }
     }
 }

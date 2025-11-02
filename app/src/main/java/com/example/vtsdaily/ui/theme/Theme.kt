@@ -24,8 +24,8 @@ val Shapes = Shapes(
 
 // Material 3 Color Schemes
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryPurple,
-    secondary = PrimaryGreen,
+    primary = Color (0xFF4CAF50),
+    secondary = Color ( color = 0xFF4CAF50),
     background = Color(0xFF121212),
     surface = Color(0xFF1E1E1E),
     onPrimary = OnPrimaryText,
@@ -35,8 +35,8 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryPurple,
-    secondary = PrimaryGreen,
+    primary = Color (0xFF4CAF50),
+    secondary = Color ( color = 0xFF4CAF50),
     background = AppBackground,
     surface = SurfaceWhite,
     onPrimary = OnPrimaryText,
@@ -44,7 +44,6 @@ private val LightColorScheme = lightColorScheme(
     onBackground = OnSurfaceText,
     onSurface = OnSurfaceText
 )
-
 
 @Composable
 fun VTSDailyTheme(

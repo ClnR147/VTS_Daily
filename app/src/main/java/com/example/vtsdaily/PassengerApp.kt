@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.sp
 import com.example.vtsdaily.ui.theme.ActiveColor
 import com.example.vtsdaily.ui.theme.AppBackground
 import com.example.vtsdaily.ui.theme.CompletedColor
-import com.example.vtsdaily.ui.theme.PrimaryGreen
 import com.example.vtsdaily.ui.theme.PrimaryPurple
 import com.example.vtsdaily.ui.theme.RemovedColor
 import kotlinx.coroutines.delay
@@ -54,6 +53,10 @@ import jxl.Workbook
 import java.io.File
 import android.os.Environment
 import android.util.Log
+import com.example.vtsdaily.ui.theme.VtsGreen
+import com.example.vtsdaily.ui.theme.VtsCream
+import com.example.vtsdaily.ui.theme.RowStripe
+
 
 
 
@@ -133,7 +136,7 @@ fun PassengerApp() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 2.dp)
-                .background(PrimaryGreen)
+                .background(VtsGreen)
                 .height(1.dp)
         )
 

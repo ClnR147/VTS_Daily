@@ -2,6 +2,7 @@ package com.example.vtsdaily.lookup
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,8 +10,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -20,86 +36,86 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileOutputStream
 import java.nio.charset.Charset
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.Locale
+import com.example.vtsdaily.DateSelectActivity
+import androidx.compose.ui.platform.LocalContext
 
 /* --- Style (match Drivers) --- */
 private val VtsGreen = Color(0xFF4CAF50)
 private val VtsCream = Color(0xFFFFF5E1)
 private val RowStripe = Color(0xFFF7F5FA)
 
-/* --- Data --- */
-data class LookupRow(
-    val driveDate: String,
-    val passenger: String,
-    val pAddress: String,
-    val dAddress: String,
-    val phone: String
-)
+// Top-level (outside any composable)
+private const val TAG = "DateSelect"
 
 /* --- Screen flow (2 pages) --- */
 private enum class Page { NAMES, DETAILS }
 
 /* --- Date helpers --- */
 private val dateFormats = listOf(
-    DateTimeFormatter.ofPattern("M/d/yyyy", Locale.US),
-    DateTimeFormatter.ofPattern("M/d/yy", Locale.US)
-)
-private fun parseDateOrNull(s: String): LocalDate? {
-    val t = s.trim()
-    for (f in dateFormats) {
-        try { return LocalDate.parse(t, f) } catch (_: DateTimeParseException) {}
+    "M/d/yyyy", "MM/dd/yyyy",
+    "M/d/yy",   "MM/dd/yy",   // 2-digit year support
+    "yyyy-MM-dd",
+    "MMMM d, yyyy"
+).map { DateTimeFormatter.ofPattern(it, Locale.US) }
+
+private fun parseDateOrNull(s: String?): LocalDate? {
+    val t = s?.trim().orEmpty()
+    if (t.isEmpty()) return null
+    for (fmt in dateFormats) {
+        try { return LocalDate.parse(t, fmt) } catch (_: DateTimeParseException) {}
     }
     return null
 }
 
 private fun groupTripsByDate(rows: List<LookupRow>): Map<LocalDate, List<LookupRow>> {
     return rows
-        .mapNotNull { row ->
-            parseDateOrNull(row.driveDate)?.let { it to row }
-        }
+        .mapNotNull { row -> parseDateOrNull(row.driveDate)?.let { it to row } }
         .groupBy({ it.first }, { it.second })
         .toSortedMap(compareByDescending { it }) // newest → oldest
 }
 
 private fun formatDate(d: LocalDate) = d.format(dateFormats.first())
 
-/* --- CSV importer (headers: DriveDate, Passenger, PAddress, DAddress, Phone) --- */
-private fun importLookupCsv(csv: File, charset: Charset = Charsets.UTF_8): List<LookupRow> {
-    require(csv.exists()) { "CSV not found: ${csv.absolutePath}" }
-    val lines = csv.readLines(charset).filter { it.isNotEmpty() }
-    if (lines.isEmpty()) return emptyList()
+/* ---------- Import source logging ---------- */
 
-    val header = parseCsvLine(lines.first()).map { it.trim().lowercase() }
-    fun idx(name: String) = header.indexOf(name).takeIf { it >= 0 }
-        ?: error("Missing column '$name' in CSV header: $header")
-
-    val iDrive = idx("drivedate")
-    val iName  = idx("passenger")
-    val iPAddr = idx("paddress")
-    val iDAddr = idx("daddress")
-    val iPhone = idx("phone")
-
-    val out = ArrayList<LookupRow>(lines.size - 1)
-    for (ln in lines.drop(1)) {
-        val cols = parseCsvLine(ln)
-        if (cols.size <= maxOf(iDrive, iName, iPAddr, iDAddr, iPhone)) continue
-        val row = LookupRow(
-            driveDate = cols[iDrive].trim(),
-            passenger = cols[iName].trim(),
-            pAddress  = cols[iPAddr].trim(),
-            dAddress  = cols[iDAddr].trim(),
-            phone     = cols[iPhone].trim()
-        )
-        if (row.passenger.isNotBlank()) out += row
-    }
-    return out
+private fun logImportStart(file: File) {
+    Log.d(
+        TAG,
+        "IMPORT_CLICK: source=File " +
+                "path=${file.absolutePath} exists=${file.exists()} size=${file.takeIf{it.exists()}?.length() ?: -1} " +
+                "lm=${file.takeIf{it.exists()}?.lastModified() ?: -1}"
+    )
 }
 
-/** Tiny CSV parser: handles quotes, commas, and "" escapes */
+private fun logImportStart(context: android.content.Context, uri: android.net.Uri) {
+    val cr = context.contentResolver
+    var name = "<unknown>"; var size = -1L
+    cr.query(
+        uri,
+        arrayOf(android.provider.OpenableColumns.DISPLAY_NAME, android.provider.OpenableColumns.SIZE),
+        null, null, null
+    )?.use { c ->
+        if (c.moveToFirst()) {
+            val iN = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            val iS = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
+            if (iN >= 0) name = c.getString(iN) ?: name
+            if (iS >= 0) size = c.getLong(iS)
+        }
+    }
+    val header = try {
+        cr.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readLine() } ?: ""
+    } catch (_: Exception) { "" }
+    Log.d(TAG, "IMPORT_CLICK: source=Uri uri=$uri name=$name size=$size headerPreview='${header.take(160)}'")
+}
+
+/* --- CSV line parser (handles quotes/commas/"" escapes) --- */
+
 private fun parseCsvLine(s: String): List<String> {
     val out = ArrayList<String>()
     val sb = StringBuilder()
@@ -121,10 +137,176 @@ private fun parseCsvLine(s: String): List<String> {
     return out
 }
 
+/* ---------- DEBUG: explain why rows would be rejected (no behavior change) ---------- */
+
+private val EXPECTED_HEADER = listOf(
+    "DriveDate","Passenger","A/R","PAddress","DAddress","PUTimeAppt","DOTimeAppt","RTTime","Phone"
+)
+private val REQUIRED_COLS = setOf("DriveDate","Passenger")
+
+/** Use the same date parser this screen already uses */
+private fun parseDateCurrentForDebug(raw: String?): LocalDate? = parseDateOrNull(raw)
+
+/**
+ * Reads the CSV using the same parseCsvLine() and logs exactly why rows
+ * are being rejected by baseline rules: column count, required fields,
+ * date parse, and trip type presence (A/R or tripType).
+ */
+private fun debugImportRejectionsFromFile(file: File, maxSamples: Int = 15) {
+    if (!file.exists()) {
+        Log.d(TAG, "DEBUG_IMPORT: file not found: ${file.absolutePath}")
+        return
+    }
+    file.bufferedReader(Charset.forName("UTF-8")).use { br ->
+        var headerLine = br.readLine() ?: run {
+            Log.d(TAG, "DEBUG_IMPORT: empty file"); return
+        }
+        // strip BOM
+        if (headerLine.isNotEmpty() && headerLine[0].code == 0xFEFF) headerLine = headerLine.substring(1)
+
+        val header = parseCsvLine(headerLine).map { it.trim() }
+        Log.d(TAG, "DEBUG_IMPORT: header=$header (#=${header.size})")
+
+        val missingExpected = EXPECTED_HEADER.filter { it !in header }
+        if (missingExpected.isNotEmpty()) {
+            Log.d(TAG, "DEBUG_IMPORT: expected-but-missing headers: $missingExpected")
+        }
+
+        var total = 0
+        var accepted = 0
+        var rejected = 0
+        val reasons = mutableMapOf<String, Int>()
+        val samples = mutableListOf<String>()
+
+        fun reason(r: String) { reasons[r] = (reasons[r] ?: 0) + 1 }
+
+        var lineNo = 1
+        while (true) {
+            val line = br.readLine() ?: break
+            lineNo++
+            total++
+
+            if (line.isBlank()) {
+                reason("blank_line"); rejected++
+                if (samples.size < maxSamples) samples += "L$lineNo: blank_line"
+                continue
+            }
+
+            val fields = parseCsvLine(line).map { it.trim() }
+            val colCount = fields.size
+            if (colCount != header.size) {
+                val hasQuotes = '"' in line
+                val code = when {
+                    hasQuotes && colCount > header.size -> "colcount_over_header_quotes_present"
+                    colCount > header.size -> "colcount_over_header"
+                    else -> "colcount_under_header"
+                }
+                reason(code); rejected++
+                if (samples.size < maxSamples) {
+                    samples += "L$lineNo: $code fields=$colCount header=${header.size} preview='${line.take(160)}'"
+                }
+                continue
+            }
+
+            // Build row map
+            val row = header.indices.associate { h -> header[h] to fields[h] }
+
+            // Required fields present?
+            val missingReq = REQUIRED_COLS.filter { row[it].isNullOrEmpty() }
+            if (missingReq.isNotEmpty()) {
+                reason("missing_required:${missingReq.joinToString("+")}")
+                rejected++
+                if (samples.size < maxSamples)
+                    samples += "L$lineNo: missing_required $missingReq | DriveDate='${row["DriveDate"]}' Passenger='${row["Passenger"]}'"
+                continue
+            }
+
+            // DriveDate parse using this screen’s parser
+            val parsedDate = parseDateCurrentForDebug(row["DriveDate"])
+            if (parsedDate == null) {
+                reason("date_parse_fail")
+                rejected++
+                if (samples.size < maxSamples)
+                    samples += "L$lineNo: date_parse_fail raw='${row["DriveDate"]}'"
+                continue
+            }
+
+            // Trip type present under either key?
+            val tripType = row["A/R"].orEmpty().ifEmpty { row["tripType"].orEmpty() }
+            if (tripType.isEmpty()) {
+                reason("triptype_empty")
+                rejected++
+                if (samples.size < maxSamples)
+                    samples += "L$lineNo: triptype_empty Passenger='${row["Passenger"]}'"
+                continue
+            }
+
+            // If we got here, it would be accepted by baseline rules
+            accepted++
+        }
+
+        Log.d(TAG, "DEBUG_IMPORT: total=$total accepted=$accepted rejected=$rejected")
+        Log.d(TAG, "DEBUG_IMPORT: reasons=$reasons")
+        samples.forEach { Log.d(TAG, "DEBUG_IMPORT: $it") }
+    }
+}
+
+/* ---------- Header canonicalization shim (fix mismatched names) ---------- */
+
+// Map variants to canonical importer names
+private fun canonicalForHeader(h: String): String = when (h.trim()) {
+    "tripType"   -> "A/R"
+    "puTimeAppt" -> "PUTimeAppt"
+    "rtTime"     -> "RTTime"
+    // already-canonical (and other columns) pass through unchanged
+    else         -> h.trim()
+}
+
+/**
+ * Creates a temp CSV whose FIRST LINE header is rewritten to canonical names
+ * expected by your importer. All data lines are copied verbatim.
+ * If no change is needed, returns the original file.
+ */
+private fun canonicalizeCsvHeaderToTemp(src: File, context: android.content.Context): File {
+    if (!src.exists()) return src
+
+    val lines = src.readLines(Charsets.UTF_8)
+    if (lines.isEmpty()) return src
+
+    // parse + rewrite header row only
+    val rawHeader = lines.first()
+    val header = parseCsvLine(
+        if (rawHeader.isNotEmpty() && rawHeader[0].code == 0xFEFF) rawHeader.substring(1) else rawHeader
+    )
+    val rewritten = header.map(::canonicalForHeader)
+
+    val changed = header != rewritten
+    if (!changed) {
+        Log.d(TAG, "CANON_HEADER: no change needed; using original file")
+        return src
+    }
+
+    // Write to temp in cache
+    val temp = File(context.cacheDir, "CustomerLookup.canon.csv")
+    Log.d(TAG, "CANON_HEADER: rewriting header -> ${rewritten} into temp=${temp.absolutePath}")
+
+    FileOutputStream(temp, false).bufferedWriter(Charsets.UTF_8).use { w ->
+        // join header safely (headers have no commas)
+        w.append(rewritten.joinToString(","))
+        w.append('\n')
+        // copy remaining lines exactly as-is
+        for (i in 1 until lines.size) {
+            w.append(lines[i])
+            if (i < lines.lastIndex) w.append('\n')
+        }
+    }
+    return temp
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PassengerLookupScreen() {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
 
@@ -140,8 +322,10 @@ fun PassengerLookupScreen() {
     val nameList = remember(allRows, query) {
         val q = query.trim()
         allRows.asSequence()
-            .filter { it.passenger.contains(q, ignoreCase = true) }
-            .map { it.passenger.trim() }
+            .map { it.passenger.orEmpty() }
+            .filter { it.contains(q, ignoreCase = true) }
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
             .distinct()
             .sorted()
             .toList()
@@ -166,9 +350,13 @@ fun PassengerLookupScreen() {
         if (found == null) {
             scope.launch { snackbar.showSnackbar("Lookup .csv not found in default locations.") }
         } else {
-            runCatching { importLookupCsv(found) }
+            // Canonicalize header → debug → import
+            logImportStart(found)
+            val canonFile = canonicalizeCsvHeaderToTemp(found, context)
+            debugImportRejectionsFromFile(canonFile)
+
+            runCatching { importLookupCsv(canonFile) }
                 .onSuccess { imported ->
-                    // 2) MERGE + SAVE to disk, then refresh UI
                     val merged = LookupStore.mergeAndSave(context, allRows, imported)
                     allRows = merged
                     page = Page.NAMES
@@ -181,16 +369,8 @@ fun PassengerLookupScreen() {
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) },
-        floatingActionButton = {
-            // Keep the Import CSV FAB on the bottom-end
-            FloatingActionButton(
-                onClick = { doImport() },
-                containerColor = VtsGreen,
-                contentColor = VtsCream
-            ) { Icon(Icons.Filled.Upload, contentDescription = "Import CSV") }
-        },
-        floatingActionButtonPosition = FabPosition.End
+        snackbarHost = { SnackbarHost(snackbar) }
+        // FAB removed; Import now lives in the actions row below
     ) { padding ->
         // Use a Box so we can overlay a Back FAB on DETAILS
         Box(
@@ -204,6 +384,42 @@ fun PassengerLookupScreen() {
                     thickness = 8.dp,
                     color = VtsGreen
                 )
+
+                // Actions row: Import + Date icon
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = {
+                            Log.d(TAG, "IMPORT_CLICK: tapped at ${System.currentTimeMillis()}")
+                            try {
+                                LookupStore.invalidateLookupCache()
+                                Log.d(TAG, "IMPORT_CLICK: cache invalidated")
+                            } catch (t: Throwable) {
+                                Log.d(TAG, "IMPORT_CLICK: cache invalidate skipped: ${t.message}")
+                            }
+                            doImport()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = VtsGreen)
+                    ) {
+                        Icon(Icons.Filled.Upload, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Import")
+                    }
+
+                    IconButton(
+                        onClick = {
+                            val i = Intent(context, DateSelectActivity::class.java)
+                            context.startActivity(i)
+                        }
+                    ) {
+                        Icon(Icons.Filled.CalendarMonth, contentDescription = "Trips by Date")
+                    }
+                }
 
                 if (page == Page.NAMES) {
                     OutlinedTextField(
@@ -224,7 +440,7 @@ fun PassengerLookupScreen() {
                         // Compact list: small spacing, no "Latest"
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 88.dp),
+                            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             items(nameList) { name ->
@@ -268,7 +484,7 @@ fun PassengerLookupScreen() {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp) // tightened
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             item {
                                 ElevatedCard(Modifier.fillMaxWidth()) {
@@ -283,8 +499,9 @@ fun PassengerLookupScreen() {
                                             maxLines = 2
                                         )
 
-                                        val phone = groupedTrips.values.flatten()
-                                            .firstOrNull { it.phone.isNotBlank() }?.phone
+                                        val phone = groupedTrips.values
+                                            .flatten()
+                                            .firstNotNullOfOrNull { it.phone?.trim()?.takeIf { p -> p.isNotBlank() } }
                                         if (!phone.isNullOrBlank()) {
                                             Text(
                                                 "Phone: $phone",
@@ -296,14 +513,15 @@ fun PassengerLookupScreen() {
                                                 }
                                             )
                                         }
-// Header → first detail divider (same spacing style)
+
+                                        // Header → first detail divider (same spacing style)
                                         HorizontalDivider(
                                             modifier = Modifier.padding(top = 8.dp, start = 12.dp, end = 12.dp),
                                             thickness = 3.dp,
                                             color = VtsGreen
                                         )
 
-                                        // 🔹 Grouped trips by date (newest → oldest)
+                                        // Grouped trips by date (newest → oldest)
                                         groupedTrips.entries.forEachIndexed { index, (date, trips) ->
                                             if (index > 0) {
                                                 // Small VTSGreen divider between date groups
@@ -319,7 +537,7 @@ fun PassengerLookupScreen() {
                                                 Modifier
                                                     .fillMaxWidth()
                                                     .background(RowStripe)
-                                                    .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 0.dp) // ← no bottom pad
+                                                    .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 0.dp)
                                             ) {
                                                 Text(
                                                     "Date: ${formatDate(date)}",
@@ -333,39 +551,40 @@ fun PassengerLookupScreen() {
 
                                                 trips.forEachIndexed { i, r ->
                                                     Row(Modifier.fillMaxWidth()) {
-                                                        if (r.pAddress.isNotBlank()) {
+                                                        val pickup = r.pAddress.orEmpty()
+                                                        if (pickup.isNotBlank()) {
                                                             Text(
                                                                 text = "Pickup:",
                                                                 style = MaterialTheme.typography.bodyMedium,
                                                                 modifier = Modifier.width(labelIndent)
                                                             )
                                                             Text(
-                                                                text = r.pAddress,
+                                                                text = pickup,
                                                                 style = MaterialTheme.typography.bodyMedium
                                                             )
                                                         }
                                                     }
 
                                                     Row(Modifier.fillMaxWidth()) {
-                                                        if (r.dAddress.isNotBlank()) {
+                                                        val drop = r.dAddress.orEmpty()
+                                                        if (drop.isNotBlank()) {
                                                             Text(
                                                                 text = "Drop-off:",
                                                                 style = MaterialTheme.typography.bodyMedium,
                                                                 modifier = Modifier.width(labelIndent)
                                                             )
                                                             Text(
-                                                                text = r.dAddress,
+                                                                text = drop,
                                                                 style = MaterialTheme.typography.bodyMedium
                                                             )
                                                         }
                                                     }
 
-                                                    // 👇 add space only between trips, not after the last one
+                                                    // space only between trips, not after the last one
                                                     if (i < trips.lastIndex) {
                                                         Spacer(Modifier.height(4.dp))
                                                     }
                                                 }
-
                                             }
                                         }
                                     }
@@ -373,8 +592,6 @@ fun PassengerLookupScreen() {
                             }
                         }
                     }
-
-
                 }
             }
 
@@ -384,14 +601,13 @@ fun PassengerLookupScreen() {
                     onClick = { page = Page.NAMES },
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(10.dp), // tighter to corner
+                        .padding(10.dp),
                     containerColor = VtsGreen,
                     contentColor = VtsCream
                 ) {
                     Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                 }
             }
-
         }
     }
 }

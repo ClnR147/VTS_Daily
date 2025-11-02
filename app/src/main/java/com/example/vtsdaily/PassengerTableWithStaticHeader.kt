@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.vtsdaily.ui.theme.ActionGreen
 import com.example.vtsdaily.ui.theme.OnPrimaryText
-import com.example.vtsdaily.ui.theme.PrimaryGreen
+import com.example.vtsdaily.ui.theme.VtsGreen
 import com.example.vtsdaily.ui.theme.PrimaryPurple
 
 @Composable
@@ -41,7 +41,7 @@ fun PassengerTableWithStaticHeader(
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(PrimaryGreen)          // paint full width first
+                .background(VtsGreen)          // paint full width first
                 .padding(horizontal = 8.dp, vertical = 4.dp), // then add gutters for content
             verticalAlignment = Alignment.CenterVertically
         )  {

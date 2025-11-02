@@ -2,9 +2,14 @@ package com.example.vtsdaily.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+
+val VtsGreen = Color(0xFF4CAF50)   // your VTS green
+val VtsCream = Color(0xFFFFF5E1)   // optional onPrimary you were using
+
+val RowStripe = Color(0x0D000000)  // ~5% black for subtle zebra
+val AppBackground = Color(0xFFF4FBF7)
 val PrimaryPurple = Color(0xFF4A148C)         // Main app branding color
-val PrimaryGreen = Color(0xFF4CAF50)          // Accent / status green
-val AppBackground = Color(0xFFFCFFFA)         // Soft minty background
+
 val SurfaceWhite = Color.White                // Card and surface default
 val OnPrimaryText = Color(0xFFFFF5E1)         // Light text on purple
 val OnSurfaceText = Color.Black               // Text on white background

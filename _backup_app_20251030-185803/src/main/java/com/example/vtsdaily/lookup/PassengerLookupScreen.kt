@@ -32,13 +32,6 @@ private val VtsCream = Color(0xFFFFF5E1)
 private val RowStripe = Color(0xFFF7F5FA)
 
 /* --- Data --- */
-data class LookupRow(
-    val driveDate: String,
-    val passenger: String,
-    val pAddress: String,
-    val dAddress: String,
-    val phone: String
-)
 
 /* --- Screen flow (2 pages) --- */
 private enum class Page { NAMES, DETAILS }

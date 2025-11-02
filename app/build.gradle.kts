@@ -81,7 +81,12 @@ dependencies {
     implementation("com.google.android.material:material:1.9.0") // keep only if you use XML views
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.google.accompanist:accompanist-flowlayout:0.30.1")
-
+    dependencies {implementation("com.opencsv:opencsv:5.9")
+    }
+    dependencies {
+        // with BOM already in place
+        implementation("androidx.compose.material:material-icons-extended")
+    }
     // Tests
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
