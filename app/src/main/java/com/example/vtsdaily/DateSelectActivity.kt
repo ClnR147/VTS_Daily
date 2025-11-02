@@ -27,8 +27,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 
-
-
 class DateSelectActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,8 +42,6 @@ fun DateSelectScreen() {
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-
-
 
     var dateInput by rememberSaveable { mutableStateOf("") }
     var selectedDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
@@ -135,24 +131,40 @@ fun DateSelectScreen() {
             ) {
                 items(trips) { r ->
                     ElevatedCard(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(
+                            Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             Text(r.passenger.orEmpty(), style = MaterialTheme.typography.titleMedium)
 
-                            val pu = r.pAddress.orEmpty()
-                            val dr = r.dAddress.orEmpty()
-                            if (pu.isNotBlank()) Text("Pickup: $pu", style = MaterialTheme.typography.bodyMedium)
-                            if (dr.isNotBlank()) Text("Drop-off: $dr", style = MaterialTheme.typography.bodyMedium)
+                            val puAddr = r.pAddress.orEmpty()
+                            val doAddr = r.dAddress.orEmpty()
+                            if (puAddr.isNotBlank()) {
+                                Text("Pickup: $puAddr", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            if (doAddr.isNotBlank()) {
+                                Text("Drop-off: $doAddr", style = MaterialTheme.typography.bodyMedium)
+                            }
 
-                            val tt  = r.tripType?.ifBlank { if (!r.rtTime.isNullOrBlank()) "Return" else "Appt" } ?: ""
+                            // TripType label with a sensible fallback
+                            val tt = when (r.tripType?.lowercase()) {
+                                "appt" -> "Appt"
+                                "return" -> "Return"
+                                else -> if (!r.rtTime.isNullOrBlank()) "Return" else "Appt"
+                            }
+
                             val puT = r.puTimeAppt.orEmpty()
-                            val doT = r.doTimeAppt.orEmpty()
+                            // Backward-compatible: read top-level first, then raw["DOTimeAppt"]
+                            val doT = (r.doTimeAppt ?: r.raw["DOTimeAppt"]).orEmpty()
                             val rtT = r.rtTime.orEmpty()
 
-                            // Build: TripType • PU → DO • RT
-                            val puDo = listOfNotNull(
-                                puT.takeIf { it.isNotBlank() }?.let { "PU $it" },
-                                doT.takeIf { it.isNotBlank() }?.let { "DO $it" }
-                            ).joinToString(" \u2192 ") // → arrow
+                            // PU → DO only when both present; otherwise show whichever exists
+                            val puDo = when {
+                                puT.isNotBlank() && doT.isNotBlank() -> "PU $puT \u2192 DO $doT"
+                                puT.isNotBlank() -> "PU $puT"
+                                doT.isNotBlank() -> "DO $doT"
+                                else -> ""
+                            }
 
                             val line = listOfNotNull(
                                 tt.ifBlank { null },
@@ -160,11 +172,10 @@ fun DateSelectScreen() {
                                 rtT.takeIf { it.isNotBlank() }?.let { "RT $it" }
                             ).joinToString(" • ")
 
-                            Text(line)
+                            Text(line, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
-
             }
         }
     }
@@ -201,3 +212,4 @@ private fun parseUserDateInput(raw: String): LocalDate? {
 
 private fun fmtDate(d: LocalDate): String =
     "${d.monthValue}/${d.dayOfMonth}/${d.year}"
+

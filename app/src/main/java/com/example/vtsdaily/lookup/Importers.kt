@@ -10,7 +10,6 @@ import java.nio.charset.Charset
 import java.util.Locale
 import java.io.BufferedInputStream
 
-
 private const val TAG_IMPORT = "LookupCsv"
 
 // Normalize header names for tolerant, case-insensitive matching
@@ -46,7 +45,7 @@ private fun dumpHeaderForLogcat(headers: List<String>) {
  * Works with your current 5-column file:
  *   DriveDate, Passenger, PAddress, DAddress, Phone
  *
- * Automatically supports optional fields (TripType / PU / RT) if present.
+ * Automatically supports optional fields (TripType / PU / DO / RT) if present.
  * Call sites: import com.example.vtsdaily.lookup.importLookupCsv
  */
 fun detectCsvSeparator(file: File, charset: Charset = Charsets.UTF_8): Char {
@@ -129,52 +128,86 @@ fun importLookupCsv(
                 if (i == 0) s.removePrefix("\uFEFF") else s
             }
 
-// Require ALL 9 exact names against the cleaned header
-            val required = listOf(
-                "DriveDate","Passenger","A/R","PAddress","DAddress",
-                "PUTimeAppt","DOTimeAppt","RTTime","Phone"
+            // ---------- tolerant header lookup with aliases ----------
+            fun findIdx(vararg aliases: String): Int =
+                indexOfHeader(clean, aliases.toList())
+
+            data class Cols(
+                val driveDate: Int,
+                val passenger: Int,
+                val ar: Int,
+                val pAddr: Int,
+                val dAddr: Int,
+                val puAppt: Int,
+                val doAppt: Int,
+                val rt: Int,
+                val phone: Int
             )
-            val indexByName = required.associateWith { name -> clean.indexOf(name) }
-            val missing = indexByName.filterValues { it < 0 }.keys
-            if (missing.isNotEmpty()) {
-                Log.e(TAG_IMPORT, "Missing required columns: $missing  | Cleaned header=$clean")
+
+            val cols = Cols(
+                driveDate = findIdx("DriveDate", "Date", "Drive Date"),
+                passenger = findIdx("Passenger", "Name"),
+                ar        = findIdx("A/R", "AR", "TripType", "Type"),
+                pAddr     = findIdx("PAddress", "PickupAddress", "P Address"),
+                dAddr     = findIdx("DAddress", "DropAddress", "D Address"),
+                puAppt    = findIdx("PUTimeAppt", "puTimeAppt", "Appt", "ApptTime", "AppointmentTime"),
+                doAppt    = findIdx("DOTimeAppt", "doTimeAppt", "DropOffAppt", "Drop Appt"),
+                rt        = findIdx("RTTime", "ReturnTime", "RT"),
+                phone     = findIdx("Phone", "PhoneNumber")
+            )
+
+            // Require all 9 (using aliases where needed)
+            val missingAny = listOf(
+                "DriveDate" to cols.driveDate,
+                "Passenger" to cols.passenger,
+                "A/R"       to cols.ar,
+                "PAddress"  to cols.pAddr,
+                "DAddress"  to cols.dAddr,
+                "PUTimeAppt/puTimeAppt" to cols.puAppt,
+                "DOTimeAppt/doTimeAppt" to cols.doAppt,
+                "RTTime"    to cols.rt,
+                "Phone"     to cols.phone
+            ).filter { it.second < 0 }
+
+            if (missingAny.isNotEmpty()) {
+                Log.e(TAG_IMPORT, "Missing required/alias columns: $missingAny  | Cleaned header=$clean")
                 return emptyList()
             }
 
             dumpHeaderForLogcat(header)
+            // --------------------------------------------------------
 
-            // Require ALL 9 exact columns
-
-            val idx = required.associateWith { h -> header.indexOf(h) }
-            if (idx.values.any { it < 0 }) {
-                Log.e(TAG_IMPORT, "Missing required columns. Raw headers=$header")
-                return emptyList()
-            }
-
-            fun cell(row: Array<String>, i: Int): String? =
+            fun at(row: Array<String>, i: Int): String? =
                 row.getOrNull(i)?.trim()?.takeIf { it.isNotEmpty() }
 
             val out = mutableListOf<LookupRow>()
             reader.forEach { row ->
                 val raw = mutableMapOf<String, String?>()
-                clean.forEachIndexed { i, name ->
-                    raw[name] = row.getOrNull(i)?.trim()?.takeIf { it.isNotEmpty() }
-                }
 
-                val driveDate = raw["DriveDate"]
-                val passenger = raw["Passenger"] ?: return@forEach
-                val pAddr     = raw["PAddress"] ?: ""
-                val dAddr     = raw["DAddress"] ?: ""
-                val phone     = raw["Phone"]
+                // Populate raw with the cleaned header names for debugging
+                clean.forEachIndexed { i, name -> raw[name] = at(row, i) }
 
-                val ar = raw["A/R"]?.trim()
-                val pu = raw["PUTimeAppt"]
-                val rt = raw["RTTime"]
+                // Canonical keys so downstream code can rely on exact names
+                raw["PUTimeAppt"] = at(row, cols.puAppt)
+                raw["DOTimeAppt"] = at(row, cols.doAppt)   // <- canonical Drop-off time
+                raw["RTTime"]     = at(row, cols.rt)
+
+                val driveDate = at(row, cols.driveDate)
+                val passenger = at(row, cols.passenger) ?: return@forEach
+                val pAddr     = at(row, cols.pAddr) ?: ""
+                val dAddr     = at(row, cols.dAddr) ?: ""
+                val phone     = at(row, cols.phone)
+
+                val ar = at(row, cols.ar)?.trim()
                 val tripType = when (ar?.firstOrNull()?.uppercaseChar()) {
                     'A' -> "appt"
                     'R' -> "return"
                     else -> null
                 }
+
+                val pu = raw["PUTimeAppt"]
+                val doAppt = raw["DOTimeAppt"]
+                val rt = raw["RTTime"]
 
                 out += try {
                     LookupRow(
@@ -185,6 +218,7 @@ fun importLookupCsv(
                         phone = phone,
                         tripType = tripType,
                         puTimeAppt = pu,
+                        doTimeAppt = doAppt,   // <-- now populated
                         rtTime = rt,
                         raw = raw
                     )
@@ -192,7 +226,6 @@ fun importLookupCsv(
                     LookupRow(driveDate, passenger, pAddr, dAddr, phone)
                 }
             }
-
 
             Log.d(TAG_IMPORT, "importLookupCsv parsed ${out.size} rows from ${file.name}")
             return out

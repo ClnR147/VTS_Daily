@@ -8,8 +8,8 @@ data class LookupRow(
     val phone: String? = null,
     val tripType: String? = null,
     val puTimeAppt: String? = null,
-    val doTimeAppt: String? = null,
+    val doTimeAppt: String? = null,   // <-- add this
     val rtTime: String? = null,
-    val raw: Map<String, String?> = emptyMap()   // <-- required
+    val raw: Map<String, String?> = emptyMap()
 )
 
