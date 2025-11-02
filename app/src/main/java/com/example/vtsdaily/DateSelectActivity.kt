@@ -118,21 +118,34 @@ fun DateSelectScreen() {
                     ElevatedCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(r.passenger.orEmpty(), style = MaterialTheme.typography.titleMedium)
+
                             val pu = r.pAddress.orEmpty()
                             val dr = r.dAddress.orEmpty()
                             if (pu.isNotBlank()) Text("Pickup: $pu", style = MaterialTheme.typography.bodyMedium)
                             if (dr.isNotBlank()) Text("Drop-off: $dr", style = MaterialTheme.typography.bodyMedium)
-                            val tt = r.tripType?.ifBlank { if (!r.rtTime.isNullOrBlank()) "Return" else "Appt" } ?: ""
+
+                            val tt  = r.tripType?.ifBlank { if (!r.rtTime.isNullOrBlank()) "Return" else "Appt" } ?: ""
                             val puT = r.puTimeAppt.orEmpty()
+                            val doT = r.doTimeAppt.orEmpty()
                             val rtT = r.rtTime.orEmpty()
-                            Text(listOfNotNull(
-                                tt.ifBlank { null },
+
+                            // Build: TripType • PU → DO • RT
+                            val puDo = listOfNotNull(
                                 puT.takeIf { it.isNotBlank() }?.let { "PU $it" },
+                                doT.takeIf { it.isNotBlank() }?.let { "DO $it" }
+                            ).joinToString(" \u2192 ") // → arrow
+
+                            val line = listOfNotNull(
+                                tt.ifBlank { null },
+                                puDo.ifBlank { null },
                                 rtT.takeIf { it.isNotBlank() }?.let { "RT $it" }
-                            ).joinToString(" • "))
+                            ).joinToString(" • ")
+
+                            Text(line)
                         }
                     }
                 }
+
             }
         }
     }

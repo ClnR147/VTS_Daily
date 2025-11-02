@@ -324,6 +324,7 @@ object LookupStore {
                 pAddress    = rowMap["PAddress"],
                 dAddress    = rowMap["DAddress"],
                 puTimeAppt  = rowMap["PUTimeAppt"] ?: rowMap["puTimeAppt"],
+                doTimeAppt  = rowMap["DOTimeAppt"],
                 rtTime      = rowMap["RTTime"] ?: rowMap["rtTime"],
                 phone       = rowMap["Phone"]
             )
