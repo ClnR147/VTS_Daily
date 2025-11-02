@@ -20,11 +20,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import java.io.File
+import com.example.vtsdaily.ui.components.ScreenDividers
 
 // Icons
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material3.HorizontalDivider
 
 private val VtsGreen = Color(0xFF4CAF50)   // green
 private val VtsBannerText = Color(0xFFFFF5E1)
@@ -94,12 +94,8 @@ fun DriversScreen() {
                 .fillMaxSize()
         ) {
             // divider under the main app bar (match Schedule feel)
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 12.dp),  // aligns with search bar edges
-                thickness = 8.dp,
-                color = VtsGreen
-            )
 
+            ScreenDividers.Thick()
             // Search
             OutlinedTextField(
                 value = query,

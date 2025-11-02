@@ -16,7 +16,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -44,11 +43,15 @@ import java.time.format.DateTimeParseException
 import java.util.Locale
 import com.example.vtsdaily.DateSelectActivity
 import androidx.compose.ui.platform.LocalContext
+import com.example.vtsdaily.ui.components.ScreenDividers
 
 /* --- Style (match Drivers) --- */
 private val VtsGreen = Color(0xFF4CAF50)
 private val VtsCream = Color(0xFFFFF5E1)
 private val RowStripe = Color(0xFFF7F5FA)
+
+
+private val CardInnerPadding = 12.dp
 
 // Top-level (outside any composable)
 private const val TAG = "DateSelect"
@@ -138,7 +141,8 @@ private fun parseCsvLine(s: String): List<String> {
 }
 
 /* ---------- DEBUG: explain why rows would be rejected (no behavior change) ---------- */
-
+private val CardGutter = 12.dp      // screen edge ↔ card edge
+private val CardInner = 14.dp       // card edge ↔ content
 private val EXPECTED_HEADER = listOf(
     "DriveDate","Passenger","A/R","PAddress","DAddress","PUTimeAppt","DOTimeAppt","RTTime","Phone"
 )
@@ -379,11 +383,8 @@ fun PassengerLookupScreen() {
                 .fillMaxSize()
         ) {
             Column(Modifier.fillMaxSize()) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    thickness = 8.dp,
-                    color = VtsGreen
-                )
+
+            ScreenDividers.Thick()
 
                 // Actions row: Import + Date icon
                 Row(
@@ -487,16 +488,16 @@ fun PassengerLookupScreen() {
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             item {
-                                ElevatedCard(Modifier.fillMaxWidth()) {
+                                ElevatedCard(Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = CardGutter, vertical = 6.dp)
+                                ) {
                                     Column(
-                                        Modifier.padding(14.dp),
+                                        Modifier.padding(CardInner),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         // Header: passenger name + phone
-                                        Text(
-                                            name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            maxLines = 2
+                                        Text(name, style = MaterialTheme.typography.titleMedium,maxLines = 2
                                         )
 
                                         val phone = groupedTrips.values
@@ -515,22 +516,13 @@ fun PassengerLookupScreen() {
                                         }
 
                                         // Header → first detail divider (same spacing style)
-                                        HorizontalDivider(
-                                            modifier = Modifier.padding(top = 8.dp, start = 12.dp, end = 12.dp),
-                                            thickness = 3.dp,
-                                            color = VtsGreen
-                                        )
+                                        ScreenDividers.Thick()
 
                                         // Grouped trips by date (newest → oldest)
                                         groupedTrips.entries.forEachIndexed { index, (date, trips) ->
                                             if (index > 0) {
                                                 // Small VTSGreen divider between date groups
-                                                HorizontalDivider(
-                                                    modifier = Modifier
-                                                        .padding(top = 8.dp, bottom = 0.dp, start = 12.dp, end = 12.dp),
-                                                    thickness = 3.dp,
-                                                    color = VtsGreen
-                                                )
+                                                ScreenDividers.Thin()
                                             }
 
                                             Column(

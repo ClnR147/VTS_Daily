@@ -9,7 +9,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import com.example.vtsdaily.drivers.DriversScreen
 import com.example.vtsdaily.lookup.PassengerLookupScreen
 import com.example.vtsdaily.ui.theme.VTSDailyTheme
+import com.example.vtsdaily.ui.components.ScreenDividers
 
 // Icons
 import androidx.compose.material.icons.Icons
@@ -34,11 +34,7 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -108,15 +104,8 @@ class MainActivity : ComponentActivity() {
                                 PassengerApp() // your existing Schedule UI (date, table, etc.)
 
                                 // Overlay the divider so it appears between header and date
-                                HorizontalDivider(
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                        .fillMaxWidth()
-                                        .padding(start = gutter, end = gutter)
-                                        .zIndex(1f),
-                                    thickness = 8.dp,
-                                    color = Color(0xFF4CAF50) // VtsGreen
-                                )
+                                ScreenDividers.Thick()
+
                             }
                             1 -> DriversScreen()
                             2 -> PassengerLookupScreen()

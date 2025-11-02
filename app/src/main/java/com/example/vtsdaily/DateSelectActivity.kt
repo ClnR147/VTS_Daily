@@ -16,13 +16,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.vtsdaily.lookup.LookupRow
 import com.example.vtsdaily.lookup.LookupStore
 import kotlinx.coroutines.launch
 import java.time.DateTimeException
 import java.time.LocalDate
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+
+
 
 class DateSelectActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,6 +42,10 @@ fun DateSelectScreen() {
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+
 
     var dateInput by rememberSaveable { mutableStateOf("") }
     var selectedDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
@@ -82,7 +91,6 @@ fun DateSelectScreen() {
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Date text input + Load button (no picker)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -93,10 +101,21 @@ fun DateSelectScreen() {
                     modifier = Modifier.weight(1f),
                     label = { Text("Date (M/D/YY or M/D/YYYY)") },
                     singleLine = true,
-
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus(force = true) // ensure field loses focus
+                            keyboardController?.hide()            // hide IME
+                            onLoad(dateInput)
+                        }
+                    )
                 )
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { onLoad(dateInput) }) { Text("Load") }
+                Button(onClick = {
+                    focusManager.clearFocus(force = true)     // ensure field loses focus
+                    keyboardController?.hide()               // hide IME
+                    onLoad(dateInput)
+                }) { Text("Load") }
             }
 
             if (selectedDate != null) {

@@ -13,6 +13,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import com.example.vtsdaily.ui.theme.VtsGreen
+import com.example.vtsdaily.ui.theme.LocalCardDividerStyle
+import com.example.vtsdaily.ui.theme.LocalScreenDividerStyle
+import com.example.vtsdaily.ui.theme.defaultCardDividerStyle
+import com.example.vtsdaily.ui.theme.defaultScreenDividerStyle
 
 
 // Custom small-rounded shape styling
@@ -70,10 +79,27 @@ fun VTSDailyTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        shapes = Shapes,
-        content = content
+    // ——— Divider themes (Card + Screen) provided here ———
+    val cardDividerStyle = defaultCardDividerStyle().copy(
+        color = VtsGreen.copy(alpha = 0.85f),   // strong, inside cards
+        horizontalInset = 12.dp                  // match your card inner padding
     )
+    val screenDividerStyle = defaultScreenDividerStyle().copy(
+        color = VtsGreen.copy(alpha = 0.85f),
+        thick = 8.dp,          // <- really thick
+        horizontalInset = 12.dp, // <- same as OutlinedTextField padding
+        verticalSpace = 0.dp     // no extra top gap
+    )
+
+    CompositionLocalProvider(
+        LocalCardDividerStyle provides cardDividerStyle,
+        LocalScreenDividerStyle provides screenDividerStyle
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            shapes = Shapes,
+            content = content
+        )
+    }
 }
