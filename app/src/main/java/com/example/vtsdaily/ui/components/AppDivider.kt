@@ -31,6 +31,7 @@ private fun BaseDivider(
 
 // ---------- Card dividers ----------
 object CardDividers {
+    // Themed defaults (use LocalCardDividerStyle.current.horizontalInset)
     @Composable fun Thin(modifier: Modifier = Modifier) = with(LocalCardDividerStyle.current) {
         BaseDivider(thin, horizontalInset, verticalSpace, color, modifier)
     }
@@ -40,18 +41,32 @@ object CardDividers {
     @Composable fun Thick(modifier: Modifier = Modifier) = with(LocalCardDividerStyle.current) {
         BaseDivider(thick, horizontalInset, verticalSpace, color, modifier)
     }
-    /** Full-bleed variant inside cards (rare): */
+
+    /** Full-bleed variant inside cards (rare) */
     @Composable fun FullBleed(modifier: Modifier = Modifier) = with(LocalCardDividerStyle.current) {
         BaseDivider(medium, 0.dp, verticalSpace, color, modifier)
     }
+
     /** Nice for “Header → Details”: thicker + a touch more spacing */
     @Composable fun Section(modifier: Modifier = Modifier) = with(LocalCardDividerStyle.current) {
         BaseDivider(thick, horizontalInset, verticalSpace + thin, color, modifier)
+    }
+
+    // 🔹 NEW: inset-aware overloads so you can align with inner content (e.g., labels)
+    @Composable fun Thin(inset: Dp, modifier: Modifier = Modifier) = with(LocalCardDividerStyle.current) {
+        BaseDivider(thin, inset, verticalSpace, color, modifier)
+    }
+    @Composable fun Medium(inset: Dp, modifier: Modifier = Modifier) = with(LocalCardDividerStyle.current) {
+        BaseDivider(medium, inset, verticalSpace, color, modifier)
+    }
+    @Composable fun Thick(inset: Dp, modifier: Modifier = Modifier) = with(LocalCardDividerStyle.current) {
+        BaseDivider(thick, inset, verticalSpace, color, modifier)
     }
 }
 
 // ---------- Screen dividers ----------
 object ScreenDividers {
+    // Themed defaults (use LocalScreenDividerStyle.current.horizontalInset)
     @Composable fun Thin(modifier: Modifier = Modifier) = with(LocalScreenDividerStyle.current) {
         BaseDivider(thin, horizontalInset, verticalSpace, color, modifier)
     }
@@ -61,10 +76,28 @@ object ScreenDividers {
     @Composable fun Thick(modifier: Modifier = Modifier) = with(LocalScreenDividerStyle.current) {
         BaseDivider(thick, horizontalInset, verticalSpace, color, modifier)
     }
-    /** Inset screen divider (use when content area has horizontal padding) */
+
+    // Inset-aware overloads (match card/parent widths precisely)
+    @Composable fun Thin(inset: Dp, modifier: Modifier = Modifier) = with(LocalScreenDividerStyle.current) {
+        BaseDivider(thin, inset, verticalSpace, color, modifier)
+    }
+    @Composable fun Medium(inset: Dp, modifier: Modifier = Modifier) = with(LocalScreenDividerStyle.current) {
+        BaseDivider(medium, inset, verticalSpace, color, modifier)
+    }
+    @Composable fun Thick(inset: Dp, modifier: Modifier = Modifier) = with(LocalScreenDividerStyle.current) {
+        BaseDivider(thick, inset, verticalSpace, color, modifier)
+    }
+
+    /** Inset screen divider (medium by default) */
     @Composable fun Inset(modifier: Modifier = Modifier, inset: Dp = 16.dp) =
         with(LocalScreenDividerStyle.current) {
             BaseDivider(medium, inset, verticalSpace, color, modifier)
+        }
+
+    /** Full-bleed (edge-to-edge within the current container) */
+    @Composable fun FullBleed(thickness: Dp? = null, modifier: Modifier = Modifier) =
+        with(LocalScreenDividerStyle.current) {
+            BaseDivider(thickness ?: medium, 0.dp, verticalSpace, color, modifier)
         }
 
     /** Section break for major page sections */
@@ -72,4 +105,3 @@ object ScreenDividers {
         BaseDivider(thick, horizontalInset, verticalSpace + thin, color, modifier)
     }
 }
-

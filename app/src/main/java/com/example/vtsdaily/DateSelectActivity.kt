@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
@@ -26,11 +26,30 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.example.vtsdaily.ui.theme.VtsGreen   // divider color
+import com.example.vtsdaily.ui.components.ScreenDividers
+import androidx.compose.runtime.CompositionLocalProvider
+import com.example.vtsdaily.ui.theme.LocalCardDividerStyle
+import com.example.vtsdaily.ui.theme.LocalScreenDividerStyle
+import com.example.vtsdaily.ui.components.CardDividers
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 
 class DateSelectActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { DateSelectScreen() }
+        setContent {
+            // If you have an app theme like VtsDailyTheme, wrap with it here.
+            // VtsDailyTheme {
+            MaterialTheme {
+                ProvideDividerStyles {
+                    DateSelectScreen()
+                }
+            }
+            // }
+        }
     }
 }
 
@@ -43,16 +62,15 @@ fun DateSelectScreen() {
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    var dateInput by rememberSaveable { mutableStateOf("") }
     var selectedDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
     var trips by remember { mutableStateOf<List<LookupRow>>(emptyList()) }
+    var dateDigits by rememberSaveable { mutableStateOf("") } // RAW DIGITS ONLY
 
-    // Use a lambda instead of a local function to avoid the composable invocation error.
-    val onLoad: (String) -> Unit = remember(context, snackbar, scope) {
-        { input ->
-            val parsed = parseUserDateInput(input)
+    val onLoadDigits: (String) -> Unit = remember(context, snackbar, scope) {
+        { digits ->
+            val parsed = parseDateDigits(digits)
             if (parsed == null) {
-                scope.launch { snackbar.showSnackbar("Enter a valid date like 6/7/25 or 6/7/2025") }
+                scope.launch { snackbar.showSnackbar("Enter date as MMDDYY or MMDDYYYY") }
             } else {
                 selectedDate = parsed
                 val sorted = LookupStore.tripsOnChrono(LookupStore.load(context), parsed)
@@ -72,7 +90,7 @@ fun DateSelectScreen() {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { if (dateInput.isNotBlank()) onLoad(dateInput) }) {
+                    IconButton(onClick = { if (dateDigits.isNotBlank()) onLoadDigits(dateDigits) }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Reload")
                     }
                 }
@@ -83,96 +101,115 @@ fun DateSelectScreen() {
         Column(
             modifier = Modifier
                 .padding(padding)
-                .padding(16.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .fillMaxSize()
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            // === Screen header divider (edge-to-edge in content area) ===
+            ScreenDividers.Thick()
+
+            // Content block padding
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedTextField(
-                    value = dateInput,
-                    onValueChange = { dateInput = it },
-                    modifier = Modifier.weight(1f),
-                    label = { Text("Date (M/D/YY or M/D/YYYY)") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            focusManager.clearFocus(force = true) // ensure field loses focus
-                            keyboardController?.hide()            // hide IME
-                            onLoad(dateInput)
-                        }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Numbers-only field; slashes are drawn virtually
+                    OutlinedTextField(
+                        value = dateDigits,
+                        onValueChange = { raw ->
+                            dateDigits = raw.filter(Char::isDigit).take(8) // MMDDYY or MMDDYYYY
+                        },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Date (MMDDYY or MMDDYYYY)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Done,
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                focusManager.clearFocus(force = true)
+                                keyboardController?.hide()
+                                onLoadDigits(dateDigits)
+                            }
+                        ),
+                        visualTransformation = DigitsDateVisualTransformation()
                     )
-                )
-                Spacer(Modifier.width(8.dp))
-                Button(onClick = {
-                    focusManager.clearFocus(force = true)     // ensure field loses focus
-                    keyboardController?.hide()               // hide IME
-                    onLoad(dateInput)
-                }) { Text("Load") }
-            }
 
-            if (selectedDate != null) {
-                Text(
-                    text = "Selected: ${fmtDate(selectedDate!!)}  •  Trips: ${trips.size}",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+                    Spacer(Modifier.width(8.dp))
+                    Button(onClick = {
+                        focusManager.clearFocus(force = true)
+                        keyboardController?.hide()
+                        onLoadDigits(dateDigits)
+                    }) { Text("Load") }
+                }
 
-            Divider()
+                if (selectedDate != null) {
+                    Text(
+                        text = "Selected: ${fmtDate(selectedDate!!)}  •  Trips: ${trips.size}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
 
-            // Simple list of passengers for that date
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                items(trips) { r ->
-                    ElevatedCard(Modifier.fillMaxWidth()) {
-                        Column(
-                            Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(r.passenger.orEmpty(), style = MaterialTheme.typography.titleMedium)
+                // Thin divider before the list — match card width (parent already has 16.dp padding)
+                ScreenDividers.Thin(inset = 0.dp)
 
-                            val puAddr = r.pAddress.orEmpty()
-                            val doAddr = r.dAddress.orEmpty()
-                            if (puAddr.isNotBlank()) {
-                                Text("Pickup: $puAddr", style = MaterialTheme.typography.bodyMedium)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    itemsIndexed(trips) { index, r ->
+                        ElevatedCard(Modifier.fillMaxWidth()) {
+                            Column(
+                                Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(r.passenger.orEmpty(), style = MaterialTheme.typography.titleMedium)
+
+                                val puAddr = r.pAddress.orEmpty()
+                                val doAddr = r.dAddress.orEmpty()
+                                if (puAddr.isNotBlank()) {
+                                    Text("Pickup: $puAddr", style = MaterialTheme.typography.bodyMedium)
+                                }
+                                if (doAddr.isNotBlank()) {
+                                    Text("Drop-off: $doAddr", style = MaterialTheme.typography.bodyMedium)
+                                }
+
+                                val tt = when (r.tripType?.lowercase()) {
+                                    "appt" -> "Appt"
+                                    "return" -> "Return"
+                                    else -> if (!r.rtTime.isNullOrBlank()) "Return" else "Appt"
+                                }
+
+                                val puT = r.puTimeAppt.orEmpty()
+                                val doT = (r.doTimeAppt ?: r.raw["DOTimeAppt"]).orEmpty()
+                                val rtT = r.rtTime.orEmpty()
+
+                                val puDo = when {
+                                    puT.isNotBlank() && doT.isNotBlank() -> "PU $puT \u2192 DO $doT"
+                                    puT.isNotBlank() -> "PU $puT"
+                                    doT.isNotBlank() -> "DO $doT"
+                                    else -> ""
+                                }
+
+                                val line = listOfNotNull(
+                                    tt.ifBlank { null },
+                                    puDo.ifBlank { null },
+                                    rtT.takeIf { it.isNotBlank() }?.let { "RT $it" }
+                                ).joinToString(" • ")
+
+                                Text(line, style = MaterialTheme.typography.bodyMedium)
                             }
-                            if (doAddr.isNotBlank()) {
-                                Text("Drop-off: $doAddr", style = MaterialTheme.typography.bodyMedium)
-                            }
+                        }
 
-                            // TripType label with a sensible fallback
-                            val tt = when (r.tripType?.lowercase()) {
-                                "appt" -> "Appt"
-                                "return" -> "Return"
-                                else -> if (!r.rtTime.isNullOrBlank()) "Return" else "Appt"
-                            }
-
-                            val puT = r.puTimeAppt.orEmpty()
-                            // Backward-compatible: read top-level first, then raw["DOTimeAppt"]
-                            val doT = (r.doTimeAppt ?: r.raw["DOTimeAppt"]).orEmpty()
-                            val rtT = r.rtTime.orEmpty()
-
-                            // PU → DO only when both present; otherwise show whichever exists
-                            val puDo = when {
-                                puT.isNotBlank() && doT.isNotBlank() -> "PU $puT \u2192 DO $doT"
-                                puT.isNotBlank() -> "PU $puT"
-                                doT.isNotBlank() -> "DO $doT"
-                                else -> ""
-                            }
-
-                            val line = listOfNotNull(
-                                tt.ifBlank { null },
-                                puDo.ifBlank { null },
-                                rtT.takeIf { it.isNotBlank() }?.let { "RT $it" }
-                            ).joinToString(" • ")
-
-                            Text(line, style = MaterialTheme.typography.bodyMedium)
+                        // === Detail card separator divider (same visual width as card) ===
+                        if (index < trips.lastIndex) {
+                            CardDividers.Thin(inset = 0.dp)
                         }
                     }
                 }
@@ -181,35 +218,112 @@ fun DateSelectScreen() {
     }
 }
 
+/* ---------------------- Divider style provider ---------------------- */
+@Composable
+private fun ProvideDividerStyles(content: @Composable () -> Unit) {
+    val screen = LocalScreenDividerStyle.current
+    val card = LocalCardDividerStyle.current
+
+    CompositionLocalProvider(
+        LocalScreenDividerStyle provides screen.copy(
+            thin = 1.dp,
+            medium = 3.dp,
+            thick = 8.dp,
+            horizontalInset = 16.dp,
+            verticalSpace = 0.dp,
+            color = VtsGreen
+        ),
+        LocalCardDividerStyle provides card.copy(
+            thin = 1.dp,
+            medium = 3.dp,
+            thick = 3.dp,          // use 8.dp if you want a very bold in-card separator
+            horizontalInset = 12.dp,
+            verticalSpace = 8.dp,
+            color = VtsGreen
+        )
+    ) {
+        content()
+    }
+}
+
+/* ---------------------- Visual transformation (digits -> "MM/DD/..") ---------------------- */
+private class DigitsDateVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digits = text.text.filter(Char::isDigit)
+        val out = buildString {
+            when (digits.length) {
+                0 -> {}
+                1, 2 -> append(digits)
+                3, 4 -> {
+                    append(digits.substring(0, 2)); append('/')
+                    append(digits.substring(2))
+                }
+                5, 6 -> {
+                    append(digits.substring(0, 2)); append('/')
+                    append(digits.substring(2, 4)); append('/')
+                    append(digits.substring(4))
+                }
+                else -> {
+                    val d = digits.take(8)
+                    append(d.substring(0, 2)); append('/')
+                    append(d.substring(2, 4)); append('/')
+                    append(d.substring(4, 8))
+                }
+            }
+        }
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int = when {
+                offset <= 2 -> offset
+                offset <= 4 -> offset + 1   // slash after MM
+                offset <= 8 -> offset + 2   // slashes after MM and DD
+                else -> out.length
+            }
+
+            override fun transformedToOriginal(offset: Int): Int = when {
+                offset <= 2 -> offset
+                offset == 3 -> 2
+                offset <= 5 -> offset - 1
+                offset == 6 -> 4
+                offset <= out.length -> offset - 2
+                else -> digits.length
+            }
+        }
+
+        return TransformedText(AnnotatedString(out), offsetMapping)
+    }
+}
+
 /* ---------------------- DATE PARSING ---------------------- */
-/**
- * Accepts:
- *  - M/D/YY   (e.g., 6/7/25 → 2025-06-07)
- *  - M/D/YYYY (e.g., 6/7/2025)
- * Separators may be '/' or '-'. Leading zeros not required.
- * Two-digit years are treated as 2000..2099.
- */
 private fun parseUserDateInput(raw: String): LocalDate? {
     val s = raw
-        .replace('\u00A0', ' ') // NBSP
+        .replace('\u00A0', ' ')
         .replace('\u2007', ' ')
         .replace('\u202F', ' ')
         .trim()
-        .replace(Regex("\\s+"), "") // remove inner spaces
+        .replace(Regex("\\s+"), "")
     val m = Regex("""^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2}|\d{4})$""").matchEntire(s) ?: return null
     val (mStr, dStr, yStr) = m.destructured
     val month = mStr.toIntOrNull() ?: return null
     val day = dStr.toIntOrNull() ?: return null
     var year = yStr.toIntOrNull() ?: return null
-    if (year < 100) year += 2000 // interpret 2-digit as 2000–2099
+    if (year < 100) year += 2000
 
-    return try {
-        LocalDate.of(year, month, day)
-    } catch (_: DateTimeException) {
-        null
-    }
+    return try { LocalDate.of(year, month, day) } catch (_: DateTimeException) { null }
 }
 
-private fun fmtDate(d: LocalDate): String =
-    "${d.monthValue}/${d.dayOfMonth}/${d.year}"
+/** Parse 6 or 8 digits (MMDDYY or MMDDYYYY) into LocalDate, returns null if invalid. */
+private fun parseDateDigits(d: String): LocalDate? {
+    val digits = d.filter(Char::isDigit)
+    if (digits.length != 6 && digits.length != 8) return null
+    val mm = digits.substring(0, 2).toIntOrNull() ?: return null
+    val dd = digits.substring(2, 4).toIntOrNull() ?: return null
+    val year = if (digits.length == 6) {
+        (digits.substring(4, 6).toIntOrNull() ?: return null) + 2000
+    } else {
+        digits.substring(4, 8).toIntOrNull() ?: return null
+    }
+    return try { LocalDate.of(year, mm, dd) } catch (_: Exception) { null }
+}
 
+private fun fmtDate(d: LocalDate): String = "${d.monthValue}/${d.dayOfMonth}/${d.year}"

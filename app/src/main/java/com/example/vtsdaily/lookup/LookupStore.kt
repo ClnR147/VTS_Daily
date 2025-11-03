@@ -151,6 +151,22 @@ object LookupStore {
         )
     }
 
+    // LookupStore.kt
+    fun tripCounts(context: Context): Map<String, Int> {
+        // get all rows using whatever you already use to load lookup data
+        val rows: List<LookupRow> = load(context) // <- use your existing loader
+        // If you don’t have loadAllRows, replace with your current source (JSON/CSV cache)
+
+        // Normalize name key (trim, collapse spaces, case-insensitive)
+        fun keyOf(name: String): String =
+            name.trim().lowercase().replace(Regex("\\s+"), " ")
+
+        return rows
+            .mapNotNull { it.passenger?.trim().takeUnless { s -> s.isNullOrEmpty() } } // adapt: use the field you render for "name"
+            .groupingBy { keyOf(it!!) }
+            .eachCount()
+    }
+
     /** CSV DIAGNOSTIC — explain why rows fail with your current assumptions (kept from your version). */
     fun debugImportRejectionsFromFile(file: File, maxSamples: Int = 15) {
         if (!file.exists()) {

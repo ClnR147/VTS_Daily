@@ -3,6 +3,7 @@ package com.example.vtsdaily.lookup
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -307,7 +308,7 @@ private fun canonicalizeCsvHeaderToTemp(src: File, context: android.content.Cont
     return temp
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PassengerLookupScreen() {
     val context = LocalContext.current
@@ -322,7 +323,22 @@ fun PassengerLookupScreen() {
 
     var selectedName by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Distinct names matching query
+    // --- NEW: trip counts for entire dataset (name-normalized) ---
+    val counts by remember(allRows) {
+        mutableStateOf(
+            allRows.asSequence()
+                .mapNotNull { it.passenger?.trim()?.takeIf { s -> s.isNotEmpty() } }
+                .map { it.replace(Regex("\\s+"), " ").lowercase() }
+                .groupingBy { it }
+                .eachCount()
+        )
+    }
+    fun tripCountFor(displayName: String): Int {
+        val key = displayName.trim().replace(Regex("\\s+"), " ").lowercase()
+        return counts[key] ?: 0
+    }
+
+    // Distinct names matching query (filtered, sorted)
     val nameList = remember(allRows, query) {
         val q = query.trim()
         allRows.asSequence()
@@ -333,6 +349,14 @@ fun PassengerLookupScreen() {
             .distinct()
             .sorted()
             .toList()
+    }
+
+    // --- NEW: group filtered names by first letter for sticky headers ---
+    val nameSections: Map<Char, List<String>> = remember(nameList) {
+        nameList.groupBy { name ->
+            val c = name.firstOrNull { !it.isWhitespace() }?.uppercaseChar()
+            if (c != null && c in 'A'..'Z') c else '#'
+        }.toSortedMap()
     }
 
     // ALL trips for this passenger, newest → oldest
@@ -384,7 +408,7 @@ fun PassengerLookupScreen() {
         ) {
             Column(Modifier.fillMaxSize()) {
 
-            ScreenDividers.Thick()
+                ScreenDividers.Thick()
 
                 // Actions row: Import + Date icon
                 Row(
@@ -438,12 +462,43 @@ fun PassengerLookupScreen() {
 
                 when (page) {
                     Page.NAMES -> {
-                        // Compact list: small spacing, no "Latest"
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            // Header row
+                            item {
+                                Surface(tonalElevation = 1.dp) {
+                                    Column(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.surface)
+                                    ) {
+                                        Row(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Passenger Name",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Text(
+                                                text = "# of Trips",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        ScreenDividers.Thin()
+                                    }
+                                }
+                            }
+
+                            // Name rows
                             items(nameList) { name ->
                                 Surface(
                                     shape = MaterialTheme.shapes.medium,
@@ -459,21 +514,30 @@ fun PassengerLookupScreen() {
                                     Row(
                                         Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
                                             text = name,
                                             style = MaterialTheme.typography.bodyLarge,
                                             maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            text = tripCountFor(name).toString(),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
                             }
                         }
                     }
+                    // Page.DETAILS -> { ... } // unchanged
 
-                    Page.DETAILS -> {
+
+                Page.DETAILS -> {
                         val name = selectedName ?: ""
 
                         // Group passenger's trips by date
@@ -488,16 +552,20 @@ fun PassengerLookupScreen() {
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             item {
-                                ElevatedCard(Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = CardGutter, vertical = 6.dp)
+                                ElevatedCard(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = CardGutter, vertical = 6.dp)
                                 ) {
                                     Column(
                                         Modifier.padding(CardInner),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         // Header: passenger name + phone
-                                        Text(name, style = MaterialTheme.typography.titleMedium,maxLines = 2
+                                        Text(
+                                            name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            maxLines = 2
                                         )
 
                                         val phone = groupedTrips.values

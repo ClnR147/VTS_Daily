@@ -52,9 +52,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             VTSDailyTheme {
-                // 0 = Schedule, 1 = Drivers, 2 = Lookup
+                // 0 = Schedule, 1 = Lookup, 2 = Drivers
                 var view by rememberSaveable { mutableStateOf(0) }
-                val titles = listOf("Schedule", "Drivers", "Passenger Lookup")
+                val titles = listOf("Schedule", "Passenger Lookup", "Drivers")
 
                 Scaffold(
                     topBar = {
@@ -79,18 +79,19 @@ class MainActivity : ComponentActivity() {
                                 label = { Text("Schedule") },
                                 alwaysShowLabel = true
                             )
-                            NavigationBarItem(
+                                NavigationBarItem(
                                 selected = view == 1,
                                 onClick = { view = 1 },
-                                icon = { Icon(Icons.Filled.Person, contentDescription = "Drivers") },
-                                label = { Text("Drivers") },
-                                alwaysShowLabel = true
-                            )
-                            NavigationBarItem(
-                                selected = view == 2,
-                                onClick = { view = 2 },
                                 icon = { Icon(Icons.Filled.Search, contentDescription = "Lookup") },
                                 label = { Text("Lookup") },
+                                alwaysShowLabel = true
+                            )
+
+                                NavigationBarItem(
+                                selected = view == 2,
+                                onClick = { view = 2 },
+                                icon = { Icon(Icons.Filled.Person, contentDescription = "Drivers") },
+                                label = { Text("Drivers") },
                                 alwaysShowLabel = true
                             )
                         }
@@ -107,8 +108,8 @@ class MainActivity : ComponentActivity() {
                                 ScreenDividers.Thick()
 
                             }
-                            1 -> DriversScreen()
-                            2 -> PassengerLookupScreen()
+                            1 -> PassengerLookupScreen()
+                            2 -> DriversScreen()
                         }
                     }
                 }

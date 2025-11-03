@@ -17,7 +17,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
 
-private enum class Dest { Schedule, Drivers, Lookup }
+private enum class Dest { Schedule, Lookup, Drivers }
 
 /**
  * Stable implementation of a bottom NavigationBar (compact screens)
@@ -27,8 +27,8 @@ private enum class Dest { Schedule, Drivers, Lookup }
 @Composable
 fun VTSAppScaffold(
     schedule: @Composable () -> Unit,
-    drivers:  @Composable () -> Unit,
     lookup:   @Composable () -> Unit,
+    drivers:  @Composable () -> Unit,
 ) {
     var current by rememberSaveable { mutableStateOf(Dest.Schedule) }
 
@@ -43,8 +43,8 @@ fun VTSAppScaffold(
                     Text(
                         when (current) {
                             Dest.Schedule -> "Schedule"
-                            Dest.Drivers  -> "Drivers"
                             Dest.Lookup   -> "Lookup"
+                            Dest.Drivers  -> "Drivers"
                         }
                     )
                 }
@@ -60,16 +60,17 @@ fun VTSAppScaffold(
                         label = { Text("Schedule") }
                     )
                     NavigationBarItem(
-                        selected = current == Dest.Drivers,
-                        onClick = { current = Dest.Drivers },
-                        icon = { Icon(Icons.Filled.DirectionsCar, null) },
-                        label = { Text("Drivers") }
-                    )
-                    NavigationBarItem(
                         selected = current == Dest.Lookup,
                         onClick = { current = Dest.Lookup },
                         icon = { Icon(Icons.Filled.Search, null) },
                         label = { Text("Lookup") }
+                    )
+
+                    NavigationBarItem(
+                        selected = current == Dest.Drivers,
+                        onClick = { current = Dest.Drivers },
+                        icon = { Icon(Icons.Filled.DirectionsCar, null) },
+                        label = { Text("Drivers") }
                     )
                 }
             }
@@ -88,17 +89,19 @@ fun VTSAppScaffold(
                         icon = { Icon(Icons.Filled.CalendarMonth, null) },
                         label = { Text("Schedule") }
                     )
-                    NavigationRailItem(
-                        selected = current == Dest.Drivers,
-                        onClick = { current = Dest.Drivers },
-                        icon = { Icon(Icons.Filled.DirectionsCar, null) },
-                        label = { Text("Drivers") }
-                    )
+
                     NavigationRailItem(
                         selected = current == Dest.Lookup,
                         onClick = { current = Dest.Lookup },
                         icon = { Icon(Icons.Filled.Search, null) },
                         label = { Text("Lookup") }
+                    )
+
+                    NavigationRailItem(
+                        selected = current == Dest.Drivers,
+                        onClick = { current = Dest.Drivers },
+                        icon = { Icon(Icons.Filled.DirectionsCar, null) },
+                        label = { Text("Drivers") }
                     )
                 }
             }
@@ -111,8 +114,8 @@ fun VTSAppScaffold(
             ) {
                 when (current) {
                     Dest.Schedule -> schedule()
-                    Dest.Drivers  -> drivers()
                     Dest.Lookup   -> lookup()
+                    Dest.Drivers  -> drivers()
                 }
             }
         }

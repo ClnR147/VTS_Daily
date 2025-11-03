@@ -17,11 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import com.example.vtsdaily.ui.theme.VtsGreen
-import com.example.vtsdaily.ui.theme.LocalCardDividerStyle
-import com.example.vtsdaily.ui.theme.LocalScreenDividerStyle
-import com.example.vtsdaily.ui.theme.defaultCardDividerStyle
-import com.example.vtsdaily.ui.theme.defaultScreenDividerStyle
+
 
 
 // Custom small-rounded shape styling
