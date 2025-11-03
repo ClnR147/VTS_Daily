@@ -409,7 +409,7 @@ fun loadCompletedTrips(
     val fileName = "VTS $scheduleDateStr.xls"
     val file = File(folder, fileName)
     if (!file.exists()) {
-        Log.d("DEBUG", "Completed: file not found ${file.absolutePath}")
+
         return emptyList()
     }
 

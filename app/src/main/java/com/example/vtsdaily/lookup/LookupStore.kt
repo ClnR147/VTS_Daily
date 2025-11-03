@@ -20,8 +20,6 @@ object LookupStore {
     private const val TMP_SUFFIX = ".tmp"
     private val utf8: Charset = Charsets.UTF_8
 
-    private const val TAG = "DateSelect"
-
     private val EXPECTED_HEADER = listOf(
         "DriveDate","Passenger","A/R","PAddress","DAddress","PUTimeAppt","DOTimeAppt","RTTime","Phone"
     )
@@ -153,16 +151,13 @@ object LookupStore {
 
     // LookupStore.kt
     fun tripCounts(context: Context): Map<String, Int> {
-        // get all rows using whatever you already use to load lookup data
-        val rows: List<LookupRow> = load(context) // <- use your existing loader
-        // If you don’t have loadAllRows, replace with your current source (JSON/CSV cache)
+        val rows: List<LookupRow> = load(context)
 
-        // Normalize name key (trim, collapse spaces, case-insensitive)
         fun keyOf(name: String): String =
             name.trim().lowercase().replace(Regex("\\s+"), " ")
 
         return rows
-            .mapNotNull { it.passenger?.trim().takeUnless { s -> s.isNullOrEmpty() } } // adapt: use the field you render for "name"
+            .mapNotNull { it.passenger?.trim().takeUnless { s -> s.isNullOrEmpty() } }
             .groupingBy { keyOf(it!!) }
             .eachCount()
     }
@@ -170,19 +165,14 @@ object LookupStore {
     /** CSV DIAGNOSTIC — explain why rows fail with your current assumptions (kept from your version). */
     fun debugImportRejectionsFromFile(file: File, maxSamples: Int = 15) {
         if (!file.exists()) {
-            Log.d(TAG, "DEBUG_IMPORT: file not found: ${file.absolutePath}")
             return
         }
         val br = file.bufferedReader(Charsets.UTF_8)
-        var headerLine = br.readLine() ?: run {
-            Log.d(TAG, "DEBUG_IMPORT: empty file"); return
-        }
+        var headerLine = br.readLine() ?: run { return }
         if (headerLine.isNotEmpty() && headerLine[0].code == 0xFEFF) headerLine = headerLine.substring(1)
         val header = headerLine.split(',').map { it.trim() }
-        Log.d(TAG, "DEBUG_IMPORT: header=$header (#=${header.size})")
 
         val missingExpected = EXPECTED_HEADER.filter { it !in header }
-        if (missingExpected.isNotEmpty()) Log.d(TAG, "DEBUG_IMPORT: expected-but-missing headers: $missingExpected")
 
         var lineNo = 1
         var total = 0
@@ -235,9 +225,7 @@ object LookupStore {
                 accepted++
             }
         }
-        Log.d(TAG, "DEBUG_IMPORT: total=$total accepted=$accepted rejected=$rejected")
-        Log.d(TAG, "DEBUG_IMPORT: reasons=$reasons")
-        samples.forEach { Log.d(TAG, "DEBUG_IMPORT: $it") }
+        // (All debug logs removed)
     }
 
     /* ================== NEW: CSV IMPORT (canonicalizes header in-memory) ================== */
@@ -279,7 +267,6 @@ object LookupStore {
      */
     fun importLookupCsv(csvFile: File): List<LookupRow> {
         if (!csvFile.exists()) {
-            Log.d(TAG, "IMPORT: file not found ${csvFile.absolutePath}")
             return emptyList()
         }
 
@@ -291,11 +278,6 @@ object LookupStore {
         if (headerLine.isNotEmpty() && headerLine[0].code == 0xFEFF) headerLine = headerLine.substring(1)
         val rawHeader = parseCsvLineQuoted(headerLine)
         val canonHeader = rawHeader.map(::canonicalForHeader)
-        if (canonHeader != rawHeader) {
-            Log.d(TAG, "CANON_HEADER_INMEM: $rawHeader -> $canonHeader")
-        } else {
-            Log.d(TAG, "CANON_HEADER_INMEM: no change")
-        }
 
         val out = ArrayList<LookupRow>(lines.size.coerceAtLeast(8))
         var kept = 0
@@ -348,7 +330,6 @@ object LookupStore {
             kept++
         }
 
-        Log.d(TAG, "IMPORT_PARSE_DONE: header=$canonHeader rows=${out.size} (kept=$kept, dropped=$dropped)")
         return out
     }
 
@@ -375,7 +356,6 @@ object LookupStore {
 
     // LookupStore.kt
     fun invalidateLookupCache() {
-        // clear whatever caches you maintain
         cachedRows = null
         cachedHeader = null
         loadedFromPath = null
@@ -455,7 +435,7 @@ object LookupStore {
             val firstLine = csvFile.useLines { it.firstOrNull() } ?: return
             csvHeaders = firstLine.split(',').map { it.trim() }
 
-            Log.d("LookupCsvHeader", "Loaded headers (${csvHeaders.size}): $csvHeaders")
+            // Debug log removed
         } catch (e: Exception) {
             Log.e("LookupCsvHeader", "Error reading CSV header", e)
         }

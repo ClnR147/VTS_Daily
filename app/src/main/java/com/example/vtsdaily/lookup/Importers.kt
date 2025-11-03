@@ -30,14 +30,13 @@ private fun indexOfHeader(headers: List<String>, aliases: List<String>): Int {
 
 /** Logs ALL header cells exactly as they appear in the CSV (no guessing). */
 private fun dumpHeaderForLogcat(headers: List<String>) {
-    Log.d(TAG_IMPORT, "CSV HEADER COUNT = ${headers.size}")
+
     headers.forEachIndexed { idx, name ->
         val visible = name.replace(" ", "␠")
         val last = name.lastOrNull()
         val lastCode = last?.code?.let { String.format("U+%04X", it) } ?: "—"
         val codePoints = name.codePoints().toArray().joinToString(", ") { "U+%04X".format(it) }
-        Log.d(TAG_IMPORT, "hdr[$idx] raw='${name}' | visible='${visible}' | len=${name.length} | last=${last ?: '∅'} ($lastCode)")
-        Log.d(TAG_IMPORT, "hdr[$idx] codepoints = [$codePoints]")
+
     }
 }
 
@@ -227,7 +226,6 @@ fun importLookupCsv(
                 }
             }
 
-            Log.d(TAG_IMPORT, "importLookupCsv parsed ${out.size} rows from ${file.name}")
             return out
         }
 }

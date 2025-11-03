@@ -44,6 +44,7 @@ import java.time.format.DateTimeParseException
 import java.util.Locale
 import com.example.vtsdaily.DateSelectActivity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.zIndex
 import com.example.vtsdaily.ui.components.ScreenDividers
 
 /* --- Style (match Drivers) --- */
@@ -89,12 +90,7 @@ private fun formatDate(d: LocalDate) = d.format(dateFormats.first())
 /* ---------- Import source logging ---------- */
 
 private fun logImportStart(file: File) {
-    Log.d(
-        TAG,
-        "IMPORT_CLICK: source=File " +
-                "path=${file.absolutePath} exists=${file.exists()} size=${file.takeIf{it.exists()}?.length() ?: -1} " +
-                "lm=${file.takeIf{it.exists()}?.lastModified() ?: -1}"
-    )
+
 }
 
 private fun logImportStart(context: android.content.Context, uri: android.net.Uri) {
@@ -115,7 +111,7 @@ private fun logImportStart(context: android.content.Context, uri: android.net.Ur
     val header = try {
         cr.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readLine() } ?: ""
     } catch (_: Exception) { "" }
-    Log.d(TAG, "IMPORT_CLICK: source=Uri uri=$uri name=$name size=$size headerPreview='${header.take(160)}'")
+
 }
 
 /* --- CSV line parser (handles quotes/commas/"" escapes) --- */
@@ -159,22 +155,22 @@ private fun parseDateCurrentForDebug(raw: String?): LocalDate? = parseDateOrNull
  */
 private fun debugImportRejectionsFromFile(file: File, maxSamples: Int = 15) {
     if (!file.exists()) {
-        Log.d(TAG, "DEBUG_IMPORT: file not found: ${file.absolutePath}")
+
         return
     }
     file.bufferedReader(Charset.forName("UTF-8")).use { br ->
         var headerLine = br.readLine() ?: run {
-            Log.d(TAG, "DEBUG_IMPORT: empty file"); return
+        return
         }
         // strip BOM
         if (headerLine.isNotEmpty() && headerLine[0].code == 0xFEFF) headerLine = headerLine.substring(1)
 
         val header = parseCsvLine(headerLine).map { it.trim() }
-        Log.d(TAG, "DEBUG_IMPORT: header=$header (#=${header.size})")
+
 
         val missingExpected = EXPECTED_HEADER.filter { it !in header }
         if (missingExpected.isNotEmpty()) {
-            Log.d(TAG, "DEBUG_IMPORT: expected-but-missing headers: $missingExpected")
+
         }
 
         var total = 0
@@ -250,9 +246,8 @@ private fun debugImportRejectionsFromFile(file: File, maxSamples: Int = 15) {
             accepted++
         }
 
-        Log.d(TAG, "DEBUG_IMPORT: total=$total accepted=$accepted rejected=$rejected")
-        Log.d(TAG, "DEBUG_IMPORT: reasons=$reasons")
-        samples.forEach { Log.d(TAG, "DEBUG_IMPORT: $it") }
+
+        samples.forEach {  }
     }
 }
 
@@ -287,13 +282,13 @@ private fun canonicalizeCsvHeaderToTemp(src: File, context: android.content.Cont
 
     val changed = header != rewritten
     if (!changed) {
-        Log.d(TAG, "CANON_HEADER: no change needed; using original file")
+
         return src
     }
 
     // Write to temp in cache
     val temp = File(context.cacheDir, "CustomerLookup.canon.csv")
-    Log.d(TAG, "CANON_HEADER: rewriting header -> ${rewritten} into temp=${temp.absolutePath}")
+
 
     FileOutputStream(temp, false).bufferedWriter(Charsets.UTF_8).use { w ->
         // join header safely (headers have no commas)
@@ -420,12 +415,12 @@ fun PassengerLookupScreen() {
                 ) {
                     Button(
                         onClick = {
-                            Log.d(TAG, "IMPORT_CLICK: tapped at ${System.currentTimeMillis()}")
+
                             try {
                                 LookupStore.invalidateLookupCache()
-                                Log.d(TAG, "IMPORT_CLICK: cache invalidated")
+
                             } catch (t: Throwable) {
-                                Log.d(TAG, "IMPORT_CLICK: cache invalidate skipped: ${t.message}")
+
                             }
                             doImport()
                         },
@@ -468,12 +463,14 @@ fun PassengerLookupScreen() {
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             // Header row
-                            item {
+                            // Floating (sticky) header row
+                            stickyHeader {
                                 Surface(tonalElevation = 1.dp) {
                                     Column(
                                         Modifier
                                             .fillMaxWidth()
-                                            .background(MaterialTheme.colorScheme.surface)
+                                            .background(MaterialTheme.colorScheme.surface) // keep opaque for stickies
+                                            .zIndex(1f)                                    // optional: ensure it stays above rows
                                     ) {
                                         Row(
                                             Modifier
@@ -497,6 +494,7 @@ fun PassengerLookupScreen() {
                                     }
                                 }
                             }
+
 
                             // Name rows
                             items(nameList) { name ->
