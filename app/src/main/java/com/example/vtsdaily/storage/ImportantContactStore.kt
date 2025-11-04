@@ -69,10 +69,12 @@ object ImportantContactStore {
         save(context, all)
     }
 
-    fun delete(context: Context, name: String, phone: String = "") {
-        val all = load(context)
-        val removed = all.filterNot { keyOf(it) == "${norm(name)}|${normPhone(phone)}" }
-        save(context, removed)
+    fun delete(context: Context, name: String, phone: String) {
+        val list = load(context)
+        val newList = list.filterNot {
+            it.name.equals(name, ignoreCase = true) && it.phone == phone
+        }
+        save(context, newList)
     }
 
     // ---------- Backup / Restore ----------

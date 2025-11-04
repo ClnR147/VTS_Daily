@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.AlertDialog
@@ -44,6 +43,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.clickable
+import androidx.core.net.toUri
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,44 +71,48 @@ fun ContactListScreen(context: Context) {
             CenterAlignedTopAppBar(
                 title = { Text("Important Contacts", style = MaterialTheme.typography.titleLarge) },
                 actions = {
-                    // Import CSV from /sdcard/PassengerSchedules/ImportantContacts.csv
+                    // Combined Import: looks for both JSON and CSV in /sdcard/PassengerSchedules
                     IconButton(onClick = {
-                        val csv = File(
-                            Environment.getExternalStorageDirectory(),
-                            "PassengerSchedules/ImportantContacts.csv"
-                        )
-                        val rpt = ImportantContactStore.importFromCsvFile(context, csv)
+                        val dir = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
+                        val json = File(dir, "ImportantContacts.json")
+                        val csv  = File(dir, "ImportantContacts.csv")
+
+                        var added = 0
+                        var merged = 0
+                        var dropped = 0
+                        var ranSomething = false
+
+                        if (json.exists()) {
+                            val rpt = ImportantContactStore.importFromJsonFile(context, json)
+                            added  += rpt.added
+                            merged += rpt.merged
+                            ranSomething = true
+                        }
+                        if (csv.exists()) {
+                            val rpt = ImportantContactStore.importFromCsvFile(context, csv)
+                            added  += rpt.added
+                            merged += rpt.merged
+                            dropped += rpt.dropped
+                            ranSomething = true
+                        }
+
                         reload()
-                        scope.launch {
-                            snackbar.showSnackbar(
-                                "CSV import: +${rpt.added} added, ${rpt.merged} merged, ${rpt.dropped} dropped"
-                            )
-                        }
-                    }) { Icon(Icons.Filled.FileUpload, contentDescription = "Import CSV") }
 
-                    // Import JSON from /sdcard/PassengerSchedules/ImportantContacts.json
-                    IconButton(onClick = {
-                        val json = File(
-                            Environment.getExternalStorageDirectory(),
-                            "PassengerSchedules/ImportantContacts.json"
-                        )
-                        val rpt = ImportantContactStore.importFromJsonFile(context, json)
-                        reload()
                         scope.launch {
-                            snackbar.showSnackbar("JSON import: +${rpt.added} added, ${rpt.merged} merged")
+                            if (ranSomething) {
+                                val droppedPart = if (dropped > 0) ", $dropped dropped" else ""
+                                snackbar.showSnackbar("Import: +$added added, $merged merged$droppedPart")
+                                // optional: backup after a successful import
+                                ImportantContactStore.backupToExternal(context)
+                            } else {
+                                snackbar.showSnackbar("No JSON or CSV found in PassengerSchedules/")
+                            }
                         }
-                    }) { Icon(Icons.Filled.FileUpload, contentDescription = "Import JSON") }
+                    }) {
+                        Icon(Icons.Filled.FileUpload, contentDescription = "Import (CSV/JSON)")
+                    }
 
-                    IconButton(onClick = {
-                        val ok = ImportantContactStore.backupToExternal(context)
-                        scope.launch {
-                            snackbar.showSnackbar(
-                                if (ok) "Backed up to app external: PassengerSchedules/ImportantContacts.json"
-                                else "Backup failed (permission/path?)"
-                            )
-                        }
-                    }) { Icon(Icons.Filled.Backup, contentDescription = "Backup") }
-
+                    // Restore button stays
                     IconButton(onClick = {
                         val ok = ImportantContactStore.restoreFromExternal(context)
                         reload()
@@ -118,8 +122,11 @@ fun ContactListScreen(context: Context) {
                                 else "No external file to restore (or permission denied)"
                             )
                         }
-                    }) { Icon(Icons.Filled.Restore, contentDescription = "Restore") }
+                    }) {
+                        Icon(Icons.Filled.Restore, contentDescription = "Restore")
+                    }
                 }
+
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -167,12 +174,27 @@ fun ContactListScreen(context: Context) {
                         contact = c,
                         onEdit = { editing = c },
                         onDelete = {
-                            ImportantContactStore.delete(context, c.name)
+                            // 1) Instant UI removal
+                            val delName = c.name
+                            val delPhone = c.phone
+                            contacts = contacts.filterNot {
+                                it.name.equals(delName, ignoreCase = true) && it.phone == delPhone
+                            }
+
+                            // 2) Persist delete (use name+phone to avoid collisions)
+                            ImportantContactStore.delete(context, delName, delPhone)
+
+                            // 3) Auto-backup after write
+                            ImportantContactStore.backupToExternal(context)
+
+                            // 4) Re-apply search filter (if any) to keep list consistent
                             reload()
-                            scope.launch { snackbar.showSnackbar("Deleted \"${c.name}\"") }
+
+                            scope.launch { snackbar.showSnackbar("Deleted \"$delName\"") }
                         }
                     )
                 }
+
             }
         }
 
@@ -216,7 +238,7 @@ private fun ContactRow(
                         style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary),
                         modifier = Modifier.clickable {
                             val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
-                                data = android.net.Uri.parse("tel:${contact.phone}")
+                                data = "tel:${contact.phone}".toUri()
                             }
                             context.startActivity(intent)
                         }
