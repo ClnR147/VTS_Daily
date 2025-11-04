@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import java.io.File
 import com.example.vtsdaily.ui.components.ScreenDividers
+// + add this import at the top with the others:
+import androidx.compose.foundation.lazy.itemsIndexed
+
 
 // Icons
 import androidx.compose.material.icons.Icons
@@ -94,8 +97,8 @@ fun DriversScreen() {
                 .fillMaxSize()
         ) {
             // divider under the main app bar (match Schedule feel)
-
             ScreenDividers.Thick()
+
             // Search
             OutlinedTextField(
                 value = query,
@@ -113,9 +116,9 @@ fun DriversScreen() {
                 contentPadding = PaddingValues(
                     start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp
                 ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(0.dp) // divider handles separation
             ) {
-                items(filtered) { d ->
+                itemsIndexed(filtered) { index, d ->
                     DriverRow(
                         driver = d,
                         onClick = { selected = d },
@@ -124,10 +127,14 @@ fun DriversScreen() {
                             context.startActivity(intent)
                         }
                     )
+
+                    // Thin VTS divider between rows (not after the last item)
+                    if (index < filtered.lastIndex) {
+                        ScreenDividers.Thin(inset = 12.dp)
+                    }
                 }
             }
         }
-
         if (selected != null) {
             DriverDetailsDialog(
                 driver = selected!!,
