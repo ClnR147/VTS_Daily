@@ -25,6 +25,26 @@ internal object DriverStore {
         file(context).writeText(gson.toJson(drivers))
     }
 
+    /** 🔹 NEW: delete by (name|phone) stable key; returns updated list */
+    fun delete(context: Context, driver: Driver): List<Driver> {
+        val delKey = keyOf(driver)
+        val updated = load(context).filterNot { keyOf(it) == delKey }
+        save(context, updated)
+        return updated
+    }
+
+    /** Optional helper if you ever need to delete without a Driver object */
+    fun delete(context: Context, name: String, phone: String?): List<Driver> {
+        val delKey = keyOf(name, phone)
+        val updated = load(context).filterNot { keyOf(it) == delKey }
+        save(context, updated)
+        return updated
+    }
+
+    private fun keyOf(d: Driver): String = keyOf(d.name, d.phone)
+    private fun keyOf(name: String, phone: String?): String =
+        "${name.trim().lowercase()}|${phone.orEmpty().trim().lowercase()}"
+
     /**
      * Import from .xls with headers: Name | Van | Year | Make | Model | Phone
      * - No id, no active.
@@ -84,7 +104,7 @@ internal object DriverStore {
         val seen = HashSet<String>()
         return list.filter { d ->
             val k = "${d.name.trim().lowercase()}|${d.van.trim().lowercase()}"
-            seen.add(k)
+            seen.add(k)   // add() returns true only the first time → keeps first occurrence
         }
     }
 

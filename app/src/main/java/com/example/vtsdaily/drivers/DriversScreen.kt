@@ -1,14 +1,12 @@
 package com.example.vtsdaily.drivers
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,10 +22,13 @@ import com.example.vtsdaily.ui.components.ScreenDividers
 // + add this import at the top with the others:
 import androidx.compose.foundation.lazy.itemsIndexed
 
-
 // Icons
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Add   // ⬅️ NEW
+import androidx.core.net.toUri
+// + at top with other imports
 
 private val VtsGreen = Color(0xFF4CAF50)   // green
 private val VtsBannerText = Color(0xFFFFF5E1)
@@ -40,6 +41,7 @@ fun DriversScreen() {
     var drivers by remember { mutableStateOf(DriverStore.load(context)) }
     var query by rememberSaveable { mutableStateOf("") }
     var selected by remember { mutableStateOf<Driver?>(null) }
+    var showAdd by remember { mutableStateOf(false) }    // ⬅️ NEW
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -48,7 +50,7 @@ fun DriversScreen() {
         val q = query.trim().lowercase()
         if (q.isEmpty()) drivers else drivers.filter { d ->
             d.name.lowercase().contains(q) ||
-                    d.van.lowercase().contains(q)  ||
+                    d.van.lowercase().contains(q) ||
                     "${d.make} ${d.model}".lowercase().contains(q)
         }
     }
@@ -77,16 +79,23 @@ fun DriversScreen() {
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        // ⬅️ NEW: two FABs stacked (Add + Import)
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { doImport() },
-                containerColor = VtsGreen,
-                contentColor = VtsBannerText
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.End
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Upload,
-                    contentDescription = "Import XLS"
-                )
+                FloatingActionButton(
+                    onClick = { showAdd = true },
+                    containerColor = VtsGreen,
+                    contentColor = VtsBannerText
+                ) { Icon(Icons.Filled.Add, contentDescription = "Add driver") }
+
+                FloatingActionButton(
+                    onClick = { doImport() },
+                    containerColor = VtsGreen,
+                    contentColor = VtsBannerText
+                ) { Icon(imageVector = Icons.Filled.Upload, contentDescription = "Import XLS") }
             }
         },
         floatingActionButtonPosition = FabPosition.End
@@ -114,34 +123,64 @@ fun DriversScreen() {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp
+                    start = 12.dp, end = 12.dp, top = 8.dp, bottom = 128.dp // ⬅️ a bit more for 2 FABs
                 ),
-                verticalArrangement = Arrangement.spacedBy(0.dp) // divider handles separation
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                itemsIndexed(filtered) { index, d ->
+                // stable key: name|phone
+                itemsIndexed(
+                    filtered,
+                    key = { _, d -> "${d.name.lowercase()}|${d.phone}" }
+                ) { index, d ->
                     DriverRow(
                         driver = d,
                         onClick = { selected = d },
                         onCall = { phone ->
-                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                            val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
                             context.startActivity(intent)
+                        },
+                        onDeleteConfirmed = { toDelete ->
+                            // Persist delete + refresh UI
+                            drivers = DriverStore.delete(context, toDelete)
+
+                            // Close details if it was open for this driver
+                            val delKey = "${toDelete.name}|${toDelete.phone}".lowercase()
+                            if (selected?.let { "${it.name}|${it.phone}".lowercase() } == delKey) {
+                                selected = null
+                            }
+
+                            scope.launch { snackbarHostState.showSnackbar("Deleted \"${toDelete.name}\"") }
                         }
                     )
 
-                    // Thin VTS divider between rows (not after the last item)
                     if (index < filtered.lastIndex) {
                         ScreenDividers.Thin(inset = 12.dp)
                     }
                 }
             }
         }
+
         if (selected != null) {
             DriverDetailsDialog(
                 driver = selected!!,
                 onDismiss = { selected = null },
                 onCall = { phone ->
-                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                    val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
                     context.startActivity(intent)
+                }
+            )
+        }
+
+        // ⬅️ NEW: Add dialog
+        if (showAdd) {
+            AddDriverDialog(
+                onDismiss = { showAdd = false },
+                onAdd = { newDriver ->
+                    val updated = drivers.toMutableList().apply { add(newDriver) }
+                    drivers = updated
+                    DriverStore.save(context, updated)
+                    scope.launch { snackbarHostState.showSnackbar("Added \"${newDriver.name}\"") }
+                    showAdd = false
                 }
             )
         }
@@ -153,8 +192,11 @@ fun DriversScreen() {
 private fun DriverRow(
     driver: Driver,
     onClick: () -> Unit,
-    onCall: (String) -> Unit
+    onCall: (String) -> Unit,
+    onDeleteConfirmed: (Driver) -> Unit   // ⬅️ delete hook
 ) {
+    var showConfirm by remember { mutableStateOf(false) }
+
     Surface(
         shape = MaterialTheme.shapes.large,
         tonalElevation = 1.dp,
@@ -206,6 +248,7 @@ private fun DriverRow(
 
             Spacer(Modifier.width(8.dp))
 
+            // Phone (tap to call)
             Text(
                 text = driver.phone,
                 style = MaterialTheme.typography.bodyMedium,
@@ -213,7 +256,36 @@ private fun DriverRow(
                 modifier = Modifier.clickable { onCall(driver.phone) },
                 maxLines = 1, overflow = TextOverflow.Clip
             )
+
+            // Delete icon
+            IconButton(
+                onClick = { showConfirm = true },
+                modifier = Modifier.padding(start = 4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "Delete driver"
+                )
+            }
         }
+    }
+
+    // Confirm dialog
+    if (showConfirm) {
+        AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            title = { Text("Delete driver?") },
+            text = { Text("Remove ${driver.name} from your drivers list?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirm = false
+                    onDeleteConfirmed(driver)
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
@@ -261,5 +333,60 @@ private fun DriverDetailsDialog(
                 }
             }
         }
+    )
+}
+
+/** ⬅️ NEW: Add Driver dialog */
+@Composable
+private fun AddDriverDialog(
+    onDismiss: () -> Unit,
+    onAdd: (Driver) -> Unit
+) {
+    var name by rememberSaveable { mutableStateOf("") }
+    var phone by rememberSaveable { mutableStateOf("") }
+    var van by rememberSaveable { mutableStateOf("") }
+    var yearText by rememberSaveable { mutableStateOf("") }
+    var make by rememberSaveable { mutableStateOf("") }
+    var model by rememberSaveable { mutableStateOf("") }
+
+    val isValid = name.isNotBlank()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Driver") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name*") }, singleLine = true)
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") }, singleLine = true)
+                OutlinedTextField(value = van, onValueChange = { van = it }, label = { Text("Van") }, singleLine = true)
+                OutlinedTextField(
+                    value = yearText,
+                    onValueChange = { yearText = it.filter { ch -> ch.isDigit() }.take(4) },
+                    label = { Text("Year") },
+                    singleLine = true
+                )
+                OutlinedTextField(value = make, onValueChange = { make = it }, label = { Text("Make") }, singleLine = true)
+                OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("Model") }, singleLine = true)
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = isValid,
+                onClick = {
+                    val year = yearText.toIntOrNull()
+                    onAdd(
+                        Driver(
+                            name = name.trim(),
+                            phone = phone.trim(),
+                            van = van.trim(),
+                            year = year,
+                            make = make.trim(),
+                            model = model.trim()
+                        )
+                    )
+                }
+            ) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
