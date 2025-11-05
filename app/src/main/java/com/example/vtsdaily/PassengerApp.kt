@@ -1,6 +1,5 @@
 package com.example.vtsdaily
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,15 +12,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,8 +28,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,14 +44,9 @@ import jxl.Sheet
 import jxl.Workbook
 import java.io.File
 import android.os.Environment
-import android.util.Log
 import com.example.vtsdaily.ui.theme.VtsGreen
-import com.example.vtsdaily.ui.theme.VtsCream
-import com.example.vtsdaily.ui.theme.RowStripe
 
-
-
-
+private const val SHOW_ADD_TRIP = false
 
 @Composable
 fun PassengerApp() {
@@ -158,7 +145,7 @@ fun PassengerApp() {
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.Center
         ) {
             // Trip Status toggle (always clickable)
             Row(
@@ -182,75 +169,16 @@ fun PassengerApp() {
                     color = statusColor,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp // 👈 adjust this to whatever size you want
+                        fontSize = 15.sp
                     )
                 )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            // Right-side buttons
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                if (viewMode == TripViewMode.ACTIVE) {
-                    val canAddTrip = !scheduleDate.isBefore(LocalDate.now())
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clickable(enabled = canAddTrip) { showInsertDialog = true }
-                            .alpha(if (canAddTrip) 1f else 0.3f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .background(Color.Red, shape = CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("+", color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Add Trip", fontSize = 14.sp, color = Color.Red)
-                    }
-                }
-
-                if (viewMode == TripViewMode.ACTIVE) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable {
-                            context.startActivity(
-                                Intent(
-                                    context,
-                                    ImportantContactsActivity::class.java
-                                )
-                            )
-                        }
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .background(Color.Blue, shape = CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Contacts,
-                                contentDescription = "Contacts",
-                                tint = Color.White,
-                                modifier = Modifier.size(10.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Contacts", fontSize = 14.sp, color = Color.Blue)
-                    }
-                }
-            }
         }
+
 
         if (viewMode == TripViewMode.REMOVED) {
             Spacer(modifier = Modifier.height(8.dp))
         }
-
-        
 
         PassengerTableWithStaticHeader(
             passengers = passengersForTable,
@@ -317,17 +245,18 @@ fun PassengerApp() {
             )
 
         }
-
-        if (showInsertDialog) {
-            InsertTripDialog(
-                onDismiss = { showInsertDialog = false },
-                onInsert = { newPassenger ->
-                    insertedPassengers = insertedPassengers + newPassenger
-                    InsertedTripStore.addInsertedTrip(context, scheduleDate, newPassenger)
-                    showInsertDialog = false
-                    scrollToBottom = true
-                }
-            )
+        if (SHOW_ADD_TRIP) {
+            if (showInsertDialog) {
+                InsertTripDialog(
+                    onDismiss = { showInsertDialog = false },
+                    onInsert = { newPassenger ->
+                        insertedPassengers = insertedPassengers + newPassenger
+                        InsertedTripStore.addInsertedTrip(context, scheduleDate, newPassenger)
+                        showInsertDialog = false
+                        scrollToBottom = true
+                    }
+                )
+            }
         }
 
         if (scrollToBottom) {

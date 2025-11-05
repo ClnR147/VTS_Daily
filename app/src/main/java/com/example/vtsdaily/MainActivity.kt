@@ -1,7 +1,6 @@
 package com.example.vtsdaily
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
@@ -18,23 +17,27 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.example.vtsdaily.drivers.DriversScreen
 import com.example.vtsdaily.lookup.PassengerLookupScreen
-import com.example.vtsdaily.ui.theme.VTSDailyTheme
 import com.example.vtsdaily.ui.components.ScreenDividers
+import com.example.vtsdaily.ui.theme.VTSDailyTheme
 
 // Icons
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import com.example.vtsdaily.contacts.ContactsScreen
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -46,25 +49,20 @@ class MainActivity : ComponentActivity() {
             !Environment.isExternalStorageManager()
         ) {
             val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-            intent.data = Uri.parse("package:$packageName")
+            intent.data = "package:$packageName".toUri()
             startActivity(intent)
         }
 
         setContent {
             VTSDailyTheme {
-                // 0 = Schedule, 1 = Lookup, 2 = Drivers
-                var view by rememberSaveable { mutableStateOf(0) }
-                val titles = listOf("Schedule", "Passenger Lookup", "Drivers")
+                // 0 = Schedule, 1 = Lookup, 2 = Drivers, 3 = Contacts
+                var view by rememberSaveable { mutableIntStateOf(0) }
+                val titles = listOf("Schedule", "Passenger Lookup", "Drivers", "Contacts")
 
                 Scaffold(
                     topBar = {
                         CenterAlignedTopAppBar(
-                            title = {
-                                Text(
-                                    titles[view],
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-                            }
+                            title = { Text(titles[view], style = MaterialTheme.typography.titleLarge) }
                         )
                     },
                     bottomBar = {
@@ -75,23 +73,29 @@ class MainActivity : ComponentActivity() {
                             NavigationBarItem(
                                 selected = view == 0,
                                 onClick = { view = 0 },
-                                icon = { Icon(Icons.Filled.List, contentDescription = "Schedule") },
+                                icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Schedule") },
                                 label = { Text("Schedule") },
                                 alwaysShowLabel = true
                             )
-                                NavigationBarItem(
+                            NavigationBarItem(
                                 selected = view == 1,
                                 onClick = { view = 1 },
                                 icon = { Icon(Icons.Filled.Search, contentDescription = "Lookup") },
                                 label = { Text("Lookup") },
                                 alwaysShowLabel = true
                             )
-
-                                NavigationBarItem(
+                            NavigationBarItem(
                                 selected = view == 2,
                                 onClick = { view = 2 },
                                 icon = { Icon(Icons.Filled.Person, contentDescription = "Drivers") },
                                 label = { Text("Drivers") },
+                                alwaysShowLabel = true
+                            )
+                            NavigationBarItem(
+                                selected = view == 3,
+                                onClick = { view = 3 },  // keep inside this Scaffold
+                                icon = { Icon(Icons.Filled.Phone, contentDescription = "Contacts") },
+                                label = { Text("Contacts") },
                                 alwaysShowLabel = true
                             )
                         }
@@ -100,16 +104,12 @@ class MainActivity : ComponentActivity() {
                     Box(Modifier.padding(padding)) {
                         when (view) {
                             0 -> Box(Modifier.fillMaxSize()) {
-                                // Draw content first
-                                val gutter = 16.dp
-                                PassengerApp() // your existing Schedule UI (date, table, etc.)
-
-                                // Overlay the divider so it appears between header and date
+                                PassengerApp()
                                 ScreenDividers.Thick()
-
                             }
                             1 -> PassengerLookupScreen()
                             2 -> DriversScreen()
+                            3 -> ContactsScreen() // ← Compose screen keeps the toolbar visible
                         }
                     }
                 }
@@ -117,3 +117,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+

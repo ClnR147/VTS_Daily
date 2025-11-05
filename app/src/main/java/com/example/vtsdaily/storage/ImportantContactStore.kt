@@ -1,7 +1,6 @@
 package com.example.vtsdaily.storage
 
 import android.content.Context
-import android.os.Environment
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
@@ -21,8 +20,8 @@ object ImportantContactStore {
 
     private fun internalFile(context: Context) = File(context.filesDir, INTERNAL_FILE)
 
-    // Safer: app-scoped external dir (no special permission required).
-    // Stays under: /Android/data/<package>/files/PassengerSchedules/ImportantContacts.json
+    // App-scoped external dir (no special permission). Path:
+    // /Android/data/<package>/files/PassengerSchedules/ImportantContacts.json
     private fun externalFile(context: Context): File {
         val base: File = context.getExternalFilesDir(null) ?: context.filesDir
         val dir = File(base, "PassengerSchedules").apply { if (!exists()) mkdirs() }
@@ -38,7 +37,7 @@ object ImportantContactStore {
         base.copy(
             name = if (inc.name.isNotBlank()) inc.name else base.name,
             phone = if (inc.phone.isNotBlank()) inc.phone else base.phone,
-            note = if (inc.note.isNotBlank()) inc.note else base.note
+            note  = if (inc.note.isNotBlank())  inc.note  else base.note
         )
 
     // ---------- Load / Save ----------
@@ -51,7 +50,8 @@ object ImportantContactStore {
         }
     }.getOrElse { emptyList() }
 
-    private fun save(context: Context, list: List<ImportantContact>) {
+    // Keep public if you want bulk replace from UI; otherwise you can make this private.
+    fun save(context: Context, list: List<ImportantContact>) {
         runCatching { internalFile(context).writeText(gson.toJson(list)) }
             .getOrElse { /* swallow; caller handles UI */ }
     }
@@ -66,13 +66,16 @@ object ImportantContactStore {
         } else {
             all += c
         }
+        // stable order for UI
+        all.sortBy { norm(it.name) }
         save(context, all)
     }
 
     fun delete(context: Context, name: String, phone: String) {
-        val list = load(context)
-        val newList = list.filterNot {
-            it.name.equals(name, ignoreCase = true) && it.phone == phone
+        val nName = norm(name)
+        val nPhone = normPhone(phone)
+        val newList = load(context).filterNot {
+            norm(it.name) == nName && normPhone(it.phone) == nPhone
         }
         save(context, newList)
     }
@@ -85,7 +88,7 @@ object ImportantContactStore {
 
     fun restoreFromExternal(context: Context): Boolean = runCatching {
         val ext = externalFile(context)
-        if (!ext.exists()) return false
+        if (!ext.exists()) return@runCatching false
         val type = object : TypeToken<List<ImportantContact>>() {}.type
         val restored: List<ImportantContact> = gson.fromJson(ext.readText(), type) ?: emptyList()
         save(context, restored)
@@ -185,7 +188,7 @@ object ImportantContactStore {
             }
         }
 
-        val final = map.values.toList()
+        val final = map.values.sortedBy { norm(it.name) }
         save(context, final)
         return ImportReport(
             kept = final.size,

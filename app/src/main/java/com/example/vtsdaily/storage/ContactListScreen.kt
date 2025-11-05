@@ -259,7 +259,7 @@ private fun ContactRow(
 }
 
 @Composable
-private fun ContactDialog(
+fun ContactDialog(
     initial: ImportantContact,
     onDismiss: () -> Unit,
     onSave: (ImportantContact) -> Unit
