@@ -1,17 +1,21 @@
 package com.example.vtsdaily.contacts
 
 import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,63 +28,149 @@ import androidx.core.net.toUri
 import com.example.vtsdaily.ui.components.ScreenDividers
 import com.example.vtsdaily.storage.ImportantContact
 import com.example.vtsdaily.storage.ImportantContactStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
-private val VtsGreen = Color(0xFF4CAF50)
 private val RowStripe = Color(0xFFF7F5FA)
 
 /** Call this from MainActivity when view == 3 */
 @Composable
 fun ContactsScreen() {
-    val context = LocalContext.current          // ← capture Activity context for startActivity
-    val appContext = context.applicationContext // ← use for file I/O in the store
+    val context = LocalContext.current          // for startActivity
+    val appContext = context.applicationContext // for file I/O
 
     var contacts by remember { mutableStateOf(ImportantContactStore.load(appContext)) }
     var editing by remember { mutableStateOf<ImportantContact?>(null) }
-    var menuOpenFor by remember { mutableStateOf<String?>(null) }
+    var actionsOpen by remember { mutableStateOf(false) } // ⋮ menu
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { editing = ImportantContact(name = "", phone = "") },
-                containerColor = VtsGreen,
-                contentColor = Color(0xFFFFF5E1)
-            ) { Icon(Icons.Filled.Add, contentDescription = "Add contact") }
-        },
-        floatingActionButtonPosition = FabPosition.End
-    ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
-            ScreenDividers.Thick()
+    // Pickers
+    val csvPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            if (uri != null) {
+                scope.launch {
+                    val tmp = copyUriToCache(appContext, uri, "contacts_import.csv")
+                    val report = withContext(Dispatchers.IO) {
+                        ImportantContactStore.importFromCsvFile(appContext, tmp)
+                    }
+                    contacts = ImportantContactStore.load(appContext)
+                    snackbar.showSnackbar(
+                        "CSV import: kept=${report.kept}, merged=${report.merged}, added=${report.added}, dropped=${report.dropped}" +
+                                if (report.errors.isNotEmpty()) " (${report.errors.first()})" else ""
+                    )
+                }
+            }
+        }
+    )
+    val jsonPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            if (uri != null) {
+                scope.launch {
+                    val tmp = copyUriToCache(appContext, uri, "contacts_import.json")
+                    val report = withContext(Dispatchers.IO) {
+                        ImportantContactStore.importFromJsonFile(appContext, tmp)
+                    }
+                    contacts = ImportantContactStore.load(appContext)
+                    snackbar.showSnackbar(
+                        "JSON import: kept=${report.kept}, merged=${report.merged}, added=${report.added}, dropped=${report.dropped}" +
+                                if (report.errors.isNotEmpty()) " (${report.errors.first()})" else ""
+                    )
+                }
+            }
+        }
+    )
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) }
+        // NOTE: no FAB — Add is inside the ⋮ menu now
+    ) { padding ->
+        Box(Modifier.padding(padding).fillMaxSize()) {
+
+            // Main content (no extra header rows → divider stays aligned)
+            Column(Modifier.fillMaxSize()) {
+                ScreenDividers.Thick()
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    itemsIndexed(
+                        contacts,
+                        key = { _, c -> "${c.name.lowercase()}|${c.phone}" }
+                    ) { index, c ->
+                        ContactRow(
+                            contact = c,
+                            onCall = { phone ->
+                                val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
+                                context.startActivity(intent)
+                            },
+                            onEdit = { editing = c },
+                            onDelete = {
+                                ImportantContactStore.delete(appContext, c.name, c.phone)
+                                contacts = ImportantContactStore.load(appContext)
+                                scope.launch { snackbar.showSnackbar("Deleted \"${c.name}\"") }
+                            }
+                        )
+                        if (index < contacts.lastIndex) ScreenDividers.Thin(inset = 12.dp)
+                    }
+                }
+            }
+
+            // OVERLAYED ⋮ actions in the top-right (no vertical space taken)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 4.dp, end = 4.dp)
             ) {
-                itemsIndexed(
-                    contacts,
-                    key = { _, c -> "${c.name.lowercase()}|${c.phone}" }
-                ) { index, c ->
-                    ContactRow(
-                        contact = c,
-                        menuOpen = menuOpenFor == c.name,
-                        onOpenMenu = { menuOpenFor = c.name },
-                        onDismissMenu = { menuOpenFor = null },
-                        onCall = { phone ->
-                            val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
-                            context.startActivity(intent)               // ← use captured context
-                        },
-                        onEdit = { editing = c },
-                        onDelete = {
-                            ImportantContactStore.delete(appContext, c.name, c.phone) // ← pass phone
-                            contacts = ImportantContactStore.load(appContext)
-                            scope.launch { snackbar.showSnackbar("Deleted \"${c.name}\"") }
+                IconButton(onClick = { actionsOpen = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Contacts Actions")
+                }
+                DropdownMenu(expanded = actionsOpen, onDismissRequest = { actionsOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Add Contact") },
+                        onClick = { actionsOpen = false; editing = ImportantContact("", "") }
+                    )
+                    Divider()
+                    DropdownMenuItem(
+                        text = { Text("Backup to External") },
+                        onClick = {
+                            actionsOpen = false
+                            scope.launch {
+                                val ok = withContext(Dispatchers.IO) {
+                                    ImportantContactStore.backupToExternal(appContext)
+                                }
+                                snackbar.showSnackbar(if (ok) "Backup complete" else "Backup failed")
+                            }
                         }
                     )
-                    if (index < contacts.lastIndex) ScreenDividers.Thin(inset = 12.dp)
+                    DropdownMenuItem(
+                        text = { Text("Restore from External") },
+                        onClick = {
+                            actionsOpen = false
+                            scope.launch {
+                                val ok = withContext(Dispatchers.IO) {
+                                    ImportantContactStore.restoreFromExternal(appContext)
+                                }
+                                contacts = ImportantContactStore.load(appContext)
+                                snackbar.showSnackbar(if (ok) "Restore complete" else "No backup found")
+                            }
+                        }
+                    )
+                    Divider()
+                    DropdownMenuItem(
+                        text = { Text("Import CSV…") },
+                        onClick = { actionsOpen = false; csvPicker.launch("*/*") }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Import JSON…") },
+                        onClick = { actionsOpen = false; jsonPicker.launch("application/json") }
+                    )
                 }
             }
         }
@@ -99,17 +189,19 @@ fun ContactsScreen() {
     }
 }
 
+/** Row uses an action cluster: Call • Edit • Delete (no per-row epsilon) */
 
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ContactRow(
     contact: ImportantContact,
-    menuOpen: Boolean,
-    onOpenMenu: () -> Unit,
-    onDismissMenu: () -> Unit,
     onCall: (String) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val clipboard = LocalClipboardManager.current
+
     Surface(
         shape = MaterialTheme.shapes.large,
         tonalElevation = 1.dp,
@@ -129,39 +221,38 @@ private fun ContactRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                // Phone is the call target (tap) + copy (long-press)
                 Text(
                     contact.phone,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { onCall(contact.phone) },
+                    modifier = Modifier
+                        .combinedClickable(
+                            onClick = { onCall(contact.phone) },
+                            onLongClick = {
+                                clipboard.setText(AnnotatedString(contact.phone))
+                            }
+                        ),
                     maxLines = 1
                 )
             }
 
-            IconButton(onClick = { onCall(contact.phone) }) {
-                Icon(Icons.Filled.Phone, contentDescription = "Call")
-            }
-
-            Box {
-                IconButton(onClick = onOpenMenu) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "More")
+            // Actions: Edit • Delete (no phone icon)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Filled.Edit, contentDescription = "Edit")
                 }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = onDismissMenu) {
-                    DropdownMenuItem(
-                        text = { Text("Edit") },
-                        onClick = { onDismissMenu(); onEdit() },
-                        leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        onClick = { onDismissMenu(); onDelete() },
-                        leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) }
-                    )
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
                 }
             }
         }
     }
 }
+
 
 /** Minimal in-file dialog for adding/editing a contact */
 @Composable
@@ -200,4 +291,17 @@ private fun AddEditContactDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
+}
+
+/* Helper: copy selected file to cache so we can read it */
+private suspend fun copyUriToCache(appContext: android.content.Context, uri: Uri, name: String): File {
+    return withContext(Dispatchers.IO) {
+        val tmp = File(appContext.cacheDir, name)
+        appContext.contentResolver.openInputStream(uri).use { input ->
+            tmp.outputStream().use { out ->
+                if (input != null) input.copyTo(out) else out.write(ByteArray(0))
+            }
+        }
+        tmp
+    }
 }
