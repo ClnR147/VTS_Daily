@@ -146,7 +146,7 @@ object ImportantContactStore {
     fun importFromJsonFile(context: Context, source: File): ImportReport {
         if (!source.exists()) return ImportReport(0, 0, 0, 0, listOf("File not found"))
         val errors = mutableListOf<String>()
-        val type = com.google.gson.reflect.TypeToken.getParameterized(
+        val type = TypeToken.getParameterized(
             List::class.java, ImportantContact::class.java
         ).type
         val incoming = runCatching {

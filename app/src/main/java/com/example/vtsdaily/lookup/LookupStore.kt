@@ -1,7 +1,6 @@
 package com.example.vtsdaily.lookup
 
 import android.content.Context
-import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
@@ -59,23 +58,6 @@ object LookupStore {
         .create()
 
     private val TIME_RE = Regex("""\b(\d{1,2}):(\d{2})\b""")
-
-    private fun String.toMinutesForTimeline(): Int? {
-        val isReturn = trim().startsWith("PR", ignoreCase = true)
-        val matches = TIME_RE.findAll(this).toList()
-        val pick = when {
-            matches.isEmpty() -> null
-            isReturn && matches.size >= 2 -> matches.last()
-            else -> matches.first()
-        }
-        return pick?.destructured?.let { (h, m) -> h.toInt() * 60 + m.toInt() }
-    }
-
-    private fun String.firstTimeMinutesOrNull(): Int? =
-        TIME_RE.find(this)?.destructured?.let { (h, m) -> h.toInt() * 60 + m.toInt() }
-
-    private fun String.isReturnTag(): Boolean =
-        trim().startsWith("PR", ignoreCase = true)
 
     private fun file(context: Context) = File(context.filesDir, FILE_NAME)
     private fun tmpFile(context: Context) = File(context.filesDir, "$FILE_NAME$TMP_SUFFIX")
@@ -149,85 +131,6 @@ object LookupStore {
         )
     }
 
-    // LookupStore.kt
-    fun tripCounts(context: Context): Map<String, Int> {
-        val rows: List<LookupRow> = load(context)
-
-        fun keyOf(name: String): String =
-            name.trim().lowercase().replace(Regex("\\s+"), " ")
-
-        return rows
-            .mapNotNull { it.passenger?.trim().takeUnless { s -> s.isNullOrEmpty() } }
-            .groupingBy { keyOf(it!!) }
-            .eachCount()
-    }
-
-    /** CSV DIAGNOSTIC — explain why rows fail with your current assumptions (kept from your version). */
-    fun debugImportRejectionsFromFile(file: File, maxSamples: Int = 15) {
-        if (!file.exists()) {
-            return
-        }
-        val br = file.bufferedReader(Charsets.UTF_8)
-        var headerLine = br.readLine() ?: run { return }
-        if (headerLine.isNotEmpty() && headerLine[0].code == 0xFEFF) headerLine = headerLine.substring(1)
-        val header = headerLine.split(',').map { it.trim() }
-
-        val missingExpected = EXPECTED_HEADER.filter { it !in header }
-
-        var lineNo = 1
-        var total = 0
-        var accepted = 0
-        var rejected = 0
-        val reasons = mutableMapOf<String, Int>()
-        val samples = mutableListOf<String>()
-        fun reason(r: String) { reasons[r] = (reasons[r] ?: 0) + 1 }
-
-        br.useLines { seq ->
-            seq.forEach { line ->
-                lineNo++; total++
-                if (line.isBlank()) { reason("blank_line"); rejected++; if (samples.size < maxSamples) samples += "L$lineNo: blank_line"; return@forEach }
-                val fields = line.split(',')
-                val colCount = fields.size
-                if (colCount != header.size) {
-                    val hasQuotes = line.indexOf('"') >= 0
-                    val code = if (hasQuotes && colCount > header.size) "colcount_over_header_quotes_present"
-                    else if (colCount > header.size) "colcount_over_header"
-                    else "colcount_under_header"
-                    reason(code); rejected++
-                    if (samples.size < maxSamples) samples += "L$lineNo: $code fields=$colCount header=${header.size} preview='${line.take(120)}'"
-                    return@forEach
-                }
-                val row = header.indices.associate { h -> header[h] to fields[h].trim() }
-
-                val missingReq = REQUIRED_COLS.filter { row[it].isNullOrEmpty() }
-                if (missingReq.isNotEmpty()) {
-                    reason("missing_required:${missingReq.joinToString("+")}"); rejected++
-                    if (samples.size < maxSamples) samples += "L$lineNo: missing_required $missingReq | DriveDate='${row["DriveDate"]}' Passenger='${row["Passenger"]}'"
-                    return@forEach
-                }
-
-                val rawDate = row["DriveDate"].orEmpty()
-                val parsedCurrent = parseDateCurrent(rawDate)
-                if (parsedCurrent == null) {
-                    val parsedFlex = parseDateFlex(rawDate)
-                    val code = if (parsedFlex != null) "date_fail_current_flex_ok" else "date_fail_both"
-                    reason(code); rejected++
-                    if (samples.size < maxSamples) samples += "L$lineNo: $code raw='$rawDate' flex=$parsedFlex"
-                    return@forEach
-                }
-
-                val tripType = row["A/R"].orEmpty().ifEmpty { row["tripType"].orEmpty() }
-                if (tripType.isEmpty()) {
-                    reason("triptype_empty"); rejected++
-                    if (samples.size < maxSamples) samples += "L$lineNo: triptype_empty Passenger='${row["Passenger"]}'"
-                    return@forEach
-                }
-                accepted++
-            }
-        }
-        // (All debug logs removed)
-    }
-
     /* ================== NEW: CSV IMPORT (canonicalizes header in-memory) ================== */
 
     // Quote-aware CSV line parser (handles commas inside quotes and "" escapes)
@@ -260,83 +163,7 @@ object LookupStore {
         else         -> h.trim()
     }
 
-    /**
-     * Reads a CSV and returns rows as LookupRow with header aliases rewritten in-memory.
-     * Data lines are copied as-is. If there are extra fields beyond the header, merges them
-     * into the last column (so addresses with commas are preserved).
-     */
-    fun importLookupCsv(csvFile: File): List<LookupRow> {
-        if (!csvFile.exists()) {
-            return emptyList()
-        }
-
-        val lines = csvFile.readLines(utf8)
-        if (lines.isEmpty()) return emptyList()
-
-        // Header
-        var headerLine = lines.first()
-        if (headerLine.isNotEmpty() && headerLine[0].code == 0xFEFF) headerLine = headerLine.substring(1)
-        val rawHeader = parseCsvLineQuoted(headerLine)
-        val canonHeader = rawHeader.map(::canonicalForHeader)
-
-        val out = ArrayList<LookupRow>(lines.size.coerceAtLeast(8))
-        var kept = 0
-        var dropped = 0
-
-        for (i in 1 until lines.size) {
-            val line = lines[i]
-            if (line.isBlank()) continue
-
-            val fields = parseCsvLineQuoted(line).map { it.trim() }
-            val values =
-                if (fields.size > canonHeader.size) {
-                    // Merge extras into last column
-                    val merged = ArrayList<String>(canonHeader.size)
-                    merged.addAll(fields.take(canonHeader.size - 1))
-                    merged.add(fields.drop(canonHeader.size - 1).joinToString(","))
-                    merged
-                } else if (fields.size < canonHeader.size) {
-                    fields + List(canonHeader.size - fields.size) { "" }
-                } else fields
-
-            val rowMap = LinkedHashMap<String, String>(canonHeader.size)
-            for (c in canonHeader.indices) rowMap[canonHeader[c]] = values[c]
-
-            // Minimal accept rules (align with your DEBUG rules):
-            if (rowMap["DriveDate"].isNullOrBlank() || rowMap["Passenger"].isNullOrBlank()) {
-                dropped++; continue
-            }
-            if (parseDateCurrent(rowMap["DriveDate"] ?: "") == null) {
-                dropped++; continue
-            }
-            val tripType = rowMap["A/R"].orEmpty().ifEmpty { rowMap["tripType"].orEmpty() }
-            if (tripType.isEmpty()) {
-                dropped++; continue
-            }
-
-            // Build LookupRow using canonical keys (fallbacks kept just in case)
-            val lr = LookupRow(
-                driveDate   = rowMap["DriveDate"],
-                passenger   = rowMap["Passenger"],
-                tripType    = rowMap["A/R"]?.ifEmpty { rowMap["tripType"] },
-                pAddress    = rowMap["PAddress"],
-                dAddress    = rowMap["DAddress"],
-                puTimeAppt  = rowMap["PUTimeAppt"] ?: rowMap["puTimeAppt"],
-                doTimeAppt  = rowMap["DOTimeAppt"],
-                rtTime      = rowMap["RTTime"] ?: rowMap["rtTime"],
-                phone       = rowMap["Phone"]
-            )
-            out += lr
-            kept++
-        }
-
-        return out
-    }
-
     /* ================== end new import ================== */
-
-    fun tripsOnChrono(context: Context, date: LocalDate): List<LookupRow> =
-        tripsOnChrono(load(context), date)
 
     fun groupTripsByDate(rows: List<LookupRow>): SortedMap<LocalDate, List<LookupRow>> {
         val grouped = rows
@@ -347,12 +174,6 @@ object LookupStore {
 
     fun groupTripsByDate(context: Context): SortedMap<LocalDate, List<LookupRow>> =
         groupTripsByDate(load(context))
-
-    fun tripsOn(date: LocalDate, rows: List<LookupRow>): List<LookupRow> =
-        groupTripsByDate(rows)[date] ?: emptyList()
-
-    fun tripsOn(context: Context, date: LocalDate): List<LookupRow> =
-        groupTripsByDate(context)[date] ?: emptyList()
 
     // LookupStore.kt
     fun invalidateLookupCache() {
@@ -396,50 +217,7 @@ object LookupStore {
         return map.values.toList().also { save(context, it) }
     }
 
-    fun upsert(context: Context, row: LookupRow): List<LookupRow> {
-        val all = load(context).toMutableList()
-        val k = stableKey(row)
-        val idx = all.indexOfFirst { stableKey(it) == k }
-        if (idx >= 0) all[idx] = row else all += row
-        save(context, all)
-        return all
-    }
-
-    fun remove(context: Context, row: LookupRow): Boolean {
-        val all = load(context).toMutableList()
-        val k = stableKey(row)
-        val removed = all.removeAll { stableKey(it) == k }
-        if (removed) save(context, all)
-        return removed
-    }
-
-    fun clear(context: Context) {
-        runCatching { file(context).delete() }
-    }
-
     // --- CSV Header cache for CustomerLookup.csv ---
     private var csvHeaders: List<String> = emptyList()
 
-    fun loadCsvHeadersOnce(context: Context) {
-        if (csvHeaders.isNotEmpty()) return
-        try {
-            val csvFile = File(
-                android.os.Environment.getExternalStorageDirectory(),
-                "PassengerSchedules/CustomerLookup.csv"
-            )
-            if (!csvFile.exists()) {
-                Log.e("LookupCsvHeader", "CSV not found: ${csvFile.absolutePath}")
-                return
-            }
-
-            val firstLine = csvFile.useLines { it.firstOrNull() } ?: return
-            csvHeaders = firstLine.split(',').map { it.trim() }
-
-            // Debug log removed
-        } catch (e: Exception) {
-            Log.e("LookupCsvHeader", "Error reading CSV header", e)
-        }
-    }
-
-    fun getCsvHeaders(): List<String> = csvHeaders
 }

@@ -39,15 +39,6 @@ object RemovedTripStore {
     }
 
 
-    fun isTripRemoved(context: Context, forDate: LocalDate, passenger: Passenger): Boolean {
-        return getRemovedTrips(context, forDate).any {
-            it.name == passenger.name &&
-                    it.pickupAddress == passenger.pickupAddress &&
-                    it.dropoffAddress == passenger.dropoffAddress &&
-                    it.typeTime == passenger.typeTime
-        }
-    }
-
     fun addRemovedTrip(context: Context, forDate: LocalDate, passenger: Passenger, reason: TripRemovalReason) {
         val file = getFile(context, forDate)
         val type = object : TypeToken<MutableList<RemovedTrip>>() {}.type

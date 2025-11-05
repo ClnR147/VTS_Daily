@@ -41,9 +41,6 @@ import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import jxl.Sheet
-import jxl.Workbook
-import java.io.File
-import android.os.Environment
 import com.example.vtsdaily.ui.theme.VtsGreen
 
 private const val SHOW_ADD_TRIP = false
@@ -188,7 +185,7 @@ fun PassengerApp() {
             viewMode = viewMode,
             context = context,
             onTripRemoved = { removedPassenger, reason ->
-                val key = "${removedPassenger.name}-${removedPassenger.pickupAddress}-${removedPassenger.dropoffAddress}-${removedPassenger.typeTime}-${scheduleDate.format(formatter)}"
+                "${removedPassenger.name}-${removedPassenger.pickupAddress}-${removedPassenger.dropoffAddress}-${removedPassenger.typeTime}-${scheduleDate.format(formatter)}"
 
                 when (reason) {
                     TripRemovalReason.COMPLETED -> CompletedTripStore.addCompletedTrip(context, scheduleDate, removedPassenger)
@@ -278,9 +275,6 @@ fun formatPhone(raw: String?): String {
         "(${d.substring(0,3)}) ${d.substring(3,6)}-${d.substring(6)}"
     else raw
 }
-private fun baseName(n: String) =
-    n.replace(Regex("\\s*\\(.*?\\)"), "") // strip (XLWC), (Cancelled), etc.
-        .trim()
 
 
 private fun idxOf(headers: List<String>, vararg candidates: String): Int =
@@ -298,93 +292,5 @@ private fun buildPhoneBookFromSchedule(passengers: List<Passenger>?): Map<String
             if (key.isNotEmpty() && value != null) key to value else null
         }
         .toMap()
-// Find a phone for a RemovedTrip by matching against XLS-loaded schedule passengers.
-fun resolvePhoneFromSchedule(trip: RemovedTrip, schedulePassengers: List<Passenger>): String? {
-    fun norm(s: String?) = s?.lowercase()?.replace(Regex("[^a-z0-9]"), "") ?: ""
-    val nName = norm(trip.name)
-    val nPU   = norm(trip.pickupAddress)
-    val nDO   = norm(trip.dropoffAddress)
-    val nTT   = norm(trip.typeTime)
-
-    val candidates = schedulePassengers.filter { p ->
-        norm(p.name) == nName &&
-                (nPU.isEmpty() || norm(p.pickupAddress)  == nPU) &&
-                (nDO.isEmpty() || norm(p.dropoffAddress) == nDO)
-    }
-
-    // 1) Best: also matches type/time
-    candidates.firstOrNull { norm(it.typeTime) == nTT }?.phone?.let { return it }
-
-    // 2) Any candidate with a phone
-    candidates.firstOrNull { !it.phone.isNullOrBlank() }?.phone?.let { return it }
-
-    // 3) Fallback: match on name only
-    return schedulePassengers.firstOrNull { norm(it.name) == nName && !it.phone.isNullOrBlank() }?.phone
-}
-
-/**
- * Load Completed trips from the same XLS.
- * - Looks for a sheet named "Completed" first; falls back to the first sheet if not found.
- * - Reads a "Phone" column if present; otherwise optionally uses schedulePhones to fill it.
- */
-fun loadCompletedTrips(
-    scheduleDate: LocalDate,
-    schedulePhonesFromPassengers: List<Passenger>? = null
-): List<CompletedTrip> {
-    val formatter = DateTimeFormatter.ofPattern("M-d-yy")
-    val scheduleDateStr = scheduleDate.format(formatter)
-
-    val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
-    val fileName = "VTS $scheduleDateStr.xls"
-    val file = File(folder, fileName)
-    if (!file.exists()) {
-
-        return emptyList()
-    }
-
-    val wb = Workbook.getWorkbook(file)
-    try {
-        // Prefer a sheet literally named "Completed"; otherwise use the first sheet.
-        val sheet = wb.sheets.firstOrNull { it.name.equals("Completed", ignoreCase = true) }
-            ?: wb.getSheet(0)
-
-        val headers = headersOf(sheet)
-
-        val nameIdx   = idxOf(headers, "Passenger", "Name")
-        val puIdx     = idxOf(headers, "PAddress", "Pickup", "Pickup Address")
-        val doIdx     = idxOf(headers, "DAddress", "Dropoff", "Dropoff Address")
-        val typeIdx   = idxOf(headers, "PUTimeAppt", "Type/Time", "TypeTime")
-        val dateIdx   = idxOf(headers, "DriveDate", "Date")
-        val doneIdx   = idxOf(headers, "CompletedAt", "Completed")
-        val phoneIdx  = idxOf(headers, "Phone", "Phone Number") // optional
-
-        fun cell(r: Int, c: Int): String =
-            if (c >= 0) sheet.getCell(c, r).contents.trim() else ""
-
-        val phoneBook = buildPhoneBookFromSchedule(schedulePhonesFromPassengers)
-
-        val out = ArrayList<CompletedTrip>(sheet.rows.coerceAtLeast(1))
-        for (r in 1 until sheet.rows) { // skip header row
-            val name = cell(r, nameIdx)
-            if (name.isEmpty()) continue
-
-            val phoneFromCol = cell(r, phoneIdx).ifBlank { null }
-            val phone = phoneFromCol ?: phoneBook[name.trim().lowercase()]
-
-            out += CompletedTrip(
-                name           = name,
-                pickupAddress  = cell(r, puIdx),
-                dropoffAddress = cell(r, doIdx),
-                typeTime       = cell(r, typeIdx),
-                date           = cell(r, dateIdx).ifEmpty { scheduleDateStr },
-                completedAt    = cell(r, doneIdx).ifBlank { null },
-                phone          = phone
-            )
-        }
-        return out
-    } finally {
-        wb.close()
-    }
-}
 
 

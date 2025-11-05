@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import com.example.vtsdaily.lookup.LookupRow
 import com.example.vtsdaily.lookup.LookupStore
 import kotlinx.coroutines.launch
-import java.time.DateTimeException
 import java.time.LocalDate
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -292,24 +291,6 @@ private class DigitsDateVisualTransformation : VisualTransformation {
 
         return TransformedText(AnnotatedString(out), offsetMapping)
     }
-}
-
-/* ---------------------- DATE PARSING ---------------------- */
-private fun parseUserDateInput(raw: String): LocalDate? {
-    val s = raw
-        .replace('\u00A0', ' ')
-        .replace('\u2007', ' ')
-        .replace('\u202F', ' ')
-        .trim()
-        .replace(Regex("\\s+"), "")
-    val m = Regex("""^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2}|\d{4})$""").matchEntire(s) ?: return null
-    val (mStr, dStr, yStr) = m.destructured
-    val month = mStr.toIntOrNull() ?: return null
-    val day = dStr.toIntOrNull() ?: return null
-    var year = yStr.toIntOrNull() ?: return null
-    if (year < 100) year += 2000
-
-    return try { LocalDate.of(year, month, day) } catch (_: DateTimeException) { null }
 }
 
 /** Parse 6 or 8 digits (MMDDYY or MMDDYYYY) into LocalDate, returns null if invalid. */

@@ -2,7 +2,6 @@ package com.example.vtsdaily.lookup
 
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -53,11 +52,6 @@ private val VtsCream = Color(0xFFFFF5E1)
 private val RowStripe = Color(0xFFF7F5FA)
 
 
-private val CardInnerPadding = 12.dp
-
-// Top-level (outside any composable)
-private const val TAG = "DateSelect"
-
 /* --- Screen flow (2 pages) --- */
 private enum class Page { NAMES, DETAILS }
 
@@ -90,27 +84,6 @@ private fun formatDate(d: LocalDate) = d.format(dateFormats.first())
 /* ---------- Import source logging ---------- */
 
 private fun logImportStart(file: File) {
-
-}
-
-private fun logImportStart(context: android.content.Context, uri: android.net.Uri) {
-    val cr = context.contentResolver
-    var name = "<unknown>"; var size = -1L
-    cr.query(
-        uri,
-        arrayOf(android.provider.OpenableColumns.DISPLAY_NAME, android.provider.OpenableColumns.SIZE),
-        null, null, null
-    )?.use { c ->
-        if (c.moveToFirst()) {
-            val iN = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-            val iS = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
-            if (iN >= 0) name = c.getString(iN) ?: name
-            if (iS >= 0) size = c.getLong(iS)
-        }
-    }
-    val header = try {
-        cr.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readLine() } ?: ""
-    } catch (_: Exception) { "" }
 
 }
 
@@ -347,7 +320,7 @@ fun PassengerLookupScreen() {
     }
 
     // --- NEW: group filtered names by first letter for sticky headers ---
-    val nameSections: Map<Char, List<String>> = remember(nameList) {
+    remember(nameList) {
         nameList.groupBy { name ->
             val c = name.firstOrNull { !it.isWhitespace() }?.uppercaseChar()
             if (c != null && c in 'A'..'Z') c else '#'
@@ -355,14 +328,6 @@ fun PassengerLookupScreen() {
     }
 
     // ALL trips for this passenger, newest → oldest
-    val tripsForPassenger by remember(allRows, selectedName) {
-        mutableStateOf(
-            if (selectedName == null) emptyList() else
-                allRows
-                    .filter { it.passenger.equals(selectedName!!, ignoreCase = true) }
-                    .sortedByDescending { parseDateOrNull(it.driveDate) ?: LocalDate.MIN }
-        )
-    }
 
     fun doImport() {
         val guesses = listOf(

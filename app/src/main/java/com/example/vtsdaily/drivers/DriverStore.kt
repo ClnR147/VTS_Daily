@@ -33,14 +33,6 @@ internal object DriverStore {
         return updated
     }
 
-    /** Optional helper if you ever need to delete without a Driver object */
-    fun delete(context: Context, name: String, phone: String?): List<Driver> {
-        val delKey = keyOf(name, phone)
-        val updated = load(context).filterNot { keyOf(it) == delKey }
-        save(context, updated)
-        return updated
-    }
-
     private fun keyOf(d: Driver): String = keyOf(d.name, d.phone)
     private fun keyOf(name: String, phone: String?): String =
         "${name.trim().lowercase()}|${phone.orEmpty().trim().lowercase()}"

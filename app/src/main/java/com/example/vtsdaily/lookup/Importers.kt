@@ -32,10 +32,10 @@ private fun indexOfHeader(headers: List<String>, aliases: List<String>): Int {
 private fun dumpHeaderForLogcat(headers: List<String>) {
 
     headers.forEachIndexed { idx, name ->
-        val visible = name.replace(" ", "␠")
+        name.replace(" ", "␠")
         val last = name.lastOrNull()
-        val lastCode = last?.code?.let { String.format("U+%04X", it) } ?: "—"
-        val codePoints = name.codePoints().toArray().joinToString(", ") { "U+%04X".format(it) }
+        last?.code?.let { String.format("U+%04X", it) } ?: "—"
+        name.codePoints().toArray().joinToString(", ") { "U+%04X".format(it) }
 
     }
 }
@@ -80,28 +80,6 @@ fun detectCsvSeparator(file: File, charset: Charset = Charsets.UTF_8): Char {
             else -> ','
         }
     }
-}
-
-/** Read the ENTIRE header row with OpenCSV using the given (or detected) separator. */
-fun readCsvHeaderAll(
-    file: File,
-    charset: Charset = Charsets.UTF_8,
-    separator: Char? = null
-): List<String> {
-    if (!file.exists()) return emptyList()
-    val sep = separator ?: detectCsvSeparator(file, charset)
-
-    val parser = CSVParserBuilder()
-        .withSeparator(sep)
-        .withIgnoreQuotations(false)
-        .build()
-
-    CSVReaderBuilder(InputStreamReader(FileInputStream(file), charset))
-        .withCSVParser(parser)
-        .build().use { reader ->
-            val header = reader.readNext() ?: return emptyList()
-            return header.toList()
-        }
 }
 
 fun importLookupCsv(
