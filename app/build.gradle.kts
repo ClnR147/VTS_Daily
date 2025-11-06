@@ -1,4 +1,7 @@
+// app/build.gradle.kts
+
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
+import com.android.build.api.artifact.SingleArtifact
 
 plugins {
     id("com.android.application")
@@ -43,7 +46,7 @@ android {
         compose = true
     }
 
-    // Match your Kotlin/Compose toolchain; 1.5.11 pairs with modern AGP/Kotlin
+    // Match your Kotlin/Compose toolchain
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.11"
     }
@@ -72,9 +75,10 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.8.3")
+    implementation("androidx.compose.foundation:foundation") // stickyHeader, LazyColumn, etc.
 
     // Window size classes
-    implementation("androidx.compose.material3:material3-window-size-class-android:1.3.0")
+    implementation("androidx.compose.material3:material3-window-size-class:1.3.0")
     implementation("androidx.window:window:1.3.0")
 
     // Other libs
@@ -108,30 +112,49 @@ dependencies {
 /**
  * Variant-agnostic APK copy:
  * - Registers copy<Variant>ApkToCustomFolder for every variant (debug, release, flavors…)
- * - Finalizes assemble<Variant> or package<Variant> with that copy task
+ * - Finalizes assemble<Variant> with that copy task
  */
 val apkDropDir = file("C:/AutoSyncToPhone/PassengerSchedules")
 
 extensions.configure<ApplicationAndroidComponentsExtension>("androidComponents") {
     onVariants(selector().all()) { variant ->
-        val cap = variant.name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        val cap = variant.name.replaceFirstChar { it.uppercaseChar() }
 
-        // Copy any *.apk produced for this variant
-        val copyTask = tasks.register<Copy>("copy${cap}ApkToCustomFolder") {
-            val apkDir = layout.buildDirectory.dir("outputs/apk/${variant.name}")
-            from(apkDir)
-            include("*.apk")
-            into(apkDropDir)
-            doLast { println("✅ Copied APK(s) for ${variant.name} to: $apkDropDir") }
+        // Provider-backed artifact (AGP 8+). May be a file OR a directory.
+        val apkArtifact = variant.artifacts.get(SingleArtifact.APK)
+
+        // Copy after assemble<Variant>; search for *.apk (skip output-metadata.json)
+        val copyTask = tasks.register("copy${cap}ApkToCustomFolder") {
+            doLast {
+                apkDropDir.mkdirs()
+
+                val artifactFile = apkArtifact.get().asFile
+                val base = if (artifactFile.isDirectory) artifactFile else artifactFile.parentFile
+
+                val apkTree = project.fileTree(base) { include("**/*.apk") }
+                val apkFiles = apkTree.files
+
+                if (apkFiles.isEmpty()) {
+                    logger.warn(
+                        "⚠ No APKs found for variant '${variant.name}'. " +
+                                "Did you run a bundle task? Build with assemble<Variant>."
+                    )
+                } else {
+                    copy {
+                        from(apkTree)
+                        into(apkDropDir)
+                        duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.INCLUDE
+                    }
+                    println("✅ Copied ${apkFiles.size} APK(s) for ${variant.name} to: $apkDropDir")
+                }
+            }
         }
 
-        // Finalize assemble<Variant> if present
-        tasks.matching { it.name == "assemble$cap" }.configureEach {
-            finalizedBy(copyTask)
-        }
-        // Fallback: finalize package<Variant> (covers AGP naming differences)
-        tasks.matching { it.name == "package$cap" }.configureEach {
-            finalizedBy(copyTask)
+        // Finalize ONLY assemble<Variant> so we run when an APK is built
+        tasks.configureEach {
+            if (name == "assemble$cap") {
+                finalizedBy(copyTask)
+            }
         }
     }
 }

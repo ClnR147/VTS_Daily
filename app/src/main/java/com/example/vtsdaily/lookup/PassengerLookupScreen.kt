@@ -9,15 +9,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
@@ -45,6 +40,7 @@ import com.example.vtsdaily.DateSelectActivity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.zIndex
 import com.example.vtsdaily.ui.components.ScreenDividers
+import androidx.compose.runtime.rememberCoroutineScope
 
 /* --- Style (match Drivers) --- */
 private val VtsGreen = Color(0xFF4CAF50)
@@ -83,9 +79,7 @@ private fun formatDate(d: LocalDate) = d.format(dateFormats.first())
 
 /* ---------- Import source logging ---------- */
 
-private fun logImportStart(file: File) {
-
-}
+private fun logImportStart(file: File) {}
 
 /* --- CSV line parser (handles quotes/commas/"" escapes) --- */
 
@@ -113,9 +107,7 @@ private fun parseCsvLine(s: String): List<String> {
 /* ---------- DEBUG: explain why rows would be rejected (no behavior change) ---------- */
 private val CardGutter = 12.dp      // screen edge ↔ card edge
 private val CardInner = 14.dp       // card edge ↔ content
-private val EXPECTED_HEADER = listOf(
-    "DriveDate","Passenger","A/R","PAddress","DAddress","PUTimeAppt","DOTimeAppt","RTTime","Phone"
-)
+
 private val REQUIRED_COLS = setOf("DriveDate","Passenger")
 
 /** Use the same date parser this screen already uses */
@@ -139,12 +131,6 @@ private fun debugImportRejectionsFromFile(file: File, maxSamples: Int = 15) {
         if (headerLine.isNotEmpty() && headerLine[0].code == 0xFEFF) headerLine = headerLine.substring(1)
 
         val header = parseCsvLine(headerLine).map { it.trim() }
-
-
-        val missingExpected = EXPECTED_HEADER.filter { it !in header }
-        if (missingExpected.isNotEmpty()) {
-
-        }
 
         var total = 0
         var accepted = 0
@@ -219,8 +205,6 @@ private fun debugImportRejectionsFromFile(file: File, maxSamples: Int = 15) {
             accepted++
         }
 
-
-        samples.forEach {  }
     }
 }
 
@@ -278,7 +262,9 @@ private fun canonicalizeCsvHeaderToTemp(src: File, context: android.content.Cont
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun PassengerLookupScreen() {
+fun PassengerLookupScreen(
+    registerActions: (onLookupByDate: () -> Unit, onImport: () -> Unit) -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -301,6 +287,7 @@ fun PassengerLookupScreen() {
                 .eachCount()
         )
     }
+
     fun tripCountFor(displayName: String): Int {
         val key = displayName.trim().replace(Regex("\\s+"), " ").lowercase()
         return counts[key] ?: 0
@@ -319,13 +306,6 @@ fun PassengerLookupScreen() {
             .toList()
     }
 
-    // --- NEW: group filtered names by first letter for sticky headers ---
-    remember(nameList) {
-        nameList.groupBy { name ->
-            val c = name.firstOrNull { !it.isWhitespace() }?.uppercaseChar()
-            if (c != null && c in 'A'..'Z') c else '#'
-        }.toSortedMap()
-    }
 
     // ALL trips for this passenger, newest → oldest
 
@@ -356,9 +336,21 @@ fun PassengerLookupScreen() {
         }
     }
 
+    LaunchedEffect(Unit) {
+        registerActions(
+            {
+                // Lookup by Date → launch your DateSelectActivity
+                val i = Intent(context, DateSelectActivity::class.java)
+                context.startActivity(i)
+            },
+            {
+                // Import
+                doImport()
+            }
+        )
+    }
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) }
-        // FAB removed; Import now lives in the actions row below
     ) { padding ->
         // Use a Box so we can overlay a Back FAB on DETAILS
         Box(
@@ -368,43 +360,8 @@ fun PassengerLookupScreen() {
         ) {
             Column(Modifier.fillMaxSize()) {
 
+                // Keep your thick divider to match other screens
                 ScreenDividers.Thick()
-
-                // Actions row: Import + Date icon
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = {
-
-                            try {
-                                LookupStore.invalidateLookupCache()
-
-                            } catch (t: Throwable) {
-
-                            }
-                            doImport()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = VtsGreen)
-                    ) {
-                        Icon(Icons.Filled.Upload, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Import")
-                    }
-
-                    IconButton(
-                        onClick = {
-                            val i = Intent(context, DateSelectActivity::class.java)
-                            context.startActivity(i)
-                        }
-                    ) {
-                        Icon(Icons.Filled.CalendarMonth, contentDescription = "Trips by Date")
-                    }
-                }
 
                 if (page == Page.NAMES) {
                     OutlinedTextField(
@@ -424,10 +381,13 @@ fun PassengerLookupScreen() {
                     Page.NAMES -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 16.dp),
+                            contentPadding = PaddingValues(
+                                start = 8.dp,
+                                end = 8.dp,
+                                bottom = 16.dp
+                            ),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            // Header row
                             // Floating (sticky) header row
                             stickyHeader {
                                 Surface(tonalElevation = 1.dp) {
@@ -435,7 +395,7 @@ fun PassengerLookupScreen() {
                                         Modifier
                                             .fillMaxWidth()
                                             .background(MaterialTheme.colorScheme.surface) // keep opaque for stickies
-                                            .zIndex(1f)                                    // optional: ensure it stays above rows
+                                            .zIndex(1f)
                                     ) {
                                         Row(
                                             Modifier
@@ -459,7 +419,6 @@ fun PassengerLookupScreen() {
                                     }
                                 }
                             }
-
 
                             // Name rows
                             items(nameList) { name ->
@@ -497,15 +456,18 @@ fun PassengerLookupScreen() {
                             }
                         }
                     }
-                    // Page.DETAILS -> { ... } // unchanged
 
-
-                Page.DETAILS -> {
+                    Page.DETAILS -> {
                         val name = selectedName ?: ""
 
                         // Group passenger's trips by date
                         val groupedTrips = remember(allRows, selectedName) {
-                            val trips = allRows.filter { it.passenger.equals(selectedName, ignoreCase = true) }
+                            val trips = allRows.filter {
+                                it.passenger.equals(
+                                    selectedName,
+                                    ignoreCase = true
+                                )
+                            }
                             groupTripsByDate(trips)
                         }
 
@@ -533,14 +495,19 @@ fun PassengerLookupScreen() {
 
                                         val phone = groupedTrips.values
                                             .flatten()
-                                            .firstNotNullOfOrNull { it.phone?.trim()?.takeIf { p -> p.isNotBlank() } }
+                                            .firstNotNullOfOrNull {
+                                                it.phone?.trim()?.takeIf { p -> p.isNotBlank() }
+                                            }
                                         if (!phone.isNullOrBlank()) {
                                             Text(
                                                 "Phone: $phone",
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.clickable {
-                                                    val i = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                                                    val i = Intent(
+                                                        Intent.ACTION_DIAL,
+                                                        Uri.parse("tel:$phone")
+                                                    )
                                                     context.startActivity(i)
                                                 }
                                             )
@@ -560,7 +527,12 @@ fun PassengerLookupScreen() {
                                                 Modifier
                                                     .fillMaxWidth()
                                                     .background(RowStripe)
-                                                    .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 0.dp)
+                                                    .padding(
+                                                        start = 8.dp,
+                                                        top = 8.dp,
+                                                        end = 8.dp,
+                                                        bottom = 0.dp
+                                                    )
                                             ) {
                                                 Text(
                                                     "Date: ${formatDate(date)}",
@@ -570,7 +542,8 @@ fun PassengerLookupScreen() {
                                                 )
                                                 Spacer(Modifier.height(4.dp))
 
-                                                val labelIndent = 70.dp  // consistent column alignment
+                                                val labelIndent =
+                                                    70.dp  // consistent column alignment
 
                                                 trips.forEachIndexed { i, r ->
                                                     Row(Modifier.fillMaxWidth()) {
@@ -579,7 +552,9 @@ fun PassengerLookupScreen() {
                                                             Text(
                                                                 text = "Pickup:",
                                                                 style = MaterialTheme.typography.bodyMedium,
-                                                                modifier = Modifier.width(labelIndent)
+                                                                modifier = Modifier.width(
+                                                                    labelIndent
+                                                                )
                                                             )
                                                             Text(
                                                                 text = pickup,
@@ -594,7 +569,9 @@ fun PassengerLookupScreen() {
                                                             Text(
                                                                 text = "Drop-off:",
                                                                 style = MaterialTheme.typography.bodyMedium,
-                                                                modifier = Modifier.width(labelIndent)
+                                                                modifier = Modifier.width(
+                                                                    labelIndent
+                                                                )
                                                             )
                                                             Text(
                                                                 text = drop,
@@ -628,7 +605,7 @@ fun PassengerLookupScreen() {
                     containerColor = VtsGreen,
                     contentColor = VtsCream
                 ) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
             }
         }

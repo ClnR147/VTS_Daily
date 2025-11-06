@@ -7,7 +7,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -16,19 +30,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import kotlinx.coroutines.launch
 import java.io.File
 import com.example.vtsdaily.ui.components.ScreenDividers
-// + add this import at the top with the others:
-import androidx.compose.foundation.lazy.itemsIndexed
-
-// Icons
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Add   // ⬅️ NEW
-import androidx.core.net.toUri
-// + at top with other imports
 
 private val VtsGreen = Color(0xFF4CAF50)   // green
 private val VtsBannerText = Color(0xFFFFF5E1)
@@ -36,12 +41,15 @@ private val RowStripe = Color(0xFFF7F5FA)
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun DriversScreen() {
+fun DriversScreen(
+    // Register actions so MainActivity's global top bar can invoke these
+    registerActions: (onAdd: () -> Unit, onImport: () -> Unit) -> Unit
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var drivers by remember { mutableStateOf(DriverStore.load(context)) }
     var query by rememberSaveable { mutableStateOf("") }
     var selected by remember { mutableStateOf<Driver?>(null) }
-    var showAdd by remember { mutableStateOf(false) }    // ⬅️ NEW
+    var showAdd by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -77,35 +85,25 @@ fun DriversScreen() {
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        // ⬅️ NEW: two FABs stacked (Add + Import)
-        floatingActionButton = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.End
-            ) {
-                FloatingActionButton(
-                    onClick = { showAdd = true },
-                    containerColor = VtsGreen,
-                    contentColor = VtsBannerText
-                ) { Icon(Icons.Filled.Add, contentDescription = "Add driver") }
+    // Expose Add / Import handlers to MainActivity's DriversTopBarCustom
+    LaunchedEffect(Unit) {
+        registerActions(
+            { showAdd = true },   // onAdd
+            { doImport() }        // onImport
+        )
+    }
 
-                FloatingActionButton(
-                    onClick = { doImport() },
-                    containerColor = VtsGreen,
-                    contentColor = VtsBannerText
-                ) { Icon(imageVector = Icons.Filled.Upload, contentDescription = "Import XLS") }
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End
+
+    // Content-only scaffold: no topBar here
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // divider under the main app bar (match Schedule feel)
+            // Divider under the global app bar (keeps screens consistent)
             ScreenDividers.Thick()
 
             // Search
@@ -119,15 +117,12 @@ fun DriversScreen() {
                 label = { Text("Search (name, van, make/model)") }
             )
 
-            // List (extra bottom padding so rows don't hide behind the FAB)
+            // List
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 12.dp, end = 12.dp, top = 8.dp, bottom = 128.dp // ⬅️ a bit more for 2 FABs
-                ),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                // stable key: name|phone
                 itemsIndexed(
                     filtered,
                     key = { _, d -> "${d.name.lowercase()}|${d.phone}" }
@@ -140,10 +135,8 @@ fun DriversScreen() {
                             context.startActivity(intent)
                         },
                         onDeleteConfirmed = { toDelete ->
-                            // Persist delete + refresh UI
                             drivers = DriverStore.delete(context, toDelete)
 
-                            // Close details if it was open for this driver
                             val delKey = "${toDelete.name}|${toDelete.phone}".lowercase()
                             if (selected?.let { "${it.name}|${it.phone}".lowercase() } == delKey) {
                                 selected = null
@@ -171,7 +164,6 @@ fun DriversScreen() {
             )
         }
 
-        // ⬅️ NEW: Add dialog
         if (showAdd) {
             AddDriverDialog(
                 onDismiss = { showAdd = false },
@@ -193,7 +185,7 @@ private fun DriverRow(
     driver: Driver,
     onClick: () -> Unit,
     onCall: (String) -> Unit,
-    onDeleteConfirmed: (Driver) -> Unit   // ⬅️ delete hook
+    onDeleteConfirmed: (Driver) -> Unit
 ) {
     var showConfirm by remember { mutableStateOf(false) }
 
@@ -229,7 +221,8 @@ private fun DriverRow(
                 Text(
                     driver.name,
                     style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 val sub = buildString {
                     if (driver.year != null) append("${driver.year} ")
@@ -241,7 +234,8 @@ private fun DriverRow(
                         sub,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF56536A),
-                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -254,7 +248,8 @@ private fun DriverRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clickable { onCall(driver.phone) },
-                maxLines = 1, overflow = TextOverflow.Clip
+                maxLines = 1,
+                overflow = TextOverflow.Clip
             )
 
             // Delete icon
@@ -270,7 +265,6 @@ private fun DriverRow(
         }
     }
 
-    // Confirm dialog
     if (showConfirm) {
         AlertDialog(
             onDismissRequest = { showConfirm = false },
@@ -336,7 +330,7 @@ private fun DriverDetailsDialog(
     )
 }
 
-/** ⬅️ NEW: Add Driver dialog */
+/** Add Driver dialog */
 @Composable
 private fun AddDriverDialog(
     onDismiss: () -> Unit,
