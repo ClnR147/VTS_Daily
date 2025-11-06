@@ -143,7 +143,7 @@ extensions.configure<ApplicationAndroidComponentsExtension>("androidComponents")
                     copy {
                         from(apkTree)
                         into(apkDropDir)
-                        duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.INCLUDE
+                        duplicatesStrategy = DuplicatesStrategy.INCLUDE
                     }
                     println("✅ Copied ${apkFiles.size} APK(s) for ${variant.name} to: $apkDropDir")
                 }

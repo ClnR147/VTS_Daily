@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-private val RowStripe = Color(0xFFF7F5FA)
+val RowStripe = Color(0xFFF7F5FA)
 
 /** Content-only screen (MainActivity owns the Scaffold/topBar) */
 @Composable

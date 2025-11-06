@@ -37,7 +37,7 @@ import com.example.vtsdaily.ui.components.ScreenDividers
 
 private val VtsGreen = Color(0xFF4CAF50)   // green
 private val VtsBannerText = Color(0xFFFFF5E1)
-private val RowStripe = Color(0xFFF7F5FA)
+val RowStripe = Color(0xFFF7F5FA)
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
