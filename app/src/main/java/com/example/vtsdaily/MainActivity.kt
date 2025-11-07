@@ -6,24 +6,39 @@ import android.os.Environment
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.*
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.vtsdaily.contacts.ContactsScreen
 import com.example.vtsdaily.contacts.ContactsTopBarCustom
 import com.example.vtsdaily.drivers.DriversScreen
+import com.example.vtsdaily.drivers.DriversTopBarCustom
 import com.example.vtsdaily.lookup.PassengerLookupScreen
+import com.example.vtsdaily.lookup.PassengerLookupTopBarCustom
 import com.example.vtsdaily.ui.components.ScreenDividers
 import com.example.vtsdaily.ui.theme.VTSDailyTheme
-import com.example.vtsdaily.lookup.PassengerLookupTopBarCustom
-
 
 // Icons
 import androidx.compose.material.icons.Icons
@@ -31,8 +46,9 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.ui.text.font.FontWeight
-import com.example.vtsdaily.drivers.DriversTopBarCustom
+
+// Subtle dark layer to push the scene toward medium-dark
+val darkScrim = Color.Black.copy(alpha = 0.06f) // tweak 0.04–0.10 to taste
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -49,22 +65,57 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            VTSDailyTheme {
+            VTSDailyTheme(dynamicColor = false) {
                 // 0 = Schedule, 1 = Lookup, 2 = Drivers, 3 = Contacts
                 var view by rememberSaveable { mutableIntStateOf(0) }
                 val snackbar = remember { SnackbarHostState() }
                 val scope = rememberCoroutineScope()
+
+                // Top bar callbacks registered from child screens
                 var driversAdd by remember { mutableStateOf<() -> Unit>({}) }
                 var driversImport by remember { mutableStateOf<() -> Unit>({}) }
                 var lookupByDateAction by remember { mutableStateOf<() -> Unit>({}) }
                 var lookupImportAction by remember { mutableStateOf<() -> Unit>({}) }
 
+                // Medium-dark backdrop: base vertical gradient
+                val baseGrad = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.20f)
+                    )
+                )
 
+                // Gentle radial glow behind content
+                val glowGrad = Brush.radialGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                        Color.Transparent
+                    ),
+                    radius = 900f
+                )
 
                 Scaffold(
+                    // Let our custom background show through
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+
                     topBar = {
                         when (view) {
-                            0 -> CenterAlignedTopAppBar(title = {Text("Schedule",style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))})
+                            0 -> CenterAlignedTopAppBar(
+                                title = {
+                                    Text(
+                                        "Schedule",
+                                        style = MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    )
+                                },
+                                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                    containerColor = Color.Transparent,
+                                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
+                                )
+                            )
                             1 -> PassengerLookupTopBarCustom(
                                 title = "Passenger Lookup",
                                 onLookupByDate = { lookupByDateAction() },
@@ -72,8 +123,8 @@ class MainActivity : ComponentActivity() {
                             )
                             2 -> DriversTopBarCustom(
                                 title = "Drivers",
-                                onAdd = { driversAdd() },        // ← was onDriversAdd()
-                                onImport = { driversImport() }   // ← was onDriversImport()
+                                onAdd = { driversAdd() },
+                                onImport = { driversImport() }
                             )
                             3 -> ContactsTopBarCustom(
                                 title = "Contacts",
@@ -85,57 +136,62 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     },
+
                     bottomBar = {
                         NavigationBar(
-                            containerColor = Color(0xFF4CAF50),  // VTS Green
-                            contentColor = Color(0xFFFFF5E1)     // Warm Cream
+                            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(8.dp),
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ) {
                             NavigationBarItem(
                                 selected = view == 0,
                                 onClick = { view = 0 },
-                                icon = {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.List,
-                                        contentDescription = "Schedule"
-                                    )
-                                },
+                                icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Schedule") },
                                 label = { Text("Schedule") },
                                 alwaysShowLabel = true
                             )
                             NavigationBarItem(
                                 selected = view == 1,
                                 onClick = { view = 1 },
-                                icon = {
-                                    Icon(Icons.Filled.Search, contentDescription = "Lookup")
-                                },
+                                icon = { Icon(Icons.Filled.Search, contentDescription = "Lookup") },
                                 label = { Text("Lookup") },
                                 alwaysShowLabel = true
                             )
                             NavigationBarItem(
                                 selected = view == 2,
                                 onClick = { view = 2 },
-                                icon = {
-                                    Icon(Icons.Filled.Person, contentDescription = "Drivers")
-                                },
+                                icon = { Icon(Icons.Filled.Person, contentDescription = "Drivers") },
                                 label = { Text("Drivers") },
                                 alwaysShowLabel = true
                             )
                             NavigationBarItem(
                                 selected = view == 3,
                                 onClick = { view = 3 },
-                                icon = {
-                                    Icon(Icons.Filled.Phone, contentDescription = "Contacts")
-                                },
+                                icon = { Icon(Icons.Filled.Phone, contentDescription = "Contacts") },
                                 label = { Text("Contacts") },
                                 alwaysShowLabel = true
                             )
                         }
                     },
+
                     snackbarHost = { SnackbarHost(snackbar) }
                 ) { padding ->
-                    Box(Modifier.padding(padding)) {
+                    // Single parent container with padding & base gradient
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(baseGrad)
+                            .padding(padding)
+                    ) {
+                        // Backdrop layers (draw first = behind content)
+                        Box(Modifier.fillMaxSize().background(glowGrad).alpha(0.85f))
+                        Box(Modifier.fillMaxSize().background(darkScrim))
+
+                        // Content
                         when (view) {
-                            0 -> Box(Modifier.fillMaxSize()) { PassengerApp(); ScreenDividers.Thick() }
+                            0 -> Box(Modifier.fillMaxSize()) {
+                                PassengerApp()
+                                ScreenDividers.Thick()
+                            }
                             1 -> PassengerLookupScreen(
                                 registerActions = { onLookupByDate, onImport ->
                                     lookupByDateAction = onLookupByDate
@@ -150,9 +206,9 @@ class MainActivity : ComponentActivity() {
                             )
                             3 -> ContactsScreen()
                         }
-                    }
-                }
-            }
-        }
-    }
-}
+                    } // end parent Box
+                } // end Scaffold
+            } // end Theme
+        } // end setContent
+    } // end onCreate
+} // end class

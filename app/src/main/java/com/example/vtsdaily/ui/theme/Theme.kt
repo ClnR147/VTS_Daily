@@ -3,9 +3,14 @@ package com.example.vtsdaily.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -13,41 +18,51 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 
+// ---------------------------------------------------------------------
+// NOTE: This file intentionally does NOT declare colors like VtsGreen.
+// Keep all color vals in Color.kt to avoid conflicts.
+// ---------------------------------------------------------------------
 
+// Uniquely named schemes to avoid clashes with any existing Light/DarkColorScheme
+val VtsLightColorScheme: ColorScheme = lightColorScheme(
+    primary = VtsGreen,
+    onPrimary = Color.White,
 
-// Custom small-rounded shape styling
-val Shapes = Shapes(
-    small = RoundedCornerShape(4.dp),
-    medium = RoundedCornerShape(6.dp),
-    large = RoundedCornerShape(8.dp)
+    secondary = VtsTextPrimary_Light,
+    onSecondary = Color.White,
+
+    background = VtsBackground_Light,
+    onBackground = VtsTextPrimary_Light,
+
+    surface = VtsSurface_Light,
+    onSurface = VtsTextPrimary_Light,
+
+    surfaceVariant = VtsBackground_Light,
+    onSurfaceVariant = VtsTextSecondary_Light,
+
+    outline = VtsOutline_Light,
+    error = VtsError
 )
 
-// Material 3 Color Schemes
-private val DarkColorScheme = darkColorScheme(
-    primary = Color (0xFF4CAF50),
-    secondary = Color ( color = 0xFF4CAF50),
-    background = Color(0xFF121212),
-    surface = Color(0xFF1E1E1E),
-    onPrimary = OnPrimaryText,
-    onSecondary = Color.White,
-    onBackground = Color.White,
-    onSurface = Color.White
-)
+val VtsDarkColorScheme: ColorScheme = darkColorScheme(
+    primary = VtsGreen,
+    onPrimary = Color.Black,
 
-private val LightColorScheme = lightColorScheme(
-    primary = Color (0xFF4CAF50),
-    secondary = Color ( color = 0xFF4CAF50),
-    background = AppBackground,
-    surface = SurfaceWhite,
-    onPrimary = OnPrimaryText,
-    onSecondary = Color.White,
-    onBackground = OnSurfaceText,
-    onSurface = OnSurfaceText
+    secondary = VtsGreen,
+    onSecondary = Color.Black,
+
+    background = VtsBackground_Dark,
+    onBackground = VtsText_OnDark,
+
+    surface = VtsSurface_Dark,
+    onSurface = VtsText_OnDark,
+
+    surfaceVariant = VtsBackground_Dark,
+    onSurfaceVariant = VtsText_OnDark,
+
+    outline = VtsOutline_Dark,
+    error = VtsError
 )
 
 @Composable
@@ -61,8 +76,8 @@ fun VTSDailyTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> VtsDarkColorScheme
+        else -> VtsLightColorScheme
     }
 
     val view = LocalView.current
@@ -82,9 +97,9 @@ fun VTSDailyTheme(
     )
     val screenDividerStyle = defaultScreenDividerStyle().copy(
         color = VtsGreen.copy(alpha = 0.85f),
-        thick = 8.dp,          // <- really thick
-        horizontalInset = 12.dp, // <- same as OutlinedTextField padding
-        verticalSpace = 0.dp     // no extra top gap
+        thick = 8.dp,            // thick brand divider
+        horizontalInset = 12.dp, // aligns with field padding
+        verticalSpace = 0.dp
     )
 
     CompositionLocalProvider(
@@ -94,7 +109,7 @@ fun VTSDailyTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,
-            shapes = Shapes,
+            shapes = androidx.compose.material3.Shapes(),
             content = content
         )
     }

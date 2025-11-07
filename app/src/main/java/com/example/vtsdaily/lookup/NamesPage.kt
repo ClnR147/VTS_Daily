@@ -31,12 +31,15 @@ fun NamesPage(
     ) {
         // sticky header
         stickyHeader {
-            Surface(tonalElevation = 1.dp) {
+            Surface(
+                tonalElevation = 1.dp,
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ) {
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .zIndex(1f)
+                    // .zIndex(1f) // usually not needed unless overlapping content below
                 ) {
                     Row(
                         Modifier
@@ -59,6 +62,7 @@ fun NamesPage(
                     ScreenDividers.Thin()
                 }
             }
+
         }
 
         items(nameList) { name ->

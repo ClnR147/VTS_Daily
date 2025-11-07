@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.vtsdaily.ui.components.ScreenDividers
+import androidx.compose.material3.TopAppBarDefaults
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +34,11 @@ fun PassengerLookupTopBarCustom(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         CenterAlignedTopAppBar(
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                actionIconContentColor = MaterialTheme.colorScheme.onSurface
+            ),
             title = {
                 Text(
                     title ?: "Passenger Lookup",
@@ -66,7 +73,9 @@ fun PassengerLookupTopBarCustom(
             }
         )
 
+
         // Match the other screens with a thick divider under the bar
-        ScreenDividers.Thick(modifier = Modifier.padding(horizontal = 12.dp))
+        ScreenDividers.Thick()
+
     }
 }
