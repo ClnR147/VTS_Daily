@@ -1,7 +1,6 @@
 package com.example.vtsdaily.lookup
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.ElevatedCard
@@ -16,14 +15,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.graphics.Color
 import com.example.vtsdaily.ui.components.ScreenDividers
+import androidx.compose.foundation.lazy.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.core.net.toUri
 
 @Composable
 fun DetailsPage(
     name: String,
-    allRows: List<LookupRow>
+    allRows: List<LookupRow>,
+    listState: LazyListState? = null   // ← NEW (optional)
 ) {
     val context = LocalContext.current
     val RowStripe = Color(0xFFF7F5FA)
+
+    // persist scroll
+    val state = listState ?: rememberSaveable(saver = LazyListState.Saver) { LazyListState(0, 0) }
 
     val groupedTrips = remember(allRows, name) {
         val trips = allRows.filter { it.passenger.equals(name, ignoreCase = true) }
@@ -31,6 +37,7 @@ fun DetailsPage(
     }
 
     LazyColumn(
+        state = state,  // ← hook in the saveable list state
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -57,7 +64,7 @@ fun DetailsPage(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.clickable {
-                                val i = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                                val i = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
                                 context.startActivity(i)
                             }
                         )
@@ -125,4 +132,3 @@ fun DetailsPage(
         }
     }
 }
-

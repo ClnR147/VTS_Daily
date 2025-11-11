@@ -17,15 +17,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +42,7 @@ import com.example.vtsdaily.lookup.PassengerLookupScreen
 import com.example.vtsdaily.lookup.PassengerLookupTopBarCustom
 import com.example.vtsdaily.ui.components.ScreenDividers
 import com.example.vtsdaily.ui.theme.VTSDailyTheme
+import androidx.compose.material3.ButtonDefaults
 
 // Icons
 import androidx.compose.material.icons.Icons
@@ -77,6 +81,10 @@ class MainActivity : ComponentActivity() {
                 var lookupByDateAction by remember { mutableStateOf<() -> Unit>({}) }
                 var lookupImportAction by remember { mutableStateOf<() -> Unit>({}) }
 
+                // Lookup handoff
+                var setLookupQuery by remember { mutableStateOf<(String) -> Unit>({}) }
+                var pendingLookupName by rememberSaveable { mutableStateOf<String?>(null) }
+
                 // Medium-dark backdrop: base vertical gradient
                 val baseGrad = Brush.verticalGradient(
                     colors = listOf(
@@ -96,7 +104,6 @@ class MainActivity : ComponentActivity() {
                 )
 
                 Scaffold(
-                    // Let our custom background show through
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onBackground,
 
@@ -173,7 +180,29 @@ class MainActivity : ComponentActivity() {
                         }
                     },
 
-                    snackbarHost = { SnackbarHost(snackbar) }
+                    snackbarHost = {
+                        SnackbarHost(
+                            hostState = snackbar,
+                            modifier = Modifier.padding(12.dp)
+                        ) { data ->
+                            Snackbar(
+                                modifier = Modifier.shadow(8.dp, MaterialTheme.shapes.large),
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.95f),
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                shape = MaterialTheme.shapes.large,
+                                dismissAction = {
+                                    TextButton(
+                                        onClick = { data.dismiss() },
+                                        colors = ButtonDefaults.textButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                    ) { Text("Dismiss") }
+                                }
+                            ) {
+                                Text(data.visuals.message, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
                 ) { padding ->
                     // Single parent container with padding & base gradient
                     Box(
@@ -189,13 +218,27 @@ class MainActivity : ComponentActivity() {
                         // Content
                         when (view) {
                             0 -> Box(Modifier.fillMaxSize()) {
-                                PassengerApp()
+                                PassengerApp(
+                                    onLookupForName = { name ->
+                                        // Stash name, then switch to Lookup
+                                        pendingLookupName = name
+                                        view = 1
+                                    }
+                                )
                                 ScreenDividers.Thick()
                             }
                             1 -> PassengerLookupScreen(
                                 registerActions = { onLookupByDate, onImport ->
                                     lookupByDateAction = onLookupByDate
                                     lookupImportAction = onImport
+                                },
+                                registerSetQuery = { setter ->
+                                    // Capture setter and immediately deliver any pending name
+                                    setLookupQuery = setter
+                                    pendingLookupName?.let {
+                                        setter(it)
+                                        pendingLookupName = null
+                                    }
                                 }
                             )
                             2 -> DriversScreen(
@@ -206,9 +249,9 @@ class MainActivity : ComponentActivity() {
                             )
                             3 -> ContactsScreen()
                         }
-                    } // end parent Box
-                } // end Scaffold
-            } // end Theme
-        } // end setContent
-    } // end onCreate
-} // end class
+                    }
+                }
+            }
+        }
+    }
+}

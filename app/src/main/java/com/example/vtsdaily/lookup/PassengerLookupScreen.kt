@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.vtsdaily.DateSelectActivity
-import com.example.vtsdaily.ui.components.ScreenDividers
 import java.io.File
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -21,15 +20,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.vtsdaily.ui.theme.VtsGreen
+import androidx.compose.foundation.lazy.LazyListState
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PassengerLookupScreen(
-    // Make it optional so you can call this screen with or without wiring actions.
-    registerActions: ((onLookupByDate: () -> Unit, onImport: () -> Unit) -> Unit)? = null
+    // Optional; safe to leave connected or not
+    registerActions: ((onLookupByDate: () -> Unit, onImport: () -> Unit) -> Unit)? = null,
+    registerSetQuery: (((String) -> Unit) -> Unit)? = null // NEW
 )  {
-
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -38,6 +38,10 @@ fun PassengerLookupScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var allRows by remember { mutableStateOf(LookupStore.load(context)) }
     var selectedName by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // ✅ save & restore scroll position for each page
+    val namesListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState(0, 0) }
+    val detailsListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState(0, 0) }
 
     // trip counts (normalized)
     val counts by remember(allRows) {
@@ -67,32 +71,29 @@ fun PassengerLookupScreen(
             .toList()
     }
 
+    // ✅ plain try/catch version
     fun doImport() {
-        // Build explicit List<File> to avoid type inference issues
-        val guesses: List<File> = listOf(
-            "/storage/emulated/0/PassengerSchedules/CustomerLookup.csv"
-        ).map { p -> File(p) }
+        try {
+            val guesses: List<File> = listOf(
+                "/storage/emulated/0/PassengerSchedules/CustomerLookup.csv"
+            ).map(::File)
 
-        val found: File? = guesses.firstOrNull { it.exists() }
-        if (found == null) {
-            scope.launch { snackbar.showSnackbar("Lookup .csv not found in default locations.") }
-            return
+            val found: File = guesses.firstOrNull { it.exists() }
+                ?: throw IllegalStateException("Lookup .csv not found in default locations.")
+
+            logImportStart(found) // ensure visible if in another file
+            val canonFile: File = canonicalizeCsvHeaderToTemp(found, context)
+            debugImportRejectionsFromFile(canonFile)
+
+            val imported: List<LookupRow> = importLookupCsv(canonFile)
+            val merged = LookupStore.mergeAndSave(context, allRows, imported)
+            allRows = merged
+            page = Page.NAMES
+
+            scope.launch { snackbar.showSnackbar("Imported ${imported.size} new rows (merged).") }
+        } catch (e: Throwable) {
+            scope.launch { snackbar.showSnackbar("Import failed: ${e.message ?: "Unknown error"}") }
         }
-
-        logImportStart(found) // ensure not 'private' if in another file
-        val canonFile: File = canonicalizeCsvHeaderToTemp(found, context) // ensure not 'private'
-        debugImportRejectionsFromFile(canonFile)
-
-        runCatching<List<LookupRow>> { importLookupCsv(canonFile) }
-            .onSuccess { imported ->
-                val merged = LookupStore.mergeAndSave(context, allRows, imported)
-                allRows = merged
-                page = Page.NAMES
-                scope.launch { snackbar.showSnackbar("Imported ${imported.size} new rows (merged).") }
-            }
-            .onFailure { e ->
-                scope.launch { snackbar.showSnackbar("Import failed: ${e.message}") }
-            }
     }
 
     LaunchedEffect(registerActions) {
@@ -103,6 +104,16 @@ fun PassengerLookupScreen(
             },
             { doImport() }
         )
+    }
+
+    // NEW: expose a setter so MainActivity (or the Schedule screen) can prefill the query
+    LaunchedEffect(registerSetQuery) {
+        registerSetQuery?.invoke { name ->
+            query = name
+            page = Page.NAMES
+            selectedName = null
+            scope.launch { namesListState.scrollToItem(0) } // snap to top for a clean view
+        }
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
@@ -127,11 +138,15 @@ fun PassengerLookupScreen(
                     Page.NAMES -> NamesPage(
                         nameList = nameList,
                         tripCountFor = ::tripCountFor,
-                        onSelect = { selectedName = it; page = Page.DETAILS }
+                        onSelect = { selectedName = it; page = Page.DETAILS },
+                        // 👉 add this param in NamesPage: listState: LazyListState? = null
+                        listState = namesListState
                     )
                     Page.DETAILS -> DetailsPage(
                         name = selectedName.orEmpty(),
-                        allRows = allRows
+                        allRows = allRows,
+                        // 👉 add this param in DetailsPage: listState: LazyListState? = null
+                        listState = detailsListState
                     )
                 }
             }
@@ -142,7 +157,8 @@ fun PassengerLookupScreen(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(10.dp),
-                    containerColor = VtsGreen                ) {
+                    containerColor = VtsGreen
+                ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back"
@@ -152,6 +168,7 @@ fun PassengerLookupScreen(
         }
     }
 }
+
 
 
 private enum class Page { NAMES, DETAILS }

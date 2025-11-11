@@ -26,6 +26,7 @@ import java.time.LocalDate
 import jxl.Workbook
 import java.io.File
 import android.os.Environment
+import androidx.compose.material.icons.filled.Search
 import java.time.format.DateTimeFormatter
 import androidx.compose.material3.AlertDialog  // ✅ Material 3 - correct
 import com.example.vtsdaily.ui.theme.ActionGreen
@@ -54,7 +55,8 @@ fun PassengerTable(
     viewMode: TripViewMode,
     context: Context,
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit,
-    onTripReinstated: (Passenger) -> Unit
+    onTripReinstated: (Passenger) -> Unit,
+    onLookupForName: (String) -> Unit = {}   // ← NEW
 ) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
@@ -277,8 +279,23 @@ fun PassengerTable(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // NEW: magnifying glass to jump to Lookup prefilled with this passenger's name
+                            IconButton(
+                                onClick = { onLookupForName(passenger.name) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Lookup this passenger"
+                                )
+                            }
+
+                            Spacer(Modifier.width(6.dp))
+
+                            // Existing checkmark
                             IconButton(
                                 onClick = { passengerToActOn = passenger },
                                 modifier = Modifier.size(24.dp)
@@ -291,6 +308,7 @@ fun PassengerTable(
                             }
                         }
                     }
+
                 }
             }
         }

@@ -46,7 +46,7 @@ import com.example.vtsdaily.ui.theme.VtsGreen
 private const val SHOW_ADD_TRIP = false
 
 @Composable
-fun PassengerApp() {
+fun PassengerApp(onLookupForName: (String) -> Unit) {
     val context = LocalContext.current
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
@@ -186,7 +186,6 @@ fun PassengerApp() {
             context = context,
             onTripRemoved = { removedPassenger, reason ->
                 "${removedPassenger.name}-${removedPassenger.pickupAddress}-${removedPassenger.dropoffAddress}-${removedPassenger.typeTime}-${scheduleDate.format(formatter)}"
-
                 when (reason) {
                     TripRemovalReason.COMPLETED -> CompletedTripStore.addCompletedTrip(context, scheduleDate, removedPassenger)
                     else -> {
@@ -194,16 +193,19 @@ fun PassengerApp() {
                         InsertedTripStore.removeInsertedTrip(context, scheduleDate, removedPassenger)
                     }
                 }
-
                 baseSchedule = loadSchedule(context, scheduleDate)
                 insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
             },
             onTripReinstated = handleTripReinstated,
 
-            // 🔹 NEW: give the table access to the XLS passengers for phone lookup
+            // 🔹 give the table access to the XLS passengers for phone lookup
             schedulePassengers = baseSchedule.passengers,
-            phoneBook = phoneBook
+            phoneBook = phoneBook,               // ← COMMA HERE
+
+            // 🔹 NEW
+            onLookupForName = onLookupForName
         )
+
 
         if (showDateListDialog) {
             AlertDialog(

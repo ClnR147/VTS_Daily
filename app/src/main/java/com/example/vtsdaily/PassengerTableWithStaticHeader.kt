@@ -28,9 +28,9 @@ fun PassengerTableWithStaticHeader(
     context: Context,
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit,
     onTripReinstated: (Passenger) -> Unit,
-    schedulePassengers: List<Passenger> = emptyList(),
-    // 🔹 NEW (default keeps other calls compiling)
-    phoneBook: Map<String, String> = emptyMap()
+    schedulePassengers: List<Passenger>?,
+    phoneBook: Map<String, String>,
+    onLookupForName: (String) -> Unit = {}   // NEW (default keeps other callers safe)
 ) {
     Column(
         modifier = Modifier
@@ -92,7 +92,8 @@ fun PassengerTableWithStaticHeader(
             viewMode = viewMode,
             context = context,
             onTripRemoved = onTripRemoved,
-            onTripReinstated = onTripReinstated
+            onTripReinstated = onTripReinstated,
+            onLookupForName = onLookupForName
         )
     }
 }
