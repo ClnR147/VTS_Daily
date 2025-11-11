@@ -221,7 +221,7 @@ class MainActivity : ComponentActivity() {
                                 PassengerApp(
                                     onLookupForName = { name ->
                                         // Stash name, then switch to Lookup
-                                        pendingLookupName = name
+                                        pendingLookupName = sanitizeName(name)
                                         view = 1
                                     }
                                 )

@@ -284,7 +284,10 @@ fun PassengerTable(
                         ) {
                             // NEW: magnifying glass to jump to Lookup prefilled with this passenger's name
                             IconButton(
-                                onClick = { onLookupForName(passenger.name) },
+                                onClick = {
+                                    val safe = sanitizeName(passenger.name)   // <- from the helper we added
+                                    if (safe.isNotBlank()) onLookupForName(safe)
+                                },
                                 modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(

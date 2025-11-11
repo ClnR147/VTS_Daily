@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.vtsdaily.ui.theme.VtsGreen
 import androidx.compose.foundation.lazy.LazyListState
+import com.example.vtsdaily.sanitizeName
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,11 +109,22 @@ fun PassengerLookupScreen(
 
     // NEW: expose a setter so MainActivity (or the Schedule screen) can prefill the query
     LaunchedEffect(registerSetQuery) {
-        registerSetQuery?.invoke { name ->
-            query = name
-            page = Page.NAMES
-            selectedName = null
-            scope.launch { namesListState.scrollToItem(0) } // snap to top for a clean view
+        registerSetQuery?.invoke { pushedName ->
+            val safe = sanitizeName(pushedName)
+            if (safe != null) {
+                // Jump straight to DETAILS for this person
+                selectedName = safe
+                page = Page.DETAILS
+                // (Optional) clear any search UI state
+                query = ""
+                scope.launch { namesListState.scrollToItem(0) }
+            } else {
+                // Fallback: show NAMES prefilled (if we couldn't find an exact match)
+                query = safe
+                page = Page.NAMES
+                selectedName = null
+                scope.launch { namesListState.scrollToItem(0) }
+            }
         }
     }
 
