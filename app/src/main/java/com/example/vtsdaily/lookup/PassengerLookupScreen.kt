@@ -112,21 +112,17 @@ fun PassengerLookupScreen(
         registerSetQuery?.invoke { pushedName ->
             val safe = sanitizeName(pushedName)
             if (safe != null) {
-                // Jump straight to DETAILS for this person
+                query = safe
                 selectedName = safe
                 page = Page.DETAILS
-                // (Optional) clear any search UI state
-                query = ""
-                scope.launch { namesListState.scrollToItem(0) }
             } else {
-                // Fallback: show NAMES prefilled (if we couldn't find an exact match)
-                query = safe
-                page = Page.NAMES
+                query = pushedName
                 selectedName = null
-                scope.launch { namesListState.scrollToItem(0) }
+                page = Page.NAMES
             }
         }
     }
+
 
     Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
