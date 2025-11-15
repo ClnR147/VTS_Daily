@@ -2,28 +2,28 @@ package com.example.vtsdaily.lookup
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.Alignment
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.ui.graphics.Color
-import com.example.vtsdaily.ui.components.ScreenDividers
-import androidx.compose.foundation.lazy.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.net.toUri
+import com.example.vtsdaily.ui.components.ScreenDividers
 
 @Composable
 fun DetailsPage(
     name: String,
     allRows: List<LookupRow>,
-    listState: LazyListState? = null   // ← NEW (optional)
+    tripCount: Int,                  // 👈 move BEFORE the default param
+    listState: LazyListState? = null // optional
 ) {
     val context = LocalContext.current
     val RowStripe = Color(0xFFF7F5FA)
@@ -37,7 +37,7 @@ fun DetailsPage(
     }
 
     LazyColumn(
-        state = state,  // ← hook in the saveable list state
+        state = state,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -52,8 +52,24 @@ fun DetailsPage(
                     Modifier.padding(CardInner),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Header: passenger name + phone
-                    Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 2)
+                    // Header: passenger name + trip count
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 2,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "$tripCount trip" + if (tripCount == 1) "" else "s",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
 
                     val phone = groupedTrips.values
                         .flatten()
@@ -93,7 +109,10 @@ fun DetailsPage(
 
                             val labelIndent = 70.dp
                             trips.forEachIndexed { i, r ->
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top
+                                ) {
                                     val pickup = r.pAddress.orEmpty()
                                     if (pickup.isNotBlank()) {
                                         Text(
@@ -108,7 +127,10 @@ fun DetailsPage(
                                     }
                                 }
 
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top
+                                ) {
                                     val drop = r.dAddress.orEmpty()
                                     if (drop.isNotBlank()) {
                                         Text(

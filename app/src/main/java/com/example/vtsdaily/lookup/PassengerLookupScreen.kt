@@ -147,16 +147,19 @@ fun PassengerLookupScreen(
                         nameList = nameList,
                         tripCountFor = ::tripCountFor,
                         onSelect = { selectedName = it; page = Page.DETAILS },
-                        // 👉 add this param in NamesPage: listState: LazyListState? = null
                         listState = namesListState
                     )
-                    Page.DETAILS -> DetailsPage(
-                        name = selectedName.orEmpty(),
-                        allRows = allRows,
-                        // 👉 add this param in DetailsPage: listState: LazyListState? = null
-                        listState = detailsListState
-                    )
+                    Page.DETAILS -> {
+                        val safeName = selectedName.orEmpty()
+                        DetailsPage(
+                            name = safeName,
+                            allRows = allRows,
+                            tripCount = tripCountFor(safeName),   // 👈 pass the count
+                            listState = detailsListState
+                        )
+                    }
                 }
+
             }
 
             if (page == Page.DETAILS) {
