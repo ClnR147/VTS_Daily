@@ -25,7 +25,57 @@ internal object DriverStore {
         file(context).writeText(gson.toJson(drivers))
     }
 
-    /** 🔹 NEW: delete by (name|phone) stable key; returns updated list */
+    /** 🔹 Add a new driver or replace an existing one with the same (name|phone) key. */
+    fun add(context: Context, driver: Driver): List<Driver> {
+        val current = load(context).toMutableList()
+        val k = keyOf(driver)
+        val idx = current.indexOfFirst { keyOf(it) == k }
+
+        if (idx >= 0) {
+            // Replace existing
+            current[idx] = driver
+        } else {
+            // Append new
+            current += driver
+        }
+
+        save(context, current)
+        return current
+    }
+
+    /**
+     * 🔹 Update an existing driver identified by its ORIGINAL (name|phone) key.
+     *
+     * This lets you:
+     * - Find the row using the pre-edit values (original),
+     * - Save the edited values (updated), even if name/phone changed.
+     *
+     * If the original is not found, it will fall back to add() semantics.
+     */
+    fun update(context: Context, original: Driver, updated: Driver): List<Driver> {
+        val originalKey = keyOf(original)
+        val current = load(context).toMutableList()
+
+        val idx = current.indexOfFirst { keyOf(it) == originalKey }
+        if (idx >= 0) {
+            // Found by original key → replace with updated
+            current[idx] = updated
+        } else {
+            // Original not found; behave like add(), but avoid duplicate keys
+            val updatedKey = keyOf(updated)
+            val dupIdx = current.indexOfFirst { keyOf(it) == updatedKey }
+            if (dupIdx >= 0) {
+                current[dupIdx] = updated
+            } else {
+                current += updated
+            }
+        }
+
+        save(context, current)
+        return current
+    }
+
+    /** 🔹 Delete by (name|phone) stable key; returns updated list. */
     fun delete(context: Context, driver: Driver): List<Driver> {
         val delKey = keyOf(driver)
         val updated = load(context).filterNot { keyOf(it) == delKey }
@@ -96,7 +146,7 @@ internal object DriverStore {
         val seen = HashSet<String>()
         return list.filter { d ->
             val k = "${d.name.trim().lowercase()}|${d.van.trim().lowercase()}"
-            seen.add(k)   // add() returns true only the first time → keeps first occurrence
+            seen.add(k)
         }
     }
 

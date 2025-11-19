@@ -50,6 +50,7 @@ fun DriversScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var selected by remember { mutableStateOf<Driver?>(null) }
     var showAdd by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<Driver?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -92,7 +93,6 @@ fun DriversScreen(
             { doImport() }        // onImport
         )
     }
-
 
     // Content-only scaffold: no topBar here
     Scaffold(
@@ -160,6 +160,30 @@ fun DriversScreen(
                 onCall = { phone ->
                     val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
                     context.startActivity(intent)
+                },
+                onEdit = { d ->
+                    selected = null
+                    editing = d
+                }
+            )
+        }
+
+        if (editing != null) {
+            val editingDriver = editing!!
+            EditDriverDialog(
+                initial = editingDriver,
+                onDismiss = { editing = null },
+                onSave = { updatedDriver ->
+                    val updatedList = DriverStore.update(
+                        context = context,
+                        original = editingDriver,   // original key (pre-edit)
+                        updated = updatedDriver     // new values
+                    )
+                    drivers = updatedList
+                    editing = null
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Updated \"${updatedDriver.name}\"")
+                    }
                 }
             )
         }
@@ -168,10 +192,11 @@ fun DriversScreen(
             AddDriverDialog(
                 onDismiss = { showAdd = false },
                 onAdd = { newDriver ->
-                    val updated = drivers.toMutableList().apply { add(newDriver) }
+                    val updated = DriverStore.add(context, newDriver)
                     drivers = updated
-                    DriverStore.save(context, updated)
-                    scope.launch { snackbarHostState.showSnackbar("Added \"${newDriver.name}\"") }
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Added \"${newDriver.name}\"")
+                    }
                     showAdd = false
                 }
             )
@@ -287,11 +312,21 @@ private fun DriverRow(
 private fun DriverDetailsDialog(
     driver: Driver,
     onDismiss: () -> Unit,
-    onCall: (String) -> Unit
+    onCall: (String) -> Unit,
+    onEdit: (Driver) -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        confirmButton = {
+            TextButton(onClick = { onEdit(driver) }) {
+                Text("Edit")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        },
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
@@ -299,7 +334,11 @@ private fun DriverDetailsDialog(
                         .background(color = VtsGreen, shape = MaterialTheme.shapes.large)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Text(driver.van, color = VtsBannerText, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        driver.van,
+                        color = VtsBannerText,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(
@@ -327,6 +366,61 @@ private fun DriverDetailsDialog(
                 }
             }
         }
+    )
+}
+
+@Composable
+private fun EditDriverDialog(
+    initial: Driver,
+    onDismiss: () -> Unit,
+    onSave: (Driver) -> Unit
+) {
+    var name by rememberSaveable { mutableStateOf(initial.name) }
+    var phone by rememberSaveable { mutableStateOf(initial.phone) }
+    var van by rememberSaveable { mutableStateOf(initial.van) }
+    var yearText by rememberSaveable { mutableStateOf(initial.year?.toString().orEmpty()) }
+    var make by rememberSaveable { mutableStateOf(initial.make) }
+    var model by rememberSaveable { mutableStateOf(initial.model) }
+
+    val isValid = name.isNotBlank()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Driver") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name*") }, singleLine = true)
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") }, singleLine = true)
+                OutlinedTextField(value = van, onValueChange = { van = it }, label = { Text("Van") }, singleLine = true)
+                OutlinedTextField(
+                    value = yearText,
+                    onValueChange = { yearText = it.filter { ch -> ch.isDigit() }.take(4) },
+                    label = { Text("Year") },
+                    singleLine = true
+                )
+                OutlinedTextField(value = make, onValueChange = { make = it }, label = { Text("Make") }, singleLine = true)
+                OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("Model") }, singleLine = true)
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = isValid,
+                onClick = {
+                    val year = yearText.toIntOrNull()
+                    onSave(
+                        Driver(
+                            name = name.trim(),
+                            phone = phone.trim(),
+                            van = van.trim(),
+                            year = year,
+                            make = make.trim(),
+                            model = model.trim()
+                        )
+                    )
+                }
+            ) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
