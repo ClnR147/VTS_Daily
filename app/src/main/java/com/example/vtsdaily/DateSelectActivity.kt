@@ -438,9 +438,27 @@ private fun LookupRow.toHistoryTrip(date: LocalDate): HistoryTrip {
         else -> if (!rtTime.isNullOrBlank()) TripType.RETURN else TripType.APPT
     }
 
+    // Deceased from CSV, if present.
+    val deceasedRaw = (raw["Deceased"]
+        ?: raw["deceased"]
+        ?: raw["DECEASED"])
+        ?.trim()
+
+    val isDeceased = when {
+        deceasedRaw.isNullOrEmpty() -> false
+        deceasedRaw.equals("y", ignoreCase = true) -> true
+        deceasedRaw.equals("yes", ignoreCase = true) -> true
+        deceasedRaw.equals("true", ignoreCase = true) -> true
+        deceasedRaw == "1" -> true
+        deceasedRaw.equals("-1") -> true          // Access yes/no sometimes
+        deceasedRaw.equals("on", ignoreCase = true) -> true
+        else -> false
+    }
+
     return HistoryTrip(
         date = date,
         passengerName = passenger.orEmpty(),
+        isDeceased = isDeceased,
         tripType = tripTypeEnum,
         puTimeAppt = parseTimeOrNull(puTimeAppt),
         rtTime = parseTimeOrNull(rtTime),

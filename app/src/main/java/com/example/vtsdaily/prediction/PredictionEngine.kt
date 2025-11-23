@@ -21,13 +21,13 @@ enum class TripType {
 data class HistoryTrip(
     val date: LocalDate,
     val passengerName: String,
+    val isDeceased: Boolean,      // 👈 add this back
     val tripType: TripType,
-    val puTimeAppt: LocalTime?,  // Appointment pickup time (A)
-    val rtTime: LocalTime?,      // Return time (R)
+    val puTimeAppt: LocalTime?,   // Appointment pickup time (A)
+    val rtTime: LocalTime?,       // Return time (R)
     val pAddress: String,
     val dAddress: String
 )
-
 /**
  * A predicted trip for the target date.
  * Same shape as what your UI need, plus appearancePercent
