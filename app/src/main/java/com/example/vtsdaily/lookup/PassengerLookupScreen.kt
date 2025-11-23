@@ -2,7 +2,9 @@ package com.example.vtsdaily.lookup
 
 import android.content.Intent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -11,26 +13,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.vtsdaily.DateSelectActivity
-import java.io.File
-import kotlinx.coroutines.launch
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import com.example.vtsdaily.ui.theme.VtsGreen
-import androidx.compose.foundation.lazy.LazyListState
 import com.example.vtsdaily.sanitizeName
-
+import com.example.vtsdaily.ui.theme.VtsGreen
+import kotlinx.coroutines.launch
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PassengerLookupScreen(
     // Optional; safe to leave connected or not
-    registerActions: ((onLookupByDate: () -> Unit, onImport: () -> Unit) -> Unit)? = null,
+    registerActions: ((onLookupByDate: () -> Unit, onPredictByDate: () -> Unit, onImport: () -> Unit) -> Unit)? = null,
     registerSetQuery: (((String) -> Unit) -> Unit)? = null // NEW
-)  {
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -54,6 +48,7 @@ fun PassengerLookupScreen(
                 .eachCount()
         )
     }
+
     fun tripCountFor(displayName: String): Int {
         val key = displayName.trim().replace(Regex("\\s+"), " ").lowercase()
         return counts[key] ?: 0
@@ -99,10 +94,19 @@ fun PassengerLookupScreen(
 
     LaunchedEffect(registerActions) {
         registerActions?.invoke(
+            // Lookup by Date → existing history mode
             {
                 val i = Intent(context, DateSelectActivity::class.java)
                 context.startActivity(i)
             },
+            // Predict by Date → same activity, but in prediction mode
+            {
+                val i = Intent(context, DateSelectActivity::class.java).apply {
+                    putExtra("mode", "predict")   // DateSelectActivity can branch on this
+                }
+                context.startActivity(i)
+            },
+            // Import
             { doImport() }
         )
     }
@@ -123,9 +127,12 @@ fun PassengerLookupScreen(
         }
     }
 
-
     Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
+        Box(
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
             Column(Modifier.fillMaxSize()) {
 
                 if (page == Page.NAMES) {
@@ -149,6 +156,7 @@ fun PassengerLookupScreen(
                         onSelect = { selectedName = it; page = Page.DETAILS },
                         listState = namesListState
                     )
+
                     Page.DETAILS -> {
                         val safeName = selectedName.orEmpty()
                         DetailsPage(
@@ -159,7 +167,6 @@ fun PassengerLookupScreen(
                         )
                     }
                 }
-
             }
 
             if (page == Page.DETAILS) {
@@ -179,7 +186,5 @@ fun PassengerLookupScreen(
         }
     }
 }
-
-
 
 private enum class Page { NAMES, DETAILS }

@@ -15,19 +15,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.vtsdaily.ui.components.ScreenDividers
 import androidx.compose.material3.TopAppBarDefaults
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PassengerLookupTopBarCustom(
     title: String? = null,
     onLookupByDate: () -> Unit,
+    onPredictByDate: () -> Unit,   // NEW: prediction flow
     onImport: () -> Unit
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -42,7 +46,9 @@ fun PassengerLookupTopBarCustom(
             title = {
                 Text(
                     title ?: "Passenger Lookup",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    )
                 )
             },
             actions = {
@@ -53,29 +59,55 @@ fun PassengerLookupTopBarCustom(
                     expanded = menuOpen,
                     onDismissRequest = { menuOpen = false }
                 ) {
+                    // Import CSV (unchanged)
                     DropdownMenuItem(
                         text = { Text("Import CSV") },
-                        leadingIcon = { Icon(Icons.Filled.Upload, contentDescription = null) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Filled.Upload,
+                                contentDescription = null
+                            )
+                        },
                         onClick = {
                             menuOpen = false
                             onImport()
                         }
                     )
+
+                    // Existing: actual history lookup by date
                     DropdownMenuItem(
                         text = { Text("Lookup by Date") },
-                        leadingIcon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Filled.CalendarMonth,
+                                contentDescription = null
+                            )
+                        },
                         onClick = {
                             menuOpen = false
                             onLookupByDate()
+                        }
+                    )
+
+                    // NEW: prediction flow entry point
+                    DropdownMenuItem(
+                        text = { Text("Predict by Date") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Filled.CalendarMonth,
+                                contentDescription = null
+                            )
+                        },
+                        onClick = {
+                            menuOpen = false
+                            onPredictByDate()
                         }
                     )
                 }
             }
         )
 
-
         // Match the other screens with a thick divider under the bar
         ScreenDividers.Thick()
-
     }
 }

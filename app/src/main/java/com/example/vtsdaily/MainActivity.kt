@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
                 var driversAdd by remember { mutableStateOf<() -> Unit>({}) }
                 var driversImport by remember { mutableStateOf<() -> Unit>({}) }
                 var lookupByDateAction by remember { mutableStateOf<() -> Unit>({}) }
+                var lookupPredictAction by remember { mutableStateOf<() -> Unit>({}) }
                 var lookupImportAction by remember { mutableStateOf<() -> Unit>({}) }
 
                 // Lookup handoff
@@ -126,6 +127,7 @@ class MainActivity : ComponentActivity() {
                             1 -> PassengerLookupTopBarCustom(
                                 title = "Passenger Lookup",
                                 onLookupByDate = { lookupByDateAction() },
+                                onPredictByDate = { lookupPredictAction() },
                                 onImport = { lookupImportAction() }
                             )
                             2 -> DriversTopBarCustom(
@@ -228,8 +230,9 @@ class MainActivity : ComponentActivity() {
                                 ScreenDividers.Thick()
                             }
                             1 -> PassengerLookupScreen(
-                                registerActions = { onLookupByDate, onImport ->
+                                registerActions = { onLookupByDate, onPredictByDate, onImport ->
                                     lookupByDateAction = onLookupByDate
+                                    lookupPredictAction = onPredictByDate
                                     lookupImportAction = onImport
                                 },
                                 registerSetQuery = { setter ->
