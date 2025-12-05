@@ -62,7 +62,13 @@ val RowStripe = Color(0xFFF7F5FA)
 /** Content-only screen (MainActivity owns the Scaffold/topBar) */
 @Composable
 fun ContactsScreen(
-    registerActions: ((onAdd: () -> Unit, onBackup: () -> Unit) -> Unit)? = null
+    registerActions: ((
+        onAdd: () -> Unit,
+        onBackup: () -> Unit,
+        onRestore: () -> Unit,
+        onImportCsv: () -> Unit,
+        onImportJson: () -> Unit
+    ) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
@@ -72,7 +78,8 @@ fun ContactsScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // File pickers (for existing import actions)
+    // --- IMPORT PICKERS (CSV + JSON merge/import) ---
+
     val csvPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
@@ -91,7 +98,8 @@ fun ContactsScreen(
             }
         }
     )
-    val jsonPicker = rememberLauncherForActivityResult(
+
+    val jsonImportPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
             if (uri != null) {
@@ -110,7 +118,8 @@ fun ContactsScreen(
         }
     )
 
-    // Backup: let user choose a file/location and write all contacts as JSON
+    // --- BACKUP (save all contacts to external JSON) ---
+
     val backupLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri: Uri? ->
@@ -118,7 +127,6 @@ fun ContactsScreen(
                 scope.launch {
                     val result = withContext(Dispatchers.IO) {
                         runCatching {
-                            // Build a simple JSON array of contacts
                             val jsonArray = org.json.JSONArray()
                             contacts.forEach { c ->
                                 val obj = org.json.JSONObject()
@@ -131,39 +139,123 @@ fun ContactsScreen(
                                 requireNotNull(out) { "Unable to open backup file for writing." }
                                 out.write(jsonArray.toString(2).toByteArray())
                             }
+
+                            contacts.size // return count for snackbar
                         }
                     }
 
                     snackbar.showSnackbar(
-                        if (result.isSuccess) "Contacts backup saved"
-                        else "Backup failed: ${
-                            result.exceptionOrNull()?.message ?: "unknown error"
-                        }"
+                        if (result.isSuccess) {
+                            "Contacts backup saved (${result.getOrNull()} contacts)"
+                        } else {
+                            "Backup failed: ${
+                                result.exceptionOrNull()?.message ?: "unknown error"
+                            }"
+                        }
                     )
                 }
-            } else {
-                // user cancelled – no snackbar needed, but you could add one if you like
+            }
+        }
+    )
+
+    // --- RESTORE (load backup JSON and replace the list) ---
+
+    val restoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            if (uri != null) {
+                scope.launch {
+                    val result = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val text = appContext.contentResolver
+                                .openInputStream(uri)
+                                ?.bufferedReader()
+                                ?.use { it.readText() }
+                                ?: "[]"
+
+                            val jsonArray = org.json.JSONArray(text)
+                            val restored = mutableListOf<ImportantContact>()
+
+                            for (i in 0 until jsonArray.length()) {
+                                val obj = jsonArray.getJSONObject(i)
+                                val name = obj.optString("name", "").trim()
+                                val phone = obj.optString("phone", "").trim()
+                                if (name.isNotEmpty()) {
+                                    restored.add(ImportantContact(name = name, phone = phone))
+                                }
+                            }
+
+                            // Replace existing contacts with restored set
+                            val current = ImportantContactStore.load(appContext)
+
+                            // Delete any current contact NOT in restored
+                            current.forEach { cur ->
+                                if (restored.none {
+                                        it.name.equals(cur.name, ignoreCase = true) &&
+                                                it.phone == cur.phone
+                                    }
+                                ) {
+                                    ImportantContactStore.delete(appContext, cur.name, cur.phone)
+                                }
+                            }
+
+                            // Upsert all restored contacts
+                            restored.forEach { ImportantContactStore.upsert(appContext, it) }
+
+                            restored.size
+                        }
+                    }
+
+                    contacts = ImportantContactStore.load(appContext)
+
+                    snackbar.showSnackbar(
+                        if (result.isSuccess) {
+                            "Restore complete (${result.getOrNull()} contacts)"
+                        } else {
+                            "Restore failed: ${
+                                result.exceptionOrNull()?.message ?: "unknown error"
+                            }"
+                        }
+                    )
+                }
             }
         }
     )
 
     // --- Actions exposed to MainActivity / top bar ---
 
-    // Add = open dialog with blank contact
     val onAddClicked: () -> Unit = {
         editing = ImportantContact(name = "", phone = "")
     }
 
-    // Backup = launch CreateDocument picker
     val onBackupClicked: () -> Unit = {
         backupLauncher.launch("contacts-backup.json")
     }
 
-    LaunchedEffect(Unit) {
-        registerActions?.invoke(onAddClicked, onBackupClicked)
+    val onRestoreClicked: () -> Unit = {
+        restoreLauncher.launch("application/json")
     }
 
-    // BODY
+    val onImportCsvClicked: () -> Unit = {
+        csvPicker.launch("text/*")
+    }
+
+    val onImportJsonClicked: () -> Unit = {
+        jsonImportPicker.launch("application/json")
+    }
+
+    LaunchedEffect(Unit) {
+        registerActions?.invoke(
+            onAddClicked,
+            onBackupClicked,
+            onRestoreClicked,
+            onImportCsvClicked,
+            onImportJsonClicked
+        )
+    }
+
+    // --- BODY (unchanged) ---
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.height(6.dp))
@@ -208,7 +300,6 @@ fun ContactsScreen(
         )
     }
 
-    // Add/Edit dialog
     editing?.let {
         AddEditContactDialog(
             initial = it,

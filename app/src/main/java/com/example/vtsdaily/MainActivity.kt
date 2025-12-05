@@ -83,9 +83,10 @@ class MainActivity : ComponentActivity() {
                 var lookupImportAction by remember { mutableStateOf<() -> Unit>({}) }
                 var contactsAdd by remember { mutableStateOf<() -> Unit>({}) }
                 var contactsBackup by remember { mutableStateOf<() -> Unit>({}) }
-              //  var contactsRestore by remember { mutableStateOf<() -> Unit>({}) }
-              //  var contactsImportCsv by remember { mutableStateOf<() -> Unit>({}) }
-              //  var contactsImportJson by remember { mutableStateOf<() -> Unit>({}) }
+                var contactsRestore by remember { mutableStateOf<() -> Unit>({}) }
+                var contactsImportCsv by remember { mutableStateOf<() -> Unit>({}) }
+                var contactsImportJson by remember { mutableStateOf<() -> Unit>({}) }
+
 
 
                 // Lookup handoff
@@ -145,9 +146,9 @@ class MainActivity : ComponentActivity() {
                                 title = "Contacts",
                                 onAdd = { contactsAdd() },
                                 onBackup = { contactsBackup() },
-                                onRestore = { /* TODO: restore */ },
-                                onImportCsv = { /* TODO: import CSV */ },
-                                onImportJson = { /* TODO: import JSON */ }
+                                onRestore = { contactsRestore() },
+                                onImportCsv = { contactsImportCsv() },
+                                onImportJson = { contactsImportJson() }
                             )
                         }
                     },
@@ -257,11 +258,15 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                             3 -> ContactsScreen(
-                                registerActions = { onAdd, onBackup ->
+                                registerActions = { onAdd, onBackup, onRestore, onImportCsv, onImportJson ->
                                     contactsAdd = onAdd
                                     contactsBackup = onBackup
+                                    contactsRestore = onRestore
+                                    contactsImportCsv = onImportCsv
+                                    contactsImportJson = onImportJson
                                 }
                             )
+
                         }
                     }
                 }
