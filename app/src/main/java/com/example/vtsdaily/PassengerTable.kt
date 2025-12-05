@@ -26,6 +26,7 @@ import java.time.LocalDate
 import jxl.Workbook
 import java.io.File
 import android.os.Environment
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Search
 import java.time.format.DateTimeFormatter
 import androidx.compose.material3.AlertDialog  // ✅ Material 3 - correct
@@ -44,6 +45,55 @@ fun ActionButton(label: String, onClick: () -> Unit) {
         Text(label)
     }
 }
+
+@Composable
+fun PassengerContactDialog(
+    name: String,
+    phone: String,
+    onCall: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.headlineLarge,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        text = {
+            if (phone.isNotBlank()) {
+                Text(
+                    text = phone,
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                Text(
+                    text = "No phone on file",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        },
+        confirmButton = {
+            if (phone.isNotBlank()) {
+                TextButton(onClick = {
+                    onCall()
+                    onDismiss()
+                }) {
+                    Text("Call")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -144,6 +194,31 @@ fun PassengerTable(
             ) {
                 Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
 
+                    var showContactDialog by remember { mutableStateOf(false) }
+
+                    if (showContactDialog) {
+                        PassengerContactDialog(
+                            name = passenger.name + reasonText,
+                            phone = passenger.phone,
+                            onCall = {
+                                if (passenger.phone.isNotBlank()) {
+                                    val intent = Intent(
+                                        Intent.ACTION_DIAL,
+                                        Uri.parse("tel:${passenger.phone}")
+                                    )
+                                    context.startActivity(intent)
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "No phone number available",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            onDismiss = { showContactDialog = false }
+                        )
+                    }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -184,7 +259,7 @@ fun PassengerTable(
                                                 ).show()
                                             }
                                         }
-                                        // 🔹 NEW: allow reinstatement from COMPLETED via long-press
+                                        // allow reinstatement from COMPLETED via long-press
                                         TripViewMode.COMPLETED -> {
                                             if (scheduleDate == LocalDate.now()) {
                                                 selectedPassenger = passenger
@@ -218,9 +293,15 @@ fun PassengerTable(
                         Text(
                             text = passenger.name + reasonText,
                             style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier
                                 .weight(1f)
                                 .alignByBaseline()
+                                .clickable {
+                                    // Show big readable name/phone for office staff
+                                    showContactDialog = true
+                                }
                         )
 
                         // Phone column for Completed & Removed
@@ -235,6 +316,7 @@ fun PassengerTable(
                             )
                         }
                     }
+
 
                     Spacer(modifier = Modifier.height(1.dp))
 
