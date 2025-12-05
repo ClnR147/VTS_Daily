@@ -104,19 +104,83 @@ fun ContactsScreen(
         onResult = { uri: Uri? ->
             if (uri != null) {
                 scope.launch {
-                    val tmp = copyUriToCache(appContext, uri, "contacts_import.json")
-                    val report = withContext(Dispatchers.IO) {
-                        ImportantContactStore.importFromJsonFile(appContext, tmp)
+                    val result = withContext(Dispatchers.IO) {
+                        runCatching {
+                            // Read entire file as text
+                            val text = appContext.contentResolver
+                                .openInputStream(uri)
+                                ?.bufferedReader()
+                                ?.use { it.readText() }
+                                ?: throw IllegalArgumentException("Empty or unreadable file")
+
+                            // Expect an array of objects, each with name/phone
+                            val array = org.json.JSONArray(text)
+
+                            // Load current contacts once
+                            val current = ImportantContactStore.load(appContext).toMutableList()
+
+                            var added = 0
+                            var updated = 0
+
+                            for (i in 0 until array.length()) {
+                                val obj = array.getJSONObject(i)
+
+                                // Try several key spellings, just in case
+                                val rawName = when {
+                                    obj.has("name") && !obj.isNull("name") -> obj.get("name")
+                                    obj.has("Name") && !obj.isNull("Name") -> obj.get("Name")
+                                    else -> ""
+                                }.toString()
+
+                                val rawPhone = when {
+                                    obj.has("phone") && !obj.isNull("phone") -> obj.get("phone")
+                                    obj.has("Phone") && !obj.isNull("Phone") -> obj.get("Phone")
+                                    else -> ""
+                                }.toString()
+
+                                val name = rawName.trim()
+                                val phone = rawPhone.trim()
+
+                                // Skip entries with no name
+                                if (name.isBlank()) continue
+
+                                val contact = ImportantContact(name = name, phone = phone)
+
+                                val existingIndex = current.indexOfFirst {
+                                    it.name.equals(name, ignoreCase = true) && it.phone == phone
+                                }
+
+                                if (existingIndex >= 0) {
+                                    current[existingIndex] = contact
+                                    updated++
+                                } else {
+                                    current.add(contact)
+                                    added++
+                                }
+
+                                // Persist via store
+                                ImportantContactStore.upsert(appContext, contact)
+                            }
+
+                            // Return stats
+                            added to updated
+                        }
                     }
-                    contacts = ImportantContactStore.load(appContext)
-                    snackbar.showSnackbar(
-                        "JSON import: kept=${report.kept}, merged=${report.merged}, added=${report.added}, dropped=${report.dropped}" +
-                                if (report.errors.isNotEmpty()) " (${report.errors.first()})" else ""
-                    )
+
+                    if (result.isSuccess) {
+                        val (added, updated) = result.getOrDefault(0 to 0)
+                        contacts = ImportantContactStore.load(appContext)
+                        snackbar.showSnackbar("JSON import: added=$added, updated=$updated")
+                    } else {
+                        val msg = result.exceptionOrNull()?.message ?: "unsupported JSON format"
+                        snackbar.showSnackbar("JSON import failed: $msg")
+                    }
                 }
             }
         }
     )
+
+
 
     // --- BACKUP (save all contacts to external JSON) ---
 
