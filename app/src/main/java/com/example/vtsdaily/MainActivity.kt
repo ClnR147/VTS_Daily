@@ -81,6 +81,12 @@ class MainActivity : ComponentActivity() {
                 var lookupByDateAction by remember { mutableStateOf<() -> Unit>({}) }
                 var lookupPredictAction by remember { mutableStateOf<() -> Unit>({}) }
                 var lookupImportAction by remember { mutableStateOf<() -> Unit>({}) }
+                var contactsAdd by remember { mutableStateOf<() -> Unit>({}) }
+                var contactsBackup by remember { mutableStateOf<() -> Unit>({}) }
+              //  var contactsRestore by remember { mutableStateOf<() -> Unit>({}) }
+              //  var contactsImportCsv by remember { mutableStateOf<() -> Unit>({}) }
+              //  var contactsImportJson by remember { mutableStateOf<() -> Unit>({}) }
+
 
                 // Lookup handoff
                 var setLookupQuery by remember { mutableStateOf<(String) -> Unit>({}) }
@@ -137,11 +143,11 @@ class MainActivity : ComponentActivity() {
                             )
                             3 -> ContactsTopBarCustom(
                                 title = "Contacts",
-                                onAdd = { /* handled inside ContactsScreen */ },
-                                onBackup = { /* handled inside ContactsScreen */ },
-                                onRestore = { /* handled inside ContactsScreen */ },
-                                onImportCsv = { /* handled inside ContactsScreen */ },
-                                onImportJson = { /* handled inside ContactsScreen */ }
+                                onAdd = { contactsAdd() },
+                                onBackup = { contactsBackup() },
+                                onRestore = { /* TODO: restore */ },
+                                onImportCsv = { /* TODO: import CSV */ },
+                                onImportJson = { /* TODO: import JSON */ }
                             )
                         }
                     },
@@ -250,7 +256,12 @@ class MainActivity : ComponentActivity() {
                                     driversImport = importCb
                                 }
                             )
-                            3 -> ContactsScreen()
+                            3 -> ContactsScreen(
+                                registerActions = { onAdd, onBackup ->
+                                    contactsAdd = onAdd
+                                    contactsBackup = onBackup
+                                }
+                            )
                         }
                     }
                 }
