@@ -6,6 +6,8 @@ import com.android.build.api.artifact.SingleArtifact
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization") // ✅ add this
+
 }
 
 android {
@@ -89,6 +91,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.google.accompanist:accompanist-flowlayout:0.30.1")
     implementation("com.opencsv:opencsv:5.9")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
 
     // Tests
     testImplementation("junit:junit:4.13.2")

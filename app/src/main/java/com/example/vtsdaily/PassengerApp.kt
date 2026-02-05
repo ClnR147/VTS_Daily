@@ -46,7 +46,10 @@ import com.example.vtsdaily.ui.theme.VtsGreen
 private const val SHOW_ADD_TRIP = false
 
 @Composable
-fun PassengerApp(onLookupForName: (String) -> Unit) {
+fun PassengerApp(
+    onLookupForName: (String) -> Unit,
+    onDialerLaunched: () -> Unit
+) {
     val context = LocalContext.current
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 

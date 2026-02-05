@@ -26,6 +26,7 @@ import java.time.LocalDate
 import jxl.Workbook
 import java.io.File
 import android.os.Environment
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Search
 import java.time.format.DateTimeFormatter
@@ -34,6 +35,16 @@ import com.example.vtsdaily.ui.theme.ActionGreen
 import com.example.vtsdaily.ui.theme.CardHighlight
 import com.example.vtsdaily.ui.theme.FromGrey
 import com.example.vtsdaily.ui.theme.SubtleGrey
+import com.example.vtsdaily.notes.TripNote
+import com.example.vtsdaily.notes.TripNotesStore
+import com.example.vtsdaily.notes.buildTripKey
+import com.example.vtsdaily.notes.TripNoteDialog
+import com.example.vtsdaily.notes.TripNoteBadges
+import androidx.compose.material.icons.outlined.EditNote
+import androidx.core.net.toUri
+
+
+private var returnedFromDialer = false
 
 @Composable
 fun ActionButton(label: String, onClick: () -> Unit) {
@@ -106,15 +117,42 @@ fun PassengerTable(
     context: Context,
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit,
     onTripReinstated: (Passenger) -> Unit,
+    onDialerLaunched: () -> Unit,
     onLookupForName: (String) -> Unit = {}   // ← NEW
 ) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
     var tripBeingEdited by remember { mutableStateOf<Passenger?>(null) }
 
+    val tripNotesStore = remember { TripNotesStore(context) }
+
+    var tripNotesMap by remember(scheduleDate) {
+        mutableStateOf(tripNotesStore.load(scheduleDate.toString()))
+    }
+
+    var notePassenger by remember { mutableStateOf<Passenger?>(null) }
+    var noteTripKey by remember { mutableStateOf<String?>(null) }
+
+
+    fun tripKeyFor(p: Passenger): String {
+        return buildTripKey(
+            scheduleDateIso = scheduleDate.toString(),
+            passengerId = p.id,
+            name = p.name,
+            pickupAddress = p.pickupAddress,
+            dropoffAddress = p.dropoffAddress,
+            typeTime = p.typeTime
+        )
+    }
+
+    fun noteFor(p: Passenger): TripNote {
+        val key = tripKeyFor(p)
+        return tripNotesMap[key] ?: TripNote(tripKey = key)
+    }
+
     fun launchWazeNavigation(context: Context, address: String) {
         val encoded = Uri.encode(address)
-        val uri = Uri.parse("https://waze.com/ul?q=$encoded")
+        val uri = "https://waze.com/ul?q=$encoded".toUri()
         val intent = Intent(Intent.ACTION_VIEW, uri)
         try {
             context.startActivity(intent)
@@ -174,6 +212,44 @@ fun PassengerTable(
             .padding(top = if (viewMode == TripViewMode.REMOVED) 0.dp else 4.dp)
             .verticalScroll(rememberScrollState())
     ) {
+        // Trip Note dialog (ACTIVE edit)
+        val pNote = notePassenger
+        val kNote = noteTripKey
+        if (pNote != null && kNote != null) {
+            val initial = tripNotesMap[kNote] ?: TripNote(tripKey = kNote)
+
+            TripNoteDialog(
+                passengerName = pNote.name,
+                pickup = pNote.pickupAddress,
+                dropoff = pNote.dropoffAddress,
+                initial = initial,
+                onDismiss = {
+                    notePassenger = null
+                    noteTripKey = null
+                },
+                onSave = { updated ->
+                    try {
+                        val newMap = tripNotesMap.toMutableMap()
+                        newMap[updated.tripKey] = updated
+                        tripNotesMap = newMap
+
+                        tripNotesStore.save(scheduleDate.toString(), tripNotesMap)
+
+                        notePassenger = null
+                        noteTripKey = null
+                    } catch (e: Throwable) {
+                        Log.e("TripNotes", "FAILED saving trip notes for ${scheduleDate}", e)
+                        Toast.makeText(
+                            context,
+                            "Trip notes save failed: ${e.javaClass.simpleName}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            )
+        }
+
+
         visiblePassengers.forEach { passenger ->
             val labelColor = CardHighlight
             val passengerKey =
@@ -202,6 +278,7 @@ fun PassengerTable(
                             phone = passenger.phone,
                             onCall = {
                                 if (passenger.phone.isNotBlank()) {
+                                    returnedFromDialer = true
                                     val intent = Intent(
                                         Intent.ACTION_DIAL,
                                         Uri.parse("tel:${passenger.phone}")
@@ -317,6 +394,21 @@ fun PassengerTable(
                         }
                     }
 
+                    // <-- this closes the Row that contains typeTime + name (+ phone)
+
+                    // ✅ INSERT #4 RIGHT HERE
+                    val tripNote = noteFor(passenger)
+                    val hasAnyBadge =
+                        tripNote.flags != com.example.vtsdaily.notes.TripNoteFlags()
+
+                    if (hasAnyBadge) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        TripNoteBadges(
+                            flags = tripNote.flags,
+                            modifier = Modifier.padding(start = 132.dp) // aligns under name
+                        )
+                    }
+
 
                     Spacer(modifier = Modifier.height(1.dp))
 
@@ -375,6 +467,21 @@ fun PassengerTable(
                                 Icon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Lookup this passenger"
+                                )
+                            }
+                            Spacer(Modifier.width(6.dp))
+
+// NEW: notes button (ACTIVE only)
+                            IconButton(
+                                onClick = {
+                                    notePassenger = passenger
+                                    noteTripKey = tripKeyFor(passenger)
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.EditNote,
+                                    contentDescription = "Trip notes"
                                 )
                             }
 

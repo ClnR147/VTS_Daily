@@ -51,10 +51,18 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
 
+import androidx.compose.runtime.mutableIntStateOf
+
+
 // Subtle dark layer to push the scene toward medium-dark
 val darkScrim = Color.Black.copy(alpha = 0.06f) // tweak 0.04–0.10 to taste
 
 class MainActivity : ComponentActivity() {
+
+    // ✅ ADDED: flags used to stabilize return-from-dialer
+    private var returnedFromDialer = false
+    private val viewState = mutableIntStateOf(0)  // ✅ Activity-owned tab state
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,8 +78,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             VTSDailyTheme(dynamicColor = false) {
+
                 // 0 = Schedule, 1 = Lookup, 2 = Drivers, 3 = Contacts
-                var view by rememberSaveable { mutableIntStateOf(0) }
+                var view by viewState
+                // ✅ ADDED: expose safe navigation hook to Activity
                 val snackbar = remember { SnackbarHostState() }
                 val scope = rememberCoroutineScope()
 
@@ -87,8 +97,6 @@ class MainActivity : ComponentActivity() {
                 var contactsImportCsv by remember { mutableStateOf<() -> Unit>({}) }
                 var contactsImportJson by remember { mutableStateOf<() -> Unit>({}) }
 
-
-
                 // Lookup handoff
                 var setLookupQuery by remember { mutableStateOf<(String) -> Unit>({}) }
                 var pendingLookupName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -102,7 +110,6 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
-                // Gentle radial glow behind content
                 val glowGrad = Brush.radialGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
@@ -213,25 +220,24 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 ) { padding ->
-                    // Single parent container with padding & base gradient
                     Box(
                         Modifier
                             .fillMaxSize()
                             .background(baseGrad)
                             .padding(padding)
                     ) {
-                        // Backdrop layers (draw first = behind content)
                         Box(Modifier.fillMaxSize().background(glowGrad).alpha(0.85f))
                         Box(Modifier.fillMaxSize().background(darkScrim))
 
-                        // Content
                         when (view) {
                             0 -> Box(Modifier.fillMaxSize()) {
                                 PassengerApp(
                                     onLookupForName = { name ->
-                                        // Stash name, then switch to Lookup
                                         pendingLookupName = sanitizeName(name)
                                         view = 1
+                                    },
+                                    onDialerLaunched = {
+                                        returnedFromDialer = true
                                     }
                                 )
                                 ScreenDividers.Thick()
@@ -243,7 +249,6 @@ class MainActivity : ComponentActivity() {
                                     lookupImportAction = onImport
                                 },
                                 registerSetQuery = { setter ->
-                                    // Capture setter and immediately deliver any pending name
                                     setLookupQuery = setter
                                     pendingLookupName?.let {
                                         setter(it)
@@ -266,11 +271,22 @@ class MainActivity : ComponentActivity() {
                                     contactsImportJson = onImportJson
                                 }
                             )
-
                         }
                     }
                 }
             }
         }
     }
+
+    // ✅ ADDED: stabilize UI after returning from dialer
+    override fun onResume() {
+        super.onResume()
+
+        if (returnedFromDialer) {
+            returnedFromDialer = false
+            viewState.intValue = 0
+
+        }
+    }
 }
+

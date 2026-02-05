@@ -30,7 +30,9 @@ fun PassengerTableWithStaticHeader(
     onTripReinstated: (Passenger) -> Unit,
     schedulePassengers: List<Passenger>?,
     phoneBook: Map<String, String>,
-    onLookupForName: (String) -> Unit = {}   // NEW (default keeps other callers safe)
+    onDialerLaunched: () -> Unit = {},
+    onLookupForName: (String) -> Unit = {}
+// NEW (default keeps other callers safe)
 ) {
     Column(
         modifier = Modifier
@@ -93,7 +95,8 @@ fun PassengerTableWithStaticHeader(
             context = context,
             onTripRemoved = onTripRemoved,
             onTripReinstated = onTripReinstated,
-            onLookupForName = onLookupForName
+            onLookupForName = onLookupForName,
+            onDialerLaunched = onDialerLaunched
         )
     }
 }

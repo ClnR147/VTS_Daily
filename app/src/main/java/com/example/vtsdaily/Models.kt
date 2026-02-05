@@ -45,4 +45,9 @@ enum class TripViewMode {
     REMOVED
 }
 
+enum class AppMode {
+    REAL,
+    DEMO
+}
+
 
