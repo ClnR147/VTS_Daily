@@ -44,26 +44,33 @@ import jxl.Sheet
 import com.example.vtsdaily.ui.theme.VtsGreen
 
 private const val SHOW_ADD_TRIP = false
+private val SANDBOX_DATE: LocalDate = LocalDate.of(2099, 1, 1)
+
 
 @Composable
 fun PassengerApp(
     onLookupForName: (String) -> Unit,
     onDialerLaunched: () -> Unit
 ) {
+
     val context = LocalContext.current
     val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
     val defaultDate = getAvailableScheduleDates().firstOrNull() ?: LocalDate.now()
     var scheduleDate by rememberSaveable { mutableStateOf(defaultDate) }
+    var sandboxMode by rememberSaveable { mutableStateOf(false) }
+    val effectiveDate = if (sandboxMode) SANDBOX_DATE else scheduleDate
 
-    var baseSchedule by remember(scheduleDate) {
-        mutableStateOf(loadSchedule(context, scheduleDate))
+    var baseSchedule by remember(effectiveDate) {
+        mutableStateOf(loadSchedule(context, effectiveDate))
     }
+    val isTestDate = (scheduleDate == SANDBOX_DATE)
 
     val phoneBook = remember(baseSchedule) { buildPhoneBookFromSchedule(baseSchedule.passengers) }
-    var insertedPassengers by remember(scheduleDate) {
-        mutableStateOf(InsertedTripStore.loadInsertedTrips(context, scheduleDate))
+    var insertedPassengers by remember(effectiveDate) {
+        mutableStateOf(InsertedTripStore.loadInsertedTrips(context, effectiveDate))
     }
+
 
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
@@ -71,15 +78,18 @@ fun PassengerApp(
     var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
 
     val handleTripReinstated: (Passenger) -> Unit = { passenger ->
-        RemovedTripStore.removeRemovedTrip(context, scheduleDate, passenger)
-        baseSchedule = loadSchedule(context, scheduleDate)
-        insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
+        RemovedTripStore.removeRemovedTrip(context, effectiveDate, passenger)
+        baseSchedule = loadSchedule(context, effectiveDate)
+        insertedPassengers = InsertedTripStore.loadInsertedTrips(context, effectiveDate)
+
     }
+
+
 // Choose which list to show in the table:
 // - Active/Removed -> today's schedule (as before)
 // - Completed      -> the trips you marked completed (from CompletedTripStore), mapped to Passenger
     val passengersForTable = if (viewMode == TripViewMode.COMPLETED) {
-        CompletedTripStore.getCompletedTrips(context, scheduleDate).map { ct ->
+        CompletedTripStore.getCompletedTrips(context, effectiveDate).map { ct ->
             Passenger(
                 name = ct.name,
                 id = "", // not needed for display here
@@ -110,7 +120,8 @@ fun PassengerApp(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
+                text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")) +
+                        if (isTestDate) "  (TEST)" else "",
                 color = PrimaryPurple,
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier
@@ -184,20 +195,22 @@ fun PassengerApp(
             passengers = passengersForTable,
             insertedPassengers = insertedPassengers,
             setInsertedPassengers = { insertedPassengers = it },
-            scheduleDate = scheduleDate,
+            scheduleDate = effectiveDate,
             viewMode = viewMode,
             context = context,
             onTripRemoved = { removedPassenger, reason ->
                 "${removedPassenger.name}-${removedPassenger.pickupAddress}-${removedPassenger.dropoffAddress}-${removedPassenger.typeTime}-${scheduleDate.format(formatter)}"
                 when (reason) {
-                    TripRemovalReason.COMPLETED -> CompletedTripStore.addCompletedTrip(context, scheduleDate, removedPassenger)
+                    TripRemovalReason.COMPLETED ->
+                        CompletedTripStore.addCompletedTrip(context, effectiveDate, removedPassenger)
                     else -> {
-                        RemovedTripStore.addRemovedTrip(context, scheduleDate, removedPassenger, reason)
-                        InsertedTripStore.removeInsertedTrip(context, scheduleDate, removedPassenger)
+                        RemovedTripStore.addRemovedTrip(context, effectiveDate, removedPassenger, reason)
+                        InsertedTripStore.removeInsertedTrip(context, effectiveDate, removedPassenger)
                     }
                 }
-                baseSchedule = loadSchedule(context, scheduleDate)
-                insertedPassengers = InsertedTripStore.loadInsertedTrips(context, scheduleDate)
+                baseSchedule = loadSchedule(context, effectiveDate)
+                insertedPassengers = InsertedTripStore.loadInsertedTrips(context, effectiveDate)
+
             },
             onTripReinstated = handleTripReinstated,
 
@@ -253,7 +266,8 @@ fun PassengerApp(
                     onDismiss = { showInsertDialog = false },
                     onInsert = { newPassenger ->
                         insertedPassengers = insertedPassengers + newPassenger
-                        InsertedTripStore.addInsertedTrip(context, scheduleDate, newPassenger)
+                        InsertedTripStore.addInsertedTrip(context, effectiveDate, newPassenger)
+
                         showInsertDialog = false
                         scrollToBottom = true
                     }

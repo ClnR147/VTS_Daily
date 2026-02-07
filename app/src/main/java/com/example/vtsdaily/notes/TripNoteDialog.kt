@@ -3,11 +3,6 @@ package com.example.vtsdaily.notes
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.DirectionsCar
-import androidx.compose.material.icons.outlined.PhoneInTalk
-import androidx.compose.material.icons.outlined.PinDrop
-import androidx.compose.material.icons.outlined.WheelchairPickup
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -46,12 +41,16 @@ fun TripNoteDialog(
                     FlagChip("Call", flags.callOnArrival) { flags = flags.copy(callOnArrival = it) }
                     FlagChip("Gate", flags.hasGateCode) { flags = flags.copy(hasGateCode = it) }
                     FlagChip("Ramp", flags.needsRamp) { flags = flags.copy(needsRamp = it) }
+                    FlagChip("Blind", flags.blind) { flags = flags.copy(blind = it) }
                     FlagChip("Lift", flags.needsLift) { flags = flags.copy(needsLift = it) }
                     FlagChip("Cane", flags.usesCane) { flags = flags.copy(usesCane = it) }
                     FlagChip("Car seat", flags.bringCarSeat) { flags = flags.copy(bringCarSeat = it) }
                     FlagChip("Front", flags.pickupFront) { flags = flags.copy(pickupFront = it) }
                     FlagChip("Back", flags.pickupBack) { flags = flags.copy(pickupBack = it) }
                     FlagChip("Alley", flags.pickupAlley) { flags = flags.copy(pickupAlley = it) }
+                    FlagChip("Pets", flags.pets) { flags = flags.copy(pets = it) }
+
+
                 }
 
                 Spacer(Modifier.height(10.dp))

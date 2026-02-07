@@ -173,7 +173,7 @@ fun PassengerTable(
             .filter { CompletedTripStore.isTripCompleted(context, scheduleDate, it) }
             // 🔹 NEW: if phone missing, backfill from XLS by name-only (trim at '(' or '+', lowercase)
             .map { p ->
-                if (p.phone.isNullOrBlank()) {
+                if (p.phone.isBlank()) {
                     val key = cleanedName(p.name)
                     val lookedUp = namePhones[key]
                     if (!lookedUp.isNullOrBlank()) p.copy(phone = lookedUp) else p
@@ -238,7 +238,7 @@ fun PassengerTable(
                         notePassenger = null
                         noteTripKey = null
                     } catch (e: Throwable) {
-                        Log.e("TripNotes", "FAILED saving trip notes for ${scheduleDate}", e)
+                        Log.e("TripNotes", "FAILED saving trip notes for $scheduleDate", e)
                         Toast.makeText(
                             context,
                             "Trip notes save failed: ${e.javaClass.simpleName}",
@@ -281,7 +281,7 @@ fun PassengerTable(
                                     returnedFromDialer = true
                                     val intent = Intent(
                                         Intent.ACTION_DIAL,
-                                        Uri.parse("tel:${passenger.phone}")
+                                        "tel:${passenger.phone}".toUri()
                                     )
                                     context.startActivity(intent)
                                 } else {
@@ -309,7 +309,7 @@ fun PassengerTable(
                                             if (passenger.phone.isNotBlank()) {
                                                 val intent = Intent(
                                                     Intent.ACTION_DIAL,
-                                                    Uri.parse("tel:${passenger.phone}")
+                                                    "tel:${passenger.phone}".toUri()
                                                 )
                                                 context.startActivity(intent)
                                             } else {
@@ -323,22 +323,15 @@ fun PassengerTable(
                                     }
                                 },
                                 onLongClick = {
+                                    val isSandboxDate = scheduleDate.year >= 2099
+                                    val allowReinstate = (scheduleDate == LocalDate.now()) || isSandboxDate
+
                                     when (viewMode) {
                                         TripViewMode.ACTIVE -> selectedPassenger = passenger
-                                        TripViewMode.REMOVED -> {
-                                            if (scheduleDate == LocalDate.now()) {
-                                                selectedPassenger = passenger
-                                            } else {
-                                                Toast.makeText(
-                                                    context,
-                                                    "Reinstatements are only allowed for today's schedule.",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
-                                        }
-                                        // allow reinstatement from COMPLETED via long-press
+
+                                        TripViewMode.REMOVED,
                                         TripViewMode.COMPLETED -> {
-                                            if (scheduleDate == LocalDate.now()) {
+                                            if (allowReinstate) {
                                                 selectedPassenger = passenger
                                             } else {
                                                 Toast.makeText(
@@ -350,6 +343,7 @@ fun PassengerTable(
                                         }
                                     }
                                 }
+
                             ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -624,7 +618,7 @@ fun PassengerTable(
 // Trim at '(' or '+', then lowercase and trim spaces.
 private fun cleanedName(raw: String): String {
     val cut = raw.indexOfAny(charArrayOf('(', '+'))
-    val base = if (cut >= 0) raw.substring(0, cut) else raw
+    val base = if (cut >= 0) raw.take(cut) else raw
     return base.trim().lowercase()
 }
 

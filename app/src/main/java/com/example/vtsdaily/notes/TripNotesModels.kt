@@ -9,9 +9,11 @@ data class TripNoteFlags(
     val callOnArrival: Boolean = false,
     val hasGateCode: Boolean = false,
     val needsRamp: Boolean = false,
+    val blind: Boolean = false,
     val needsLift: Boolean = false,
     val usesCane: Boolean = false,
     val bringCarSeat: Boolean = false,
+    val pets: Boolean = false,
 
     // pickup spot hints
     val pickupFront: Boolean = false,
