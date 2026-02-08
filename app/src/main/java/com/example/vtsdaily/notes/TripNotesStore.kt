@@ -26,7 +26,7 @@ class TripNotesStore(private val context: Context) {
         return try {
             val list = json.decodeFromString<List<TripNote>>(f.readText())
             list
-                .filter { it.hasMeaningfulContent() }          // 🔥 drop empty notes
+                .filter { it.shouldPersist() }          // 🔥 drop empty notes
                 .associateBy { it.tripKey }
                 .toMutableMap()
         } catch (_: Exception) {
@@ -38,7 +38,7 @@ class TripNotesStore(private val context: Context) {
         val f = notesFile(dateIso)
 
         val list = map.values
-            .filter { it.hasMeaningfulContent() }              // 🔥 never persist empties
+            .filter { it.shouldPersist() }              // 🔥 never persist empties
             .sortedBy { it.tripKey }
 
         if (list.isEmpty()) {
@@ -58,7 +58,7 @@ class TripNotesStore(private val context: Context) {
 
         val map = load(dateIso)
 
-        if (!note.hasMeaningfulContent()) {
+        if (!note.shouldPersist()) {
             map.remove(note.tripKey)
         } else {
             map[note.tripKey] = note.copy(lastUpdatedEpochMs = System.currentTimeMillis())

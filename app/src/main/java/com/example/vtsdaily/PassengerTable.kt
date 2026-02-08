@@ -44,6 +44,7 @@ import com.example.vtsdaily.notes.TripNoteBadges
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.core.net.toUri
 import com.example.vtsdaily.notes.TripNoteFlags
+import com.example.vtsdaily.notes.shouldPersist
 
 
 private var returnedFromDialer = false
@@ -237,7 +238,7 @@ fun PassengerTable(
                 },
                 onSave = { updated ->
                     // Contract: note existence is ONLY gateCode or noteText
-                    val isEmpty = updated.gateCode.isBlank() && updated.noteText.isBlank()
+                    val isEmpty = !updated.shouldPersist()
 
                     if (isEmpty) {
                         // Remove from in-memory map immediately (so indicator/UI updates now)

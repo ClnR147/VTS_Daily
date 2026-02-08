@@ -37,7 +37,7 @@ private fun TripNote.normalized(): TripNote =
         noteText = noteText.trim()
     )
 
-private fun TripNoteFlags.hasAnyTrue(): Boolean =
+fun TripNoteFlags.hasAnyTrue(): Boolean =
     callOnArrival ||
             hasGateCode ||
             needsRamp ||
@@ -49,6 +49,17 @@ private fun TripNoteFlags.hasAnyTrue(): Boolean =
             pickupFront ||
             pickupBack ||
             pickupAlley
+
+// Save-worthy (keeps flags-only notes)
+fun TripNote.shouldPersist(): Boolean =
+    gateCode.trim().isNotBlank() ||
+            noteText.trim().isNotBlank() ||
+            flags.hasAnyTrue()
+
+// Notes-exist indicator (if you still want this to be gate/text only)
+fun TripNote.hasNoteTextOrGate(): Boolean =
+    gateCode.trim().isNotBlank() || noteText.trim().isNotBlank()
+
 
 fun TripNote.hasMeaningfulContent(): Boolean =
     gateCode.trim().isNotBlank() || noteText.trim().isNotBlank()
