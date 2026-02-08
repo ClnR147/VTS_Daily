@@ -80,7 +80,8 @@ fun TripNoteDialog(
                     val updated = initial.copy(
                         flags = flags.copy(
                             // keep hasGateCode in sync if they typed something
-                            hasGateCode = flags.hasGateCode || gateCode.isNotBlank()
+                            hasGateCode = gateCode.trim().isNotBlank()
+
                         ),
                         gateCode = gateCode.trim(),
                         noteText = noteText.trim(),

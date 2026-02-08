@@ -24,11 +24,35 @@ data class TripNoteFlags(
 @Serializable
 data class TripNote(
     val tripKey: String,
+    val matchKey: String = "",   // ← passenger.id
     val flags: TripNoteFlags = TripNoteFlags(),
-    val gateCode: String = "",         // optional: store the actual code
+    val gateCode: String = "",
     val noteText: String = "",
     val lastUpdatedEpochMs: Long = 0L
 )
+
+private fun TripNote.normalized(): TripNote =
+    copy(
+        gateCode = gateCode.trim(),
+        noteText = noteText.trim()
+    )
+
+private fun TripNoteFlags.hasAnyTrue(): Boolean =
+    callOnArrival ||
+            hasGateCode ||
+            needsRamp ||
+            blind ||
+            needsLift ||
+            usesCane ||
+            bringCarSeat ||
+            pets ||
+            pickupFront ||
+            pickupBack ||
+            pickupAlley
+
+fun TripNote.hasMeaningfulContent(): Boolean =
+    gateCode.trim().isNotBlank() || noteText.trim().isNotBlank()
+
 
 /**
  * Build a stable key for a trip.

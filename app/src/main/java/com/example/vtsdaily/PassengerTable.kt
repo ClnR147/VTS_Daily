@@ -28,6 +28,7 @@ import java.io.File
 import android.os.Environment
 import android.util.Log
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Search
 import java.time.format.DateTimeFormatter
 import androidx.compose.material3.AlertDialog  // ✅ Material 3 - correct
@@ -42,6 +43,7 @@ import com.example.vtsdaily.notes.TripNoteDialog
 import com.example.vtsdaily.notes.TripNoteBadges
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.core.net.toUri
+import com.example.vtsdaily.notes.TripNoteFlags
 
 
 private var returnedFromDialer = false
@@ -147,8 +149,14 @@ fun PassengerTable(
 
     fun noteFor(p: Passenger): TripNote {
         val key = tripKeyFor(p)
-        return tripNotesMap[key] ?: TripNote(tripKey = key)
+
+        return tripNotesMap[key]
+            ?: TripNote(
+                tripKey = key,
+                matchKey = p.id   // ✅ anchor copy-forward on passenger ID
+            )
     }
+
 
     fun launchWazeNavigation(context: Context, address: String) {
         val encoded = Uri.encode(address)
@@ -228,24 +236,32 @@ fun PassengerTable(
                     noteTripKey = null
                 },
                 onSave = { updated ->
-                    try {
-                        val newMap = tripNotesMap.toMutableMap()
-                        newMap[updated.tripKey] = updated
-                        tripNotesMap = newMap
+                    // Contract: note existence is ONLY gateCode or noteText
+                    val isEmpty = updated.gateCode.isBlank() && updated.noteText.isBlank()
 
-                        tripNotesStore.save(scheduleDate.toString(), tripNotesMap)
+                    if (isEmpty) {
+                        // Remove from in-memory map immediately (so indicator/UI updates now)
+                        tripNotesMap = tripNotesMap.toMutableMap().apply {
+                            remove(updated.tripKey)
+                        }
 
-                        notePassenger = null
-                        noteTripKey = null
-                    } catch (e: Throwable) {
-                        Log.e("TripNotes", "FAILED saving trip notes for $scheduleDate", e)
-                        Toast.makeText(
-                            context,
-                            "Trip notes save failed: ${e.javaClass.simpleName}",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        // Persist deletion via store rule
+                        tripNotesStore.upsertOrRemove(scheduleDate.toString(), updated)
+                    } else {
+                        // Keep/update in memory immediately
+                        tripNotesMap = tripNotesMap.toMutableMap().apply {
+                            put(updated.tripKey, updated)
+                        }
+
+                        // Persist save via store rule
+                        tripNotesStore.upsertOrRemove(scheduleDate.toString(), updated)
                     }
+
+                    notePassenger = null
+                    noteTripKey = null
                 }
+
+
             )
         }
 
@@ -466,18 +482,91 @@ fun PassengerTable(
                             Spacer(Modifier.width(6.dp))
 
 // NEW: notes button (ACTIVE only)
-                            IconButton(
-                                onClick = {
-                                    notePassenger = passenger
-                                    noteTripKey = tripKeyFor(passenger)
-                                },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.EditNote,
-                                    contentDescription = "Trip notes"
-                                )
+                            val key = tripKeyFor(passenger)
+                            val note = tripNotesMap[key]
+
+                            fun TripNoteFlags.hasAnyTrue(): Boolean =
+                                callOnArrival ||
+                                        hasGateCode ||
+                                        needsRamp ||
+                                        blind ||
+                                        needsLift ||
+                                        usesCane ||
+                                        bringCarSeat ||
+                                        pets ||
+                                        pickupFront ||
+                                        pickupBack ||
+                                        pickupAlley
+
+                            // Meaningful means: gate code or note text ONLY (flags do not count)
+                            fun TripNote.hasMeaningfulContent(): Boolean =
+                                gateCode.trim().isNotBlank() || noteText.trim().isNotBlank()
+
+// Passenger-level "exists" indicator:
+// show if we have a meaningful note loaded for this passenger today,
+// OR we already prefetched/copied one into today's map.
+                                val hasMeaningfulToday = note?.hasMeaningfulContent() == true
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+
+                                // ✅ Add/Edit icon (always available)
+                                IconButton(
+                                    onClick = {
+                                        val key = tripKeyFor(passenger)
+
+                                        // Current note for today row (if any), else empty shell
+                                        val current = tripNotesMap[key]
+                                            ?: TripNote(
+                                                tripKey = key,
+                                                matchKey = passenger.id
+                                            )
+
+                                        // Passenger-level copy-forward:
+                                        // If today's current has no meaningful text/gate, try to prefill from most recent meaningful note.
+                                        if (!current.hasMeaningfulContent()) {
+                                            val prior = tripNotesStore.findMostRecentTextForPassenger(
+                                                passengerId = passenger.id,
+                                                excludeDateIso = scheduleDate.toString()
+                                            )
+
+                                            if (prior != null) {
+                                                val prefilled = current.copy(
+                                                    gateCode = prior.gateCode,
+                                                    noteText = prior.noteText
+                                                    // flags: keep whatever today's current has (or leave as-is)
+                                                )
+
+                                                // Put into map so dialog opens prefilled (not saved yet)
+                                                tripNotesMap = tripNotesMap.toMutableMap().apply {
+                                                    put(key, prefilled)
+                                                }
+                                            } else {
+                                                // Ensure an entry exists so dialog can edit and save
+                                                tripNotesMap = tripNotesMap.toMutableMap().apply {
+                                                    put(key, current)
+                                                }
+                                            }
+                                        } else {
+                                            // Ensure today's note is present in map for editing
+                                            tripNotesMap = tripNotesMap.toMutableMap().apply {
+                                                put(key, current)
+                                            }
+                                        }
+
+                                        notePassenger = passenger
+                                        noteTripKey = key
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.EditNote,
+                                        contentDescription = "Add/Edit notes"
+                                    )
+                                }
                             }
+
+
+
 
                             Spacer(Modifier.width(6.dp))
 

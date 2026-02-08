@@ -64,7 +64,7 @@ fun PassengerApp(
     var baseSchedule by remember(effectiveDate) {
         mutableStateOf(loadSchedule(context, effectiveDate))
     }
-    val isTestDate = (scheduleDate == SANDBOX_DATE)
+    val isTestDate = scheduleDate.year >= 2099
 
     val phoneBook = remember(baseSchedule) { buildPhoneBookFromSchedule(baseSchedule.passengers) }
     var insertedPassengers by remember(effectiveDate) {
