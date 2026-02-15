@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.Upgrade
 import androidx.compose.material.icons.outlined.WheelchairPickup
 import androidx.compose.material.icons.outlined.Blind
 import androidx.compose.material.icons.outlined.Pets
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -56,6 +57,9 @@ fun TripNoteBadges(flags: TripNoteFlags, modifier: Modifier = Modifier) {
             Icon(Icons.Outlined.AccessibilityNew, contentDescription = "Uses cane", tint = tint, modifier = Modifier.size(18.dp))
         }
 
+        if (flags.person) {
+            Icon(Icons.Outlined.Person, contentDescription = "Attendant", tint = tint, modifier = Modifier.size(18.dp))
+        }
         // equipment
         if (flags.bringCarSeat) {
             Icon(Icons.Outlined.ChildCare, contentDescription = "Bring car seat", tint = tint, modifier = Modifier.size(18.dp))

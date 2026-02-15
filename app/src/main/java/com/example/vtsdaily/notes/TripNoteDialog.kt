@@ -49,6 +49,8 @@ fun TripNoteDialog(
                     FlagChip("Back", flags.pickupBack) { flags = flags.copy(pickupBack = it) }
                     FlagChip("Alley", flags.pickupAlley) { flags = flags.copy(pickupAlley = it) }
                     FlagChip("Pets", flags.pets) { flags = flags.copy(pets = it) }
+                    FlagChip("Person", flags.person) { flags = flags.copy(person = it) }
+
 
 
                 }

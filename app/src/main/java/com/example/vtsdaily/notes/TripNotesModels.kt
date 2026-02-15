@@ -14,6 +14,7 @@ data class TripNoteFlags(
     val usesCane: Boolean = false,
     val bringCarSeat: Boolean = false,
     val pets: Boolean = false,
+    val person: Boolean = false,
 
     // pickup spot hints
     val pickupFront: Boolean = false,
@@ -48,7 +49,8 @@ fun TripNoteFlags.hasAnyTrue(): Boolean =
             pets ||
             pickupFront ||
             pickupBack ||
-            pickupAlley
+            pickupAlley ||
+            person
 
 // Save-worthy (keeps flags-only notes)
 fun TripNote.shouldPersist(): Boolean =

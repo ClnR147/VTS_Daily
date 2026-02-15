@@ -47,11 +47,13 @@ import androidx.compose.material3.ButtonDefaults
 // Icons
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
 
 import androidx.compose.runtime.mutableIntStateOf
+import com.example.vtsdaily.business.BusinessContactsScreen
 
 
 // Subtle dark layer to push the scene toward medium-dark
@@ -96,6 +98,8 @@ class MainActivity : ComponentActivity() {
                 var contactsRestore by remember { mutableStateOf<() -> Unit>({}) }
                 var contactsImportCsv by remember { mutableStateOf<() -> Unit>({}) }
                 var contactsImportJson by remember { mutableStateOf<() -> Unit>({}) }
+                var businessAdd by remember { mutableStateOf<(() -> Unit)?>(null) }
+
 
                 // Lookup handoff
                 var setLookupQuery by remember { mutableStateOf<(String) -> Unit>({}) }
@@ -157,6 +161,13 @@ class MainActivity : ComponentActivity() {
                                 onImportCsv = { contactsImportCsv() },
                                 onImportJson = { contactsImportJson() }
                             )
+
+                            4 -> DriversTopBarCustom(
+                                title = "Clinics",
+                                onAdd = { businessAdd?.invoke() },
+                                onImport = { } // no-op for now
+                            )
+
                         }
                     },
 
@@ -193,6 +204,14 @@ class MainActivity : ComponentActivity() {
                                 label = { Text("Contacts") },
                                 alwaysShowLabel = true
                             )
+                            NavigationBarItem(
+                                selected = view == 4,
+                                onClick = { view = 4 },
+                                icon = { Icon(Icons.Filled.MedicalServices, contentDescription = "Clinics") },
+                                label = { Text("Clinics") },
+                                alwaysShowLabel = true
+                            )
+
                         }
                     },
 
@@ -271,6 +290,12 @@ class MainActivity : ComponentActivity() {
                                     contactsImportJson = onImportJson
                                 }
                             )
+                            4 -> BusinessContactsScreen(
+                                registerActions = { onAdd ->
+                                    businessAdd = onAdd
+                                }
+                            )
+
                         }
                     }
                 }

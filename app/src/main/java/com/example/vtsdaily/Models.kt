@@ -19,7 +19,6 @@ data class CompletedTrip(
     val phone: String? = null   // NEW
 )
 
-
 data class Schedule(
     val date: String,
     val passengers: List<Passenger>
