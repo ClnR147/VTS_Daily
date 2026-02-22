@@ -24,34 +24,209 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.vtsdaily.ui.components.ScreenDividers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.core.net.toUri
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+
+
 
 val BusinessRowStripe = androidx.compose.ui.graphics.Color(0xFFF7F5FA)
 
 /** Content-only screen (MainActivity owns the Scaffold/topBar) */
+// Change signature to include export callback
 @Composable
 fun BusinessContactsScreen(
-    registerActions: ((onAdd: () -> Unit) -> Unit)? = null
+    registerActions: ((onAdd: () -> Unit, onImportJson: () -> Unit, onExport: () -> Unit) -> Unit)? = null
 ) {
+    // existing state...
     val context = LocalContext.current
     val appContext = context.applicationContext
-
     var contacts by remember { mutableStateOf(BusinessContactStore.load(appContext)) }
     var editing by remember { mutableStateOf<BusinessContact?>(null) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // --- JSON IMPORT PICKER (existing) ---
+    // ... your existing jsonImportPicker here ...
+    val jsonImportPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            if (uri != null) {
+                scope.launch {
+                    val result = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val text = appContext.contentResolver
+                                .openInputStream(uri)
+                                ?.bufferedReader()
+                                ?.use { it.readText() }
+                                ?: "[]"
+
+                            val array = org.json.JSONArray(text)
+
+                            // Load current once
+                            val current = BusinessContactStore.load(appContext).toMutableList()
+
+                            var added = 0
+                            var updated = 0
+
+                            for (i in 0 until array.length()) {
+                                val obj = array.getJSONObject(i)
+
+                                val name = when {
+                                    obj.has("name") && !obj.isNull("name") -> obj.get("name")
+                                    obj.has("Name") && !obj.isNull("Name") -> obj.get("Name")
+                                    else -> ""
+                                }.toString().trim()
+
+                                val address = when {
+                                    obj.has("address") && !obj.isNull("address") -> obj.get("address")
+                                    obj.has("Address") && !obj.isNull("Address") -> obj.get("Address")
+                                    else -> ""
+                                }.toString().trim()
+
+                                val phone = when {
+                                    obj.has("phone") && !obj.isNull("phone") -> obj.get("phone")
+                                    obj.has("Phone") && !obj.isNull("Phone") -> obj.get("Phone")
+                                    else -> ""
+                                }.toString().trim()
+
+                                if (name.isBlank() && address.isBlank() && phone.isBlank()) continue
+
+                                // require at least address OR name (your call; address is primary)
+                                if (address.isBlank() && name.isBlank()) continue
+
+                                val contact = BusinessContact(
+                                    name = name,
+                                    address = address,
+                                    phone = phone
+                                )
+
+                                val existingIndex = current.indexOfFirst {
+                                    it.name.equals(name, ignoreCase = true) && it.phone == phone
+                                }
+
+                                if (existingIndex >= 0) {
+                                    current[existingIndex] = contact
+                                    updated++
+                                } else {
+                                    current.add(contact)
+                                    added++
+                                }
+
+                                BusinessContactStore.upsert(appContext, contact)
+                            }
+
+                            added to updated
+                        }
+                    }
+
+                    if (result.isSuccess) {
+                        val (added, updated) = result.getOrDefault(0 to 0)
+                        contacts = BusinessContactStore.load(appContext)
+                        snackbar.showSnackbar("JSON import: added=$added, updated=$updated")
+                    } else {
+                        val msg = result.exceptionOrNull()?.message ?: "unsupported JSON format"
+                        snackbar.showSnackbar("JSON import failed: $msg")
+                    }
+                }
+            }
+        }
+    )
+    // --- EXPORT (backup) launcher: create a JSON document chosen by user ---
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json"),
+        onResult = { uri: Uri? ->
+            if (uri != null) {
+                scope.launch {
+                    val result = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val arr = org.json.JSONArray()
+                            val current = BusinessContactStore.load(appContext)
+                            current.forEach { c ->
+                                val o = org.json.JSONObject()
+                                o.put("name", c.name)
+                                o.put("address", c.address)
+                                o.put("phone", c.phone)
+                                arr.put(o)
+                            }
+                            appContext.contentResolver.openOutputStream(uri).use { out ->
+                                requireNotNull(out) { "Unable to open export file for writing." }
+                                out.write(arr.toString(2).toByteArray())
+                            }
+                            current.size // return count
+                        }
+                    }
+
+                    snackbar.showSnackbar(
+                        if (result.isSuccess) {
+                            "Export saved (${result.getOrNull()} contacts)"
+                        } else {
+                            "Export failed: ${result.exceptionOrNull()?.message ?: "unknown error"}"
+                        }
+                    )
+                }
+            }
+        }
+    )
+
+    var query by rememberSaveable { mutableStateOf("") }
+
+    val filtered = remember(contacts, query) {
+        val q = query.trim().lowercase()
+        if (q.isBlank()) contacts
+        else contacts.filter { c ->
+            c.address.lowercase().contains(q) ||
+                    c.name.lowercase().contains(q) ||
+                    c.phone.lowercase().contains(q)
+        }
+    }
+
+    // onAdd + onImportJson (existing)
     val onAddClicked: () -> Unit = {
         editing = BusinessContact(name = "", address = "", phone = "")
     }
+    val onImportJsonClicked: () -> Unit = {
+        jsonImportPicker.launch("application/json")
+    }
+
+    // Export caller to be registered with MainActivity top bar
+    val onExportClicked: () -> Unit = {
+        // build a suggested filename with date
+        val ts = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd").format(java.time.LocalDate.now())
+        exportLauncher.launch("clinics-export-$ts.json")
+    }
 
     LaunchedEffect(Unit) {
-        registerActions?.invoke(onAddClicked)
+        // register all three actions
+        registerActions?.invoke(onAddClicked, onImportJsonClicked, onExportClicked)
     }
+
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.height(6.dp))
             ScreenDividers.Thick()
+
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text("Search address / name / phone") },
+                singleLine = true,
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .fillMaxWidth()
+            )
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -59,7 +234,7 @@ fun BusinessContactsScreen(
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 itemsIndexed(
-                    contacts,
+                    filtered,
                     key = { _, c -> "${c.name.lowercase()}|${c.phone}" }
                 ) { index, c ->
                     BusinessContactRow(
@@ -79,7 +254,7 @@ fun BusinessContactsScreen(
                             }
                         }
                     )
-                    if (index < contacts.lastIndex) ScreenDividers.Thin(inset = 12.dp)
+                    if (index < filtered.lastIndex) ScreenDividers.Thin(inset = 12.dp)
                 }
             }
         }
@@ -134,33 +309,44 @@ private fun BusinessContactRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text(
-                    contact.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
 
+                // PRIMARY: Address (what you drive by)
                 if (contact.address.isNotBlank()) {
                     Text(
                         contact.address,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
+                // SECONDARY: Clinic name / description
+                if (contact.name.isNotBlank()) {
+                    Text(
+                        contact.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // Phone (tap to call, long-press to copy)
                 Text(
                     contact.phone,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.combinedClickable(
                         onClick = { if (contact.phone.isNotBlank()) onCall(contact.phone) },
-                        onLongClick = { if (contact.phone.isNotBlank()) clipboard.setText(AnnotatedString(contact.phone)) }
+                        onLongClick = {
+                            if (contact.phone.isNotBlank())
+                                clipboard.setText(AnnotatedString(contact.phone))
+                        }
                     ),
                     maxLines = 1
                 )
             }
+
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,

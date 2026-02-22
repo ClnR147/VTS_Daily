@@ -56,6 +56,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import com.example.vtsdaily.business.BusinessContactsScreen
 
 
+
 // Subtle dark layer to push the scene toward medium-dark
 val darkScrim = Color.Black.copy(alpha = 0.06f) // tweak 0.04–0.10 to taste
 
@@ -99,6 +100,9 @@ class MainActivity : ComponentActivity() {
                 var contactsImportCsv by remember { mutableStateOf<() -> Unit>({}) }
                 var contactsImportJson by remember { mutableStateOf<() -> Unit>({}) }
                 var businessAdd by remember { mutableStateOf<(() -> Unit)?>(null) }
+                var businessImportJson by remember { mutableStateOf<(() -> Unit)?>(null) }
+                var businessExport by remember { mutableStateOf<(() -> Unit)?>(null) }
+
 
 
                 // Lookup handoff
@@ -162,11 +166,15 @@ class MainActivity : ComponentActivity() {
                                 onImportJson = { contactsImportJson() }
                             )
 
-                            4 -> DriversTopBarCustom(
+                            4 -> ContactsTopBarCustom(
                                 title = "Clinics",
                                 onAdd = { businessAdd?.invoke() },
-                                onImport = { } // no-op for now
+                                onBackup = { businessExport?.invoke() },   // export / backup -> MainActivity delegates to screen
+                                onRestore = { /* no-op or implement later */ },
+                                onImportCsv = { /* no-op */ },
+                                onImportJson = { businessImportJson?.invoke() }
                             )
+
 
                         }
                     },
@@ -291,10 +299,13 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                             4 -> BusinessContactsScreen(
-                                registerActions = { onAdd ->
+                                registerActions = { onAdd, onImportJson, onExport ->
                                     businessAdd = onAdd
+                                    businessImportJson = onImportJson
+                                    businessExport = onExport
                                 }
                             )
+
 
                         }
                     }
