@@ -1,11 +1,13 @@
 pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
     plugins {
-        id("com.android.application") version "8.1.2"
-        id("com.android.library") version "8.1.2"
-        kotlin("android") version "1.9.23"
-        kotlin("jvm") version "1.9.23"
-        kotlin("plugin.serialization") version "1.9.23"
+        id("com.android.application") version "8.6.1" apply false
+        id("com.android.library") version "8.6.1" apply false
+
+        kotlin("android") version "2.3.0"
+        kotlin("jvm") version "2.3.0"
+        kotlin("plugin.serialization") version "2.3.0"
+        id("org.jetbrains.kotlin.plugin.compose") version "2.3.0"
     }
 }
 

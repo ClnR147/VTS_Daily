@@ -2,22 +2,24 @@
 
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import com.android.build.api.artifact.SingleArtifact
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization") // ✅ add this
+    id("org.jetbrains.kotlin.plugin.compose")
 
 }
 
 android {
     namespace = "com.example.vtsdaily"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.vtsdaily"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -40,17 +42,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
     }
 
     buildFeatures {
         compose = true
-    }
-
-    // Match your Kotlin/Compose toolchain
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
     }
 
     packaging {
@@ -62,7 +61,7 @@ android {
 
 dependencies {
     // Compose BOM (single source of truth)
-    implementation(platform("androidx.compose:compose-bom:2024.10.00"))
+    implementation(platform("androidx.compose:compose-bom:2026.02.00"))
 
     // Core / lifecycle / activity
     implementation("androidx.core:core-ktx:1.13.1")
@@ -91,7 +90,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.google.accompanist:accompanist-flowlayout:0.30.1")
     implementation("com.opencsv:opencsv:5.9")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
 
 
     // Tests

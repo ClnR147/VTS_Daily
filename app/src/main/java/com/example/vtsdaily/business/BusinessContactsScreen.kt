@@ -1,55 +1,64 @@
 package com.example.vtsdaily.business
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.vtsdaily.ui.components.ScreenDividers
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import android.net.Uri
-import androidx.compose.foundation.clickable
-import kotlinx.coroutines.Dispatchers
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.foundation.lazy.rememberLazyListState
 
-val BusinessRowStripe = androidx.compose.ui.graphics.Color(0xFFF7F5FA)
 enum class SortMode { ADDRESS, NAME }
 
 /** Content-only screen (MainActivity owns the Scaffold/topBar) */
-// Change signature to include export callback
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BusinessContactsScreen(
     registerActions: ((onAdd: () -> Unit, onImportJson: () -> Unit, onExport: () -> Unit) -> Unit)? = null
 ) {
-    // existing state...
     val context = LocalContext.current
     val appContext = context.applicationContext
+
     var contacts by remember { mutableStateOf(BusinessContactStore.load(appContext)) }
     var editing by remember { mutableStateOf<BusinessContact?>(null) }
+
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // --- JSON IMPORT PICKER (existing) ---
-    // ... your existing jsonImportPicker here ...
+    // Tracks rows currently animating out
+    val deletingKeys = remember { mutableStateOf(setOf<String>()) }
+
+    // --- JSON IMPORT PICKER ---
     val jsonImportPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
@@ -93,8 +102,6 @@ fun BusinessContactsScreen(
                                 }.toString().trim()
 
                                 if (name.isBlank() && address.isBlank() && phone.isBlank()) continue
-
-                                // require at least address OR name (your call; address is primary)
                                 if (address.isBlank() && name.isBlank()) continue
 
                                 val contact = BusinessContact(
@@ -134,7 +141,8 @@ fun BusinessContactsScreen(
             }
         }
     )
-    // --- EXPORT (backup) launcher: create a JSON document chosen by user ---
+
+    // --- EXPORT launcher: create a JSON document chosen by user ---
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri: Uri? ->
@@ -155,7 +163,7 @@ fun BusinessContactsScreen(
                                 requireNotNull(out) { "Unable to open export file for writing." }
                                 out.write(arr.toString(2).toByteArray())
                             }
-                            current.size // return count
+                            current.size
                         }
                     }
 
@@ -175,15 +183,17 @@ fun BusinessContactsScreen(
     var sortMode by rememberSaveable { mutableStateOf(SortMode.ADDRESS) }
 
     val listState = rememberLazyListState()
-    LaunchedEffect(sortMode) {
-        listState.scrollToItem(0)
+
+    LaunchedEffect(sortMode, query) {
+        if (listState.layoutInfo.totalItemsCount > 0) {
+            listState.scrollToItem(0)
+        }
     }
+
     val sorted = remember(contacts, sortMode) {
         when (sortMode) {
-            SortMode.ADDRESS ->
-                contacts.sortedBy { it.address.lowercase() }
-            SortMode.NAME ->
-                contacts.sortedBy { it.name.lowercase() }
+            SortMode.ADDRESS -> contacts.sortedBy { it.address.lowercase() }
+            SortMode.NAME -> contacts.sortedBy { it.name.lowercase() }
         }
     }
 
@@ -197,65 +207,51 @@ fun BusinessContactsScreen(
         }
     }
 
-    // onAdd + onImportJson (existing)
     val onAddClicked: () -> Unit = {
         editing = BusinessContact(name = "", address = "", phone = "")
     }
     val onImportJsonClicked: () -> Unit = {
         jsonImportPicker.launch("application/json")
     }
-
-    // Export caller to be registered with MainActivity top bar
     val onExportClicked: () -> Unit = {
-        // build a suggested filename with date
-        val ts = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd").format(java.time.LocalDate.now())
+        val ts = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd")
+            .format(java.time.LocalDate.now())
         exportLauncher.launch("clinics-export-$ts.json")
     }
 
     LaunchedEffect(Unit) {
-        // register all three actions
         registerActions?.invoke(onAddClicked, onImportJsonClicked, onExportClicked)
     }
-
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.height(6.dp))
             ScreenDividers.Thick()
 
-            Row(
+            SingleChoiceSegmentedButtonRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Text(
-                    text = "Sort:",
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(end = 4.dp)
-                )
+                SegmentedButton(
+                    selected = sortMode == SortMode.ADDRESS,
+                    onClick = { sortMode = SortMode.ADDRESS },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                ) { Text("Address") }
 
-                Text(
-                    text = if (sortMode == SortMode.ADDRESS) "Address" else "Name",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clickable {
-                            sortMode = if (sortMode == SortMode.ADDRESS)
-                                SortMode.NAME
-                            else
-                                SortMode.ADDRESS
-                        }
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                )
+                SegmentedButton(
+                    selected = sortMode == SortMode.NAME,
+                    onClick = { sortMode = SortMode.NAME },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                ) { Text("Name") }
             }
 
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("Search address / name / phone") },
+                label = { Text("Search clinics") },
                 singleLine = true,
+                leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .fillMaxWidth()
@@ -267,33 +263,57 @@ fun BusinessContactsScreen(
                 contentPadding = PaddingValues(
                     start = 12.dp,
                     end = 12.dp,
-                    top = 4.dp,
+                    top = 8.dp,
                     bottom = 24.dp
                 ),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 itemsIndexed(
                     filtered,
                     key = { _, c -> "${c.name.lowercase()}|${c.phone}" }
-                ) { index, c ->
-                    BusinessContactRow(
-                        contact = c,
-                        onCall = { phone ->
-                            val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
-                            context.startActivity(intent)
-                        },
-                        onEdit = { editing = c },
-                        onDelete = {
-                            scope.launch {
-                                val ok = runCatching {
-                                    BusinessContactStore.delete(appContext, c.name, c.phone)
-                                    contacts = BusinessContactStore.load(appContext)
-                                }.isSuccess
-                                snackbar.showSnackbar(if (ok) "Deleted \"${c.name}\"" else "Delete failed")
+                ) { _, c ->
+                    val itemKey = "${c.name.lowercase()}|${c.phone}"
+                    val isDeleting = deletingKeys.value.contains(itemKey)
+
+                    AnimatedVisibility(
+                        visible = !isDeleting,
+                        enter = fadeIn(animationSpec = tween(180)) + expandVertically(animationSpec = tween(180)),
+                        exit = fadeOut(animationSpec = tween(180)) + shrinkVertically(animationSpec = tween(180))
+                    ) {
+                        BusinessContactRow(
+                            contact = c,
+                            onCall = { phone ->
+                                val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
+                                context.startActivity(intent)
+                            },
+                            onEdit = { editing = c },
+                            onDelete = {
+                                scope.launch {
+                                    deletingKeys.value = deletingKeys.value + itemKey
+                                    delay(180)
+
+                                    val updatedList = contacts.toMutableList()
+                                    updatedList.remove(c)
+                                    contacts = updatedList
+
+                                    deletingKeys.value = deletingKeys.value - itemKey
+
+                                    val result = snackbar.showSnackbar(
+                                        message = "Deleted \"${c.name}\"",
+                                        actionLabel = "Undo",
+                                        duration = SnackbarDuration.Long
+                                    )
+
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        contacts = BusinessContactStore.load(appContext)
+                                    } else {
+                                        BusinessContactStore.delete(appContext, c.name, c.phone)
+                                        contacts = BusinessContactStore.load(appContext)
+                                    }
+                                }
                             }
-                        }
-                    )
-                    if (index < filtered.lastIndex) ScreenDividers.Thin(inset = 12.dp)
+                        )
+                    }
                 }
             }
         }
@@ -333,59 +353,56 @@ private fun BusinessContactRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
 
     Surface(
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 1.dp,
+        shape = MaterialTheme.shapes.extraLarge,
+        tonalElevation = 2.dp,
         shadowElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier
-                .background(BusinessRowStripe)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-
-                // PRIMARY: Address (what you drive by)
                 if (contact.address.isNotBlank()) {
                     Text(
                         contact.address,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // SECONDARY: Clinic name / description
                 if (contact.name.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         contact.name,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Phone (tap to call, long-press to copy)
-                Text(
-                    contact.phone,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.combinedClickable(
-                        onClick = { if (contact.phone.isNotBlank()) onCall(contact.phone) },
-                        onLongClick = {
-                            if (contact.phone.isNotBlank())
-                                clipboard.setText(AnnotatedString(contact.phone))
-                        }
-                    ),
-                    maxLines = 1
-                )
+                if (contact.phone.isNotBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        contact.phone,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.combinedClickable(
+                            onClick = { onCall(contact.phone) },
+                            onLongClick = {
+                                val cm = context.getSystemService(ClipboardManager::class.java)
+                                cm.setPrimaryClip(ClipData.newPlainText("phone", contact.phone))
+                            }
+                        ),
+                        maxLines = 1
+                    )
+                }
             }
-
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
