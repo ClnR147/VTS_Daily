@@ -180,7 +180,6 @@ fun getAvailableScheduleDates(): List<LocalDate> {
     val folder = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
     if (!folder.exists()) return emptyList()
 
-    // Only .xls (JXL-readable), accept 0-padded month/day, various separators.
     val pattern = Regex(
         """^VTS\s+((?:0?[1-9]|1[0-2])[-_/\.](?:0?[1-9]|[12]\d|3[01])[-_/\.](?:\d{2}|\d{4}))\.xls$""",
         RegexOption.IGNORE_CASE
@@ -193,7 +192,7 @@ fun getAvailableScheduleDates(): List<LocalDate> {
                 if (parts.size != 3) return@let null
                 val (mm, dd, yyraw) = parts
                 val yy = yyraw.trim()
-                val normalized = "${mm.toInt()}-${dd.toInt()}-$yy" // remove leading zeros
+                val normalized = "${mm.toInt()}-${dd.toInt()}-$yy"
 
                 val fmt = if (yy.length == 2) {
                     DateTimeFormatter.ofPattern("M-d-yy")
@@ -204,6 +203,9 @@ fun getAvailableScheduleDates(): List<LocalDate> {
                 runCatching { LocalDate.parse(normalized, fmt) }.getOrNull()
             }
         }
-        ?.sortedDescending()
+        ?.sortedWith(
+            compareBy<LocalDate> { it.year >= 2099 }
+                .thenByDescending { it }
+        )
         ?: emptyList()
 }

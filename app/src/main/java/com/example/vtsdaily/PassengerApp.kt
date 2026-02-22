@@ -42,10 +42,14 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import jxl.Sheet
 import com.example.vtsdaily.ui.theme.VtsGreen
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 private const val SHOW_ADD_TRIP = false
 private val SANDBOX_DATE: LocalDate = LocalDate.of(2099, 1, 1)
 
+private fun isTestScheduleDate(d: LocalDate): Boolean {
+    return d.year >= 2090  // adjust if your test years differ
+}
 
 @Composable
 fun PassengerApp(
@@ -224,41 +228,69 @@ fun PassengerApp(
 
 
         if (showDateListDialog) {
+
+            val pastDates = remember { getAvailableScheduleDates() }
+
             AlertDialog(
                 onDismissRequest = { showDateListDialog = false },
-                title = { Text("Choose Date", style = MaterialTheme.typography.titleLarge) },
+                title = {
+                    Text(
+                        "Choose Date",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
                 text = {
-                    val pastDates = getAvailableScheduleDates()
+
+                    val listState = rememberLazyListState()
+
+                    val firstRealIndex = remember(pastDates) {
+                        val idx = pastDates.indexOfFirst { !isTestScheduleDate(it) }
+                        if (idx >= 0) idx else 0
+                    }
+
+                    LaunchedEffect(pastDates) {
+                        listState.scrollToItem(firstRealIndex)
+                    }
+
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 400.dp), // constrains height so it scrolls
+                            .heightIn(max = 400.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(pastDates) { date ->
-                            TextButton(onClick = {
-                                scheduleDate = date
-                                baseSchedule = loadSchedule(context, scheduleDate)
-                                insertedPassengers = InsertedTripStore.loadInsertedTrips(context, date)
-                                showDateListDialog = false
-                            }) {
+
+                            TextButton(
+                                onClick = {
+                                    scheduleDate = date
+                                    baseSchedule = loadSchedule(context, scheduleDate)
+                                    insertedPassengers =
+                                        InsertedTripStore.loadInsertedTrips(context, date)
+
+                                    showDateListDialog = false
+                                }
+                            ) {
                                 Text(
-                                    date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
+                                    date.format(
+                                        DateTimeFormatter.ofPattern("MMMM d, yyyy")
+                                    ),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
                         }
                     }
-                }
-                ,
+                },
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { showDateListDialog = false }) {
-                        Text("Cancel", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Cancel",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
                 }
             )
-
         }
         if (SHOW_ADD_TRIP) {
             if (showInsertDialog) {

@@ -26,6 +26,7 @@ import com.example.vtsdaily.ui.components.ScreenDividers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.net.Uri
+import androidx.compose.foundation.clickable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -42,6 +43,7 @@ import kotlinx.coroutines.launch
 
 
 val BusinessRowStripe = androidx.compose.ui.graphics.Color(0xFFF7F5FA)
+enum class SortMode { ADDRESS, NAME }
 
 /** Content-only screen (MainActivity owns the Scaffold/topBar) */
 // Change signature to include export callback
@@ -181,11 +183,20 @@ fun BusinessContactsScreen(
     )
 
     var query by rememberSaveable { mutableStateOf("") }
+    var sortMode by rememberSaveable { mutableStateOf(SortMode.ADDRESS) }
+    val sorted = remember(contacts, sortMode) {
+        when (sortMode) {
+            SortMode.ADDRESS ->
+                contacts.sortedBy { it.address.lowercase() }
+            SortMode.NAME ->
+                contacts.sortedBy { it.name.lowercase() }
+        }
+    }
 
-    val filtered = remember(contacts, query) {
+    val filtered = remember(sorted, query) {
         val q = query.trim().lowercase()
-        if (q.isBlank()) contacts
-        else contacts.filter { c ->
+        if (q.isBlank()) sorted
+        else sorted.filter { c ->
             c.address.lowercase().contains(q) ||
                     c.name.lowercase().contains(q) ||
                     c.phone.lowercase().contains(q)
@@ -218,6 +229,34 @@ fun BusinessContactsScreen(
             Spacer(Modifier.height(6.dp))
             ScreenDividers.Thick()
 
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Sort:",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(end = 4.dp)
+                )
+
+                Text(
+                    text = if (sortMode == SortMode.ADDRESS) "Address" else "Name",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable {
+                            sortMode = if (sortMode == SortMode.ADDRESS)
+                                SortMode.NAME
+                            else
+                                SortMode.ADDRESS
+                        }
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                )
+            }
+
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
@@ -229,8 +268,13 @@ fun BusinessContactsScreen(
             )
 
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp),
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 4.dp,
+                    bottom = 24.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 itemsIndexed(
