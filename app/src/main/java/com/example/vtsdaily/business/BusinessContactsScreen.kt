@@ -28,19 +28,8 @@ import kotlinx.coroutines.withContext
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.core.net.toUri
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
-
-
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 val BusinessRowStripe = androidx.compose.ui.graphics.Color(0xFFF7F5FA)
 enum class SortMode { ADDRESS, NAME }
@@ -184,6 +173,11 @@ fun BusinessContactsScreen(
 
     var query by rememberSaveable { mutableStateOf("") }
     var sortMode by rememberSaveable { mutableStateOf(SortMode.ADDRESS) }
+
+    val listState = rememberLazyListState()
+    LaunchedEffect(sortMode) {
+        listState.scrollToItem(0)
+    }
     val sorted = remember(contacts, sortMode) {
         when (sortMode) {
             SortMode.ADDRESS ->
@@ -268,6 +262,7 @@ fun BusinessContactsScreen(
             )
 
             LazyColumn(
+                state = listState,
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(
                     start = 12.dp,
