@@ -90,7 +90,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.google.accompanist:accompanist-flowlayout:0.30.1")
     implementation("com.opencsv:opencsv:5.9")
-
+    implementation("androidx.compose.ui:ui-unit:1.10.3")
 
 
     // Tests

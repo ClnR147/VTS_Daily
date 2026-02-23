@@ -37,6 +37,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.vtsdaily.ui.templates.DirectoryTemplateScreen
+import com.example.vtsdaily.ui.templates.SortOption
 
 enum class SortMode { ADDRESS, NAME }
 
@@ -202,8 +204,7 @@ fun BusinessContactsScreen(
         if (q.isBlank()) sorted
         else sorted.filter { c ->
             c.address.lowercase().contains(q) ||
-                    c.name.lowercase().contains(q) ||
-                    c.phone.lowercase().contains(q)
+                    c.name.lowercase().contains(q)
         }
     }
 
@@ -223,108 +224,53 @@ fun BusinessContactsScreen(
         registerActions?.invoke(onAddClicked, onImportJsonClicked, onExportClicked)
     }
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            Spacer(Modifier.height(6.dp))
-            ScreenDividers.Thick()
+    DirectoryTemplateScreen(
+        items = contacts,
 
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                SegmentedButton(
-                    selected = sortMode == SortMode.ADDRESS,
-                    onClick = { sortMode = SortMode.ADDRESS },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                ) { Text("Address") }
-
-                SegmentedButton(
-                    selected = sortMode == SortMode.NAME,
-                    onClick = { sortMode = SortMode.NAME },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                ) { Text("Name") }
-            }
-
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = { Text("Search clinics") },
-                singleLine = true,
-                leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
-                modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .fillMaxWidth()
+        sortOptions = listOf(
+            SortOption(
+                label = "Address",
+                comparator = compareBy { it.address.lowercase() },
+                primaryText = { it.address },
+                secondaryText = { it.name }
+            ),
+            SortOption(
+                label = "Name",
+                comparator = compareBy { it.name.lowercase() },
+                primaryText = { it.name },
+                secondaryText = { it.address }
             )
+        ),
 
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 8.dp,
-                    bottom = 24.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                itemsIndexed(
-                    filtered,
-                    key = { _, c -> "${c.name.lowercase()}|${c.phone}" }
-                ) { _, c ->
-                    val itemKey = "${c.name.lowercase()}|${c.phone}"
-                    val isDeleting = deletingKeys.value.contains(itemKey)
+        itemKey = { c -> "${c.name.lowercase()}|${c.phone}" },
 
-                    AnimatedVisibility(
-                        visible = !isDeleting,
-                        enter = fadeIn(animationSpec = tween(180)) + expandVertically(animationSpec = tween(180)),
-                        exit = fadeOut(animationSpec = tween(180)) + shrinkVertically(animationSpec = tween(180))
-                    ) {
-                        BusinessContactRow(
-                            contact = c,
-                            onCall = { phone ->
-                                val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
-                                context.startActivity(intent)
-                            },
-                            onEdit = { editing = c },
-                            onDelete = {
-                                scope.launch {
-                                    deletingKeys.value = deletingKeys.value + itemKey
-                                    delay(180)
+        searchLabel = "Search clinics",
+        searchHintPredicate = { c, q ->
+            c.address.lowercase().contains(q) || c.name.lowercase().contains(q)
+        },
 
-                                    val updatedList = contacts.toMutableList()
-                                    updatedList.remove(c)
-                                    contacts = updatedList
+        phoneOf = { it.phone },
 
-                                    deletingKeys.value = deletingKeys.value - itemKey
+        onEdit = { c -> editing = c },
 
-                                    val result = snackbar.showSnackbar(
-                                        message = "Deleted \"${c.name}\"",
-                                        actionLabel = "Undo",
-                                        duration = SnackbarDuration.Long
-                                    )
+        // Option A: animate out -> remove from list immediately (in-memory)
+        onDeleteImmediate = { c ->
+            contacts = contacts.toMutableList().also { it.remove(c) }
+        },
 
-                                    if (result == SnackbarResult.ActionPerformed) {
-                                        contacts = BusinessContactStore.load(appContext)
-                                    } else {
-                                        BusinessContactStore.delete(appContext, c.name, c.phone)
-                                        contacts = BusinessContactStore.load(appContext)
-                                    }
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-        }
+        // Option A: only delete from store if snackbar NOT undone
+        onDeleteFinal = { c ->
+            BusinessContactStore.delete(appContext, c.name, c.phone)
+            contacts = BusinessContactStore.load(appContext)
+        },
 
-        SnackbarHost(
-            hostState = snackbar,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp)
-        )
-    }
+        // Option A: undo pressed -> reload from store
+        onUndo = {
+            contacts = BusinessContactStore.load(appContext)
+        },
+
+        deleteSnackbarMessage = { c -> "Deleted \"${c.name}\"" }
+    )
 
     editing?.let {
         AddEditBusinessContactDialog(
@@ -349,9 +295,11 @@ fun BusinessContactsScreen(
 @Composable
 private fun BusinessContactRow(
     contact: BusinessContact,
+    sortMode: SortMode,
     onCall: (String) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
+
 ) {
     val context = LocalContext.current
 
@@ -366,19 +314,26 @@ private fun BusinessContactRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                if (contact.address.isNotBlank()) {
+
+                val primaryText =
+                    if (sortMode == SortMode.NAME) contact.name else contact.address
+
+                val secondaryText =
+                    if (sortMode == SortMode.NAME) contact.address else contact.name
+
+                if (primaryText.isNotBlank()) {
                     Text(
-                        contact.address,
+                        primaryText,
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                if (contact.name.isNotBlank()) {
+                if (secondaryText.isNotBlank()) {
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        contact.name,
+                        secondaryText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

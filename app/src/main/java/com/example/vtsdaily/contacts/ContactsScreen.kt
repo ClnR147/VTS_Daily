@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -55,6 +56,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.example.vtsdaily.ui.templates.DirectoryTemplateScreen
+import com.example.vtsdaily.ui.templates.SortOption
 
 
 val RowStripe = Color(0xFFF7F5FA)
@@ -320,49 +323,51 @@ fun ContactsScreen(
 
     // --- BODY (unchanged) ---
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            Spacer(Modifier.height(6.dp))
-            ScreenDividers.Thick()
+            DirectoryTemplateScreen(
+                items = contacts,
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
-            ) {
-                itemsIndexed(
-                    contacts,
-                    key = { _, c -> "${c.name.lowercase()}|${c.phone}" }
-                ) { index, c ->
-                    ContactRow(
-                        contact = c,
-                        onCall = { phone ->
-                            val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
-                            context.startActivity(intent)
-                        },
-                        onEdit = { editing = c },
-                        onDelete = {
-                            scope.launch {
-                                val ok = runCatching {
-                                    ImportantContactStore.delete(appContext, c.name, c.phone)
-                                    contacts = ImportantContactStore.load(appContext)
-                                }.isSuccess
-                                snackbar.showSnackbar(if (ok) "Deleted \"${c.name}\"" else "Delete failed")
-                            }
-                        }
+                // single sort: Name (no segmented row will display because of template tweak)
+                sortOptions = listOf(
+                    SortOption(
+                        label = "Name",
+                        comparator = compareBy { it.name.lowercase() },
+                        primaryText = { it.name },
+                        secondaryText = { "" } // keep Contacts as name + phone (no extra line)
                     )
-                    if (index < contacts.lastIndex) ScreenDividers.Thin(inset = 12.dp)
-                }
-            }
-        }
+                ),
 
-        SnackbarHost(
-            hostState = snackbar,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp)
-        )
-    }
+                itemKey = { c -> "${c.name.lowercase()}|${c.phone}" },
+
+                searchLabel = "Search contacts",
+                searchHintPredicate = { c, q ->
+                    // Consistency choice: include name search; optionally include phone search too
+                    c.name.lowercase().contains(q)
+                    // If you WANT phone search as well, uncomment:
+                    // || c.phone.lowercase().contains(q)
+                },
+
+                phoneOf = { it.phone },
+
+                onEdit = { c -> editing = c },
+
+                // Option A: immediate UI removal
+                onDeleteImmediate = { c ->
+                    contacts = contacts.toMutableList().also { it.remove(c) }
+                },
+
+                // Option A: only delete from store if not undone
+                onDeleteFinal = { c ->
+                    ImportantContactStore.delete(appContext, c.name, c.phone)
+                    contacts = ImportantContactStore.load(appContext)
+                },
+
+                // Undo pressed: reload from store
+                onUndo = {
+                    contacts = ImportantContactStore.load(appContext)
+                },
+
+                deleteSnackbarMessage = { c -> "Deleted \"${c.name}\"" }
+            )
 
     editing?.let {
         AddEditContactDialog(
@@ -391,7 +396,7 @@ private fun ContactRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     Surface(
         shape = MaterialTheme.shapes.large,
         tonalElevation = 1.dp,
@@ -416,8 +421,8 @@ private fun ContactRow(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.combinedClickable(
-                        onClick = { onCall(contact.phone) },
-                        onLongClick = { clipboard.setText(AnnotatedString(contact.phone)) }
+                    onClick = { onCall(contact.phone) },
+
                     ),
                     maxLines = 1
                 )
