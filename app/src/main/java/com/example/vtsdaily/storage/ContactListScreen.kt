@@ -2,12 +2,15 @@ package com.example.vtsdaily.storage
 
 import android.content.Context
 import android.os.Environment
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,7 +20,6 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -37,33 +39,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import com.example.vtsdaily.ui.components.VtsSearchBar
 import kotlinx.coroutines.launch
 import java.io.File
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.clickable
-import androidx.core.net.toUri
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactListScreen(context: Context) {
-    // Safe load (never throws)
     var contacts by remember { mutableStateOf(ImportantContactStore.load(context)) }
     var editing by remember { mutableStateOf<ImportantContact?>(null) }
-    var query by remember { mutableStateOf(TextFieldValue("")) }
+    var query by remember { mutableStateOf("") }
 
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    fun applyFilter(all: List<ImportantContact>, q: String): List<ImportantContact> {
+        val needle = q.trim()
+        return if (needle.isBlank()) all else all.filter { it.matchesQuery(needle) }
+    }
+
     fun reload() {
-        contacts = ImportantContactStore.load(context)
-        // re-apply search filter after reload
-        val q = query.text
-        if (q.isNotBlank()) {
-            contacts = contacts.filter { it.matchesQuery(q) }
-        }
+        val all = ImportantContactStore.load(context)
+        contacts = applyFilter(all, query)
     }
 
     Scaffold(
@@ -71,11 +72,11 @@ fun ContactListScreen(context: Context) {
             CenterAlignedTopAppBar(
                 title = { Text("Important Contacts", style = MaterialTheme.typography.titleLarge) },
                 actions = {
-                    // Combined Import: looks for both JSON and CSV in /sdcard/PassengerSchedules
+                    // Import (JSON + CSV) from /sdcard/PassengerSchedules
                     IconButton(onClick = {
                         val dir = File(Environment.getExternalStorageDirectory(), "PassengerSchedules")
                         val json = File(dir, "ImportantContacts.json")
-                        val csv  = File(dir, "ImportantContacts.csv")
+                        val csv = File(dir, "ImportantContacts.csv")
 
                         var added = 0
                         var merged = 0
@@ -84,13 +85,13 @@ fun ContactListScreen(context: Context) {
 
                         if (json.exists()) {
                             val rpt = ImportantContactStore.importFromJsonFile(context, json)
-                            added  += rpt.added
+                            added += rpt.added
                             merged += rpt.merged
                             ranSomething = true
                         }
                         if (csv.exists()) {
                             val rpt = ImportantContactStore.importFromCsvFile(context, csv)
-                            added  += rpt.added
+                            added += rpt.added
                             merged += rpt.merged
                             dropped += rpt.dropped
                             ranSomething = true
@@ -102,7 +103,6 @@ fun ContactListScreen(context: Context) {
                             if (ranSomething) {
                                 val droppedPart = if (dropped > 0) ", $dropped dropped" else ""
                                 snackbar.showSnackbar("Import: +$added added, $merged merged$droppedPart")
-                                // optional: backup after a successful import
                                 ImportantContactStore.backupToExternal(context)
                             } else {
                                 snackbar.showSnackbar("No JSON or CSV found in PassengerSchedules/")
@@ -112,7 +112,7 @@ fun ContactListScreen(context: Context) {
                         Icon(Icons.Filled.FileUpload, contentDescription = "Import (CSV/JSON)")
                     }
 
-                    // Restore button stays
+                    // Restore
                     IconButton(onClick = {
                         val ok = ImportantContactStore.restoreFromExternal(context)
                         reload()
@@ -126,12 +126,13 @@ fun ContactListScreen(context: Context) {
                         Icon(Icons.Filled.Restore, contentDescription = "Restore")
                     }
                 }
-
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { editing = ImportantContact(name = "", phone = "", note = "") }) {
+            FloatingActionButton(onClick = {
+                editing = ImportantContact(name = "", phone = "", note = "")
+            }) {
                 Icon(Icons.Filled.Add, contentDescription = "Add Contact")
             }
         }
@@ -140,26 +141,24 @@ fun ContactListScreen(context: Context) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                // ✅ KEY FIX:
+                // Horizontal padding stays, but remove the "vertical = 8.dp" top padding
+                // that was pushing the SearchBar down.
+                .padding(horizontal = 12.dp)
+                .padding(top = 0.dp, bottom = 8.dp)
         ) {
             // Search
-            OutlinedTextField(
+            VtsSearchBar(
                 value = query,
                 onValueChange = {
                     query = it
-                    contacts = if (it.text.isBlank()) {
-                        ImportantContactStore.load(context)
-                    } else {
-                        ImportantContactStore.load(context).filter { c -> c.matchesQuery(it.text) }
-                    }
+                    val all = ImportantContactStore.load(context)
+                    contacts = applyFilter(all, it)
                 },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Search by name or phone…") },
-                singleLine = true
+                label = "Search by name or phone…"
             )
 
-            Divider()
+            Spacer(modifier = Modifier.height(8.dp))
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -168,33 +167,29 @@ fun ContactListScreen(context: Context) {
             ) {
                 items(
                     contacts,
-                    key = { "${it.name.lowercase()}|${it.phone}" } // safer key than name-only
+                    key = { "${it.name.lowercase()}|${it.phone}" }
                 ) { c ->
                     ContactRow(
                         contact = c,
                         onEdit = { editing = c },
                         onDelete = {
-                            // 1) Instant UI removal
                             val delName = c.name
                             val delPhone = c.phone
+
+                            // Instant UI removal
                             contacts = contacts.filterNot {
                                 it.name.equals(delName, ignoreCase = true) && it.phone == delPhone
                             }
 
-                            // 2) Persist delete (use name+phone to avoid collisions)
+                            // Persist delete + backup + reload
                             ImportantContactStore.delete(context, delName, delPhone)
-
-                            // 3) Auto-backup after write
                             ImportantContactStore.backupToExternal(context)
-
-                            // 4) Re-apply search filter (if any) to keep list consistent
                             reload()
 
                             scope.launch { snackbar.showSnackbar("Deleted \"$delName\"") }
                         }
                     )
                 }
-
             }
         }
 
@@ -213,7 +208,7 @@ fun ContactListScreen(context: Context) {
     }
 }
 
-/* --- small helpers --- */
+/* --- row --- */
 @Composable
 private fun ContactRow(
     contact: ImportantContact,
@@ -224,7 +219,7 @@ private fun ContactRow(
 
     ElevatedCard {
         Row(
-            Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -293,7 +288,7 @@ fun ContactDialog(
     )
 }
 
-/** Simple client-side filter to avoid a Store dependency for search */
+/** Simple client-side filter */
 private fun ImportantContact.matchesQuery(q: String): Boolean {
     val needle = q.trim().lowercase()
     return name.lowercase().contains(needle) ||

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.stringResource
+import com.example.vtsdaily.ui.components.VtsTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -17,10 +18,13 @@ fun DriversTopBarCustom(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    CenterAlignedTopAppBar(
-        title = { Text(title) },
+    VtsTopAppBar(               // ✅ use the shared top bar
+        title = title,
         actions = {
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
                 DropdownMenuItem(
                     text = { Text("Add") },
                     leadingIcon = { Icon(Icons.Filled.Add, null) },
@@ -32,6 +36,7 @@ fun DriversTopBarCustom(
                     onClick = { expanded = false; onImport() }
                 )
             }
+
             IconButton(onClick = { expanded = true }) {
                 Icon(Icons.Filled.MoreVert, contentDescription = "More")
             }

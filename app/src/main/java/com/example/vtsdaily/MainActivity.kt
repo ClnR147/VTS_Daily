@@ -7,33 +7,25 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.surfaceColorAtElevation
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import com.example.vtsdaily.business.BusinessContactsScreen
 import com.example.vtsdaily.contacts.ContactsScreen
 import com.example.vtsdaily.contacts.ContactsTopBarCustom
 import com.example.vtsdaily.drivers.DriversScreen
@@ -41,30 +33,20 @@ import com.example.vtsdaily.drivers.DriversTopBarCustom
 import com.example.vtsdaily.lookup.PassengerLookupScreen
 import com.example.vtsdaily.lookup.PassengerLookupTopBarCustom
 import com.example.vtsdaily.ui.components.ScreenDividers
+import com.example.vtsdaily.ui.components.VtsAfterDividerSpacing
+import com.example.vtsdaily.ui.components.VtsTopAppBar
 import com.example.vtsdaily.ui.theme.VTSDailyTheme
-import androidx.compose.material3.ButtonDefaults
-
-// Icons
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Search
-
-import androidx.compose.runtime.mutableIntStateOf
-import com.example.vtsdaily.business.BusinessContactsScreen
-import java.time.LocalDate
-
 
 // Subtle dark layer to push the scene toward medium-dark
 val darkScrim = Color.Black.copy(alpha = 0.06f) // tweak 0.04–0.10 to taste
 
 class MainActivity : ComponentActivity() {
 
-    // ✅ ADDED: flags used to stabilize return-from-dialer
+    // flags used to stabilize return-from-dialer
     private var returnedFromDialer = false
-    private val viewState = mutableIntStateOf(0)  // ✅ Activity-owned tab state
+
+    // Activity-owned tab state (0=Schedule, 1=Lookup, 2=Drivers, 3=Contacts, 4=Clinics)
+    private val viewState = mutableIntStateOf(0)
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,19 +56,18 @@ class MainActivity : ComponentActivity() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R &&
             !Environment.isExternalStorageManager()
         ) {
-            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-            intent.data = "package:$packageName".toUri()
+            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                data = "package:$packageName".toUri()
+            }
             startActivity(intent)
         }
 
         setContent {
             VTSDailyTheme(dynamicColor = false) {
 
-                // 0 = Schedule, 1 = Lookup, 2 = Drivers, 3 = Contacts
                 var view by viewState
-                // ✅ ADDED: expose safe navigation hook to Activity
+
                 val snackbar = remember { SnackbarHostState() }
-                val scope = rememberCoroutineScope()
 
                 // Top bar callbacks registered from child screens
                 var driversAdd by remember { mutableStateOf<() -> Unit>({}) }
@@ -102,8 +83,6 @@ class MainActivity : ComponentActivity() {
                 var businessAdd by remember { mutableStateOf<(() -> Unit)?>(null) }
                 var businessImportJson by remember { mutableStateOf<(() -> Unit)?>(null) }
                 var businessExport by remember { mutableStateOf<(() -> Unit)?>(null) }
-
-
 
                 // Lookup handoff
                 var setLookupQuery by remember { mutableStateOf<(String) -> Unit>({}) }
@@ -129,34 +108,23 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onBackground,
-
                     topBar = {
                         when (view) {
-                            0 -> CenterAlignedTopAppBar(
-                                title = {
-                                    Text(
-                                        "Schedule",
-                                        style = MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    )
-                                },
-                                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                                    containerColor = Color.Transparent,
-                                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
-                                )
-                            )
+                            0 -> VtsTopAppBar(title = "Schedule")
+
                             1 -> PassengerLookupTopBarCustom(
                                 title = "Passenger Lookup",
                                 onLookupByDate = { lookupByDateAction() },
                                 onPredictByDate = { lookupPredictAction() },
                                 onImport = { lookupImportAction() }
                             )
+
                             2 -> DriversTopBarCustom(
                                 title = "Drivers",
                                 onAdd = { driversAdd() },
                                 onImport = { driversImport() }
                             )
+
                             3 -> ContactsTopBarCustom(
                                 title = "Contacts",
                                 onAdd = { contactsAdd() },
@@ -169,16 +137,13 @@ class MainActivity : ComponentActivity() {
                             4 -> ContactsTopBarCustom(
                                 title = "Clinics",
                                 onAdd = { businessAdd?.invoke() },
-                                onBackup = { businessExport?.invoke() },   // export / backup -> MainActivity delegates to screen
-                                onRestore = { /* no-op or implement later */ },
+                                onBackup = { businessExport?.invoke() }, // export/backup
+                                onRestore = { /* no-op */ },
                                 onImportCsv = { /* no-op */ },
                                 onImportJson = { businessImportJson?.invoke() }
                             )
-
-
                         }
                     },
-
                     bottomBar = {
                         NavigationBar(
                             containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(8.dp),
@@ -219,10 +184,8 @@ class MainActivity : ComponentActivity() {
                                 label = { Text("Clinics") },
                                 alwaysShowLabel = true
                             )
-
                         }
                     },
-
                     snackbarHost = {
                         SnackbarHost(
                             hostState = snackbar,
@@ -247,66 +210,75 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 ) { padding ->
-                    Box(
-                        Modifier
+
+                    Column(
+                        modifier = Modifier
                             .fillMaxSize()
                             .background(baseGrad)
                             .padding(padding)
                     ) {
-                        Box(Modifier.fillMaxSize().background(glowGrad).alpha(0.85f))
-                        Box(Modifier.fillMaxSize().background(darkScrim))
+                        Box(Modifier.fillMaxSize()) {
+                            Box(Modifier.fillMaxSize().background(glowGrad).alpha(0.85f))
+                            Box(Modifier.fillMaxSize().background(darkScrim))
 
-                        when (view) {
-                            0 -> Box(Modifier.fillMaxSize()) {
-                                PassengerApp(
-                                    onLookupForName = { name ->
-                                        pendingLookupName = sanitizeName(name)
-                                        view = 1
-                                    },
-                                    onDialerLaunched = {
-                                        returnedFromDialer = true
-                                    }
-                                )
+                            Column(Modifier.fillMaxSize()) {
                                 ScreenDividers.Thick()
-                            }
-                            1 -> PassengerLookupScreen(
-                                registerActions = { onLookupByDate, onPredictByDate, onImport ->
-                                    lookupByDateAction = onLookupByDate
-                                    lookupPredictAction = onPredictByDate
-                                    lookupImportAction = onImport
-                                },
-                                registerSetQuery = { setter ->
-                                    setLookupQuery = setter
-                                    pendingLookupName?.let {
-                                        setter(it)
-                                        pendingLookupName = null
+                                VtsAfterDividerSpacing()
+
+                                Box(Modifier.fillMaxSize()) {
+                                    when (view) {
+                                        0 -> PassengerApp(
+                                            onLookupForName = { name ->
+                                                pendingLookupName = sanitizeName(name)
+                                                view = 1
+                                            },
+                                            onDialerLaunched = {
+                                                returnedFromDialer = true
+                                            }
+                                        )
+
+                                        1 -> PassengerLookupScreen(
+                                            registerActions = { onLookupByDate, onPredictByDate, onImport ->
+                                                lookupByDateAction = onLookupByDate
+                                                lookupPredictAction = onPredictByDate
+                                                lookupImportAction = onImport
+                                            },
+                                            registerSetQuery = { setter ->
+                                                setLookupQuery = setter
+                                                pendingLookupName?.let {
+                                                    setter(it)
+                                                    pendingLookupName = null
+                                                }
+                                            }
+                                        )
+
+                                        2 -> DriversScreen(
+                                            registerActions = { addCb, importCb ->
+                                                driversAdd = addCb
+                                                driversImport = importCb
+                                            }
+                                        )
+
+                                        3 -> ContactsScreen(
+                                            registerActions = { onAdd, onBackup, onRestore, onImportCsv, onImportJson ->
+                                                contactsAdd = onAdd
+                                                contactsBackup = onBackup
+                                                contactsRestore = onRestore
+                                                contactsImportCsv = onImportCsv
+                                                contactsImportJson = onImportJson
+                                            }
+                                        )
+
+                                        4 -> BusinessContactsScreen(
+                                            registerActions = { onAdd, onImportJson, onExport ->
+                                                businessAdd = onAdd
+                                                businessImportJson = onImportJson
+                                                businessExport = onExport
+                                            }
+                                        )
                                     }
                                 }
-                            )
-                            2 -> DriversScreen(
-                                registerActions = { addCb, importCb ->
-                                    driversAdd = addCb
-                                    driversImport = importCb
-                                }
-                            )
-                            3 -> ContactsScreen(
-                                registerActions = { onAdd, onBackup, onRestore, onImportCsv, onImportJson ->
-                                    contactsAdd = onAdd
-                                    contactsBackup = onBackup
-                                    contactsRestore = onRestore
-                                    contactsImportCsv = onImportCsv
-                                    contactsImportJson = onImportJson
-                                }
-                            )
-                            4 -> BusinessContactsScreen(
-                                registerActions = { onAdd, onImportJson, onExport ->
-                                    businessAdd = onAdd
-                                    businessImportJson = onImportJson
-                                    businessExport = onExport
-                                }
-                            )
-
-
+                            }
                         }
                     }
                 }
@@ -314,15 +286,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ✅ ADDED: stabilize UI after returning from dialer
+    // ✅ Correct place: OUTSIDE onCreate()
     override fun onResume() {
         super.onResume()
 
         if (returnedFromDialer) {
             returnedFromDialer = false
             viewState.intValue = 0
-
         }
     }
 }
-

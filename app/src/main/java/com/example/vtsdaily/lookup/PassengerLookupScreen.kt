@@ -10,10 +10,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.vtsdaily.DateSelectActivity
 import com.example.vtsdaily.sanitizeName
+import com.example.vtsdaily.ui.components.VtsSearchBar
 import com.example.vtsdaily.ui.theme.VtsGreen
 import kotlinx.coroutines.launch
 import java.io.File
@@ -127,7 +129,11 @@ fun PassengerLookupScreen(
         }
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+    Scaffold(
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0),
+        snackbarHost = { SnackbarHost(snackbar) }
+    ) { padding ->
         Box(
             Modifier
                 .padding(padding)
@@ -136,17 +142,13 @@ fun PassengerLookupScreen(
             Column(Modifier.fillMaxSize()) {
 
                 if (page == Page.NAMES) {
-                    OutlinedTextField(
+                    VtsSearchBar(
                         value = query,
                         onValueChange = { query = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        singleLine = true,
-                        label = { Text("Search name") }
+                        label = "Search name"
                     )
                 } else {
-                    Spacer(Modifier.height(6.dp))
+                    // No spacer needed — MainActivity already provides consistent spacing under the divider
                 }
 
                 when (page) {
@@ -162,7 +164,7 @@ fun PassengerLookupScreen(
                         DetailsPage(
                             name = safeName,
                             allRows = allRows,
-                            tripCount = tripCountFor(safeName),   // 👈 pass the count
+                            tripCount = tripCountFor(safeName),
                             listState = detailsListState
                         )
                     }

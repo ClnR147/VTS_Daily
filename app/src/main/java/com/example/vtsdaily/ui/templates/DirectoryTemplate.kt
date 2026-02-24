@@ -24,12 +24,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -37,7 +35,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,6 +53,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.vtsdaily.ui.components.ScreenDividers
+import com.example.vtsdaily.ui.components.VtsCard
+import com.example.vtsdaily.ui.components.VtsSearchBar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -65,6 +64,51 @@ data class SortOption<T>(
     val primaryText: (T) -> String,
     val secondaryText: (T) -> String
 )
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DirectoryHeader(
+    showTopDivider: Boolean,
+    searchLabel: String,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    sortOptions: List<String>,
+    sortIndex: Int,
+    onSortIndexChange: (Int) -> Unit,
+    // ✅ ONE knob for “search bar distance from thick divider”
+    afterDividerGap: Dp = 4.dp,
+    horizontalPadding: Dp = 12.dp
+) {
+    if (showTopDivider) {
+        ScreenDividers.Thick()
+        Spacer(Modifier.height(afterDividerGap))
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = horizontalPadding)
+    ) {
+        VtsSearchBar(
+            value = query,
+            onValueChange = onQueryChange,
+            label = searchLabel
+        )
+
+        if (sortOptions.size > 1) {
+            Spacer(Modifier.height(6.dp))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                sortOptions.forEachIndexed { idx, label ->
+                    SegmentedButton(
+                        selected = sortIndex == idx,
+                        onClick = { onSortIndexChange(idx) },
+                        shape = SegmentedButtonDefaults.itemShape(index = idx, count = sortOptions.size)
+                    ) { Text(label) }
+                }
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,10 +139,14 @@ fun <T> DirectoryTemplateScreen(
     deleteSnackbarActionLabel: String = "Undo",
 
     // UI tweaks
-    showTopDivider: Boolean = true,
+    // ✅ default TRUE so Contacts/Clinics share the same divider rhythm
+    showTopDivider: Boolean = false,
     contentPadding: PaddingValues = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp),
     rowSpacing: Dp = 10.dp,
-    deleteAnimationMs: Long = 180L
+    deleteAnimationMs: Long = 180L,
+
+    // ✅ expose the “move search bar up/down” knob if you ever need it per-screen
+    afterDividerGap: Dp = 4.dp
 ) {
     require(sortOptions.isNotEmpty()) { "sortOptions must not be empty" }
 
@@ -144,8 +192,7 @@ fun <T> DirectoryTemplateScreen(
 
     val filtered = remember(sorted, query) {
         val q = query.trim().lowercase()
-        if (q.isBlank()) sorted
-        else sorted.filter { item -> searchHintPredicate(item, q) }
+        if (q.isBlank()) sorted else sorted.filter { item -> searchHintPredicate(item, q) }
     }
 
     // Tracks rows currently animating out
@@ -153,36 +200,17 @@ fun <T> DirectoryTemplateScreen(
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Spacer(Modifier.height(6.dp))
-            if (showTopDivider) ScreenDividers.Thick()
 
-            // Segmented sort row (only show if > 1)
-            if (sortOptions.size > 1) {
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    sortOptions.forEachIndexed { idx, opt ->
-                        SegmentedButton(
-                            selected = sortIndex == idx,
-                            onClick = { sortIndex = idx },
-                            shape = SegmentedButtonDefaults.itemShape(index = idx, count = sortOptions.size)
-                        ) { Text(opt.label) }
-                    }
-                }
-            }
-
-            // Search field
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = { Text(searchLabel) },
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .fillMaxWidth()
+            DirectoryHeader(
+                showTopDivider = showTopDivider,
+                searchLabel = searchLabel,
+                query = query,
+                onQueryChange = { query = it },
+                sortOptions = sortOptions.map { it.label },
+                sortIndex = sortIndex,
+                onSortIndexChange = { sortIndex = it },
+                afterDividerGap = afterDividerGap,
+                horizontalPadding = 12.dp
             )
 
             LazyColumn(
@@ -200,8 +228,10 @@ fun <T> DirectoryTemplateScreen(
 
                     AnimatedVisibility(
                         visible = !isDeleting,
-                        enter = fadeIn(tween(deleteAnimationMs.toInt())) + expandVertically(tween(deleteAnimationMs.toInt())),
-                        exit = fadeOut(tween(deleteAnimationMs.toInt())) + shrinkVertically(tween(deleteAnimationMs.toInt()))
+                        enter = fadeIn(tween(deleteAnimationMs.toInt())) +
+                                expandVertically(tween(deleteAnimationMs.toInt())),
+                        exit = fadeOut(tween(deleteAnimationMs.toInt())) +
+                                shrinkVertically(tween(deleteAnimationMs.toInt()))
                     ) {
                         DirectoryRowCard(
                             primaryText = selectedSort.primaryText(item),
@@ -218,7 +248,7 @@ fun <T> DirectoryTemplateScreen(
                                     // 2) immediate removal (UI state)
                                     onDeleteImmediate(item)
 
-                                    // allow key to be reused if item reappears
+                                    // allow key reuse if item reappears
                                     deletingKeys.value = deletingKeys.value - key
 
                                     // 3) undo window
@@ -260,12 +290,7 @@ private fun DirectoryRowCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Surface(
-        shape = MaterialTheme.shapes.extraLarge,
-        tonalElevation = 2.dp,
-        shadowElevation = 0.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    VtsCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -298,7 +323,7 @@ private fun DirectoryRowCard(
                         phone,
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onCall(phone) }, // ✅ calls always work, no clipboard
+                        modifier = Modifier.clickable { onCall(phone) },
                         maxLines = 1
                     )
                 }

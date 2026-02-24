@@ -19,7 +19,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
@@ -33,7 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import kotlinx.coroutines.launch
 import java.io.File
-import com.example.vtsdaily.ui.components.ScreenDividers
+import com.example.vtsdaily.ui.components.VtsCard
+import com.example.vtsdaily.ui.components.VtsSearchBar
 
 private val VtsGreen = Color(0xFF4CAF50)   // green
 private val VtsBannerText = Color(0xFFFFF5E1)
@@ -96,6 +96,8 @@ fun DriversScreen(
 
     // Content-only scaffold: no topBar here
     Scaffold(
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0),
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
@@ -103,25 +105,17 @@ fun DriversScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // Divider under the global app bar (keeps screens consistent)
-            ScreenDividers.Thick()
-
-            // Search
-            OutlinedTextField(
+            VtsSearchBar(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                singleLine = true,
-                label = { Text("Search (name, van, make/model)") }
+                label = "Search (name, van, make/model)"
             )
 
             // List
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 itemsIndexed(
                     filtered,
@@ -146,9 +140,6 @@ fun DriversScreen(
                         }
                     )
 
-                    if (index < filtered.lastIndex) {
-                        ScreenDividers.Thin(inset = 12.dp)
-                    }
                 }
             }
         }
@@ -214,10 +205,7 @@ private fun DriverRow(
 ) {
     var showConfirm by remember { mutableStateOf(false) }
 
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp,
+    VtsCard(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
@@ -226,9 +214,7 @@ private fun DriverRow(
             )
     ) {
         Row(
-            modifier = Modifier
-                .background(RowStripe)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Van pill

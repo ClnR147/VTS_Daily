@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.vtsdaily.ui.components.VtsTopAppBar
 
 @Composable
 fun ContactsTopBarCustom(
@@ -34,25 +35,13 @@ fun ContactsTopBarCustom(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
 
-    // No Surface → no shading; flat title row to match Drivers
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .padding(horizontal = 4.dp)
-    ) {
-        // Centered title
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.align(Alignment.Center)
-        )
-
-        // Epsilon (overflow) on the right
-        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+    VtsTopAppBar(
+        title = title,
+        actions = {
             IconButton(onClick = { menuOpen = true }) {
                 Icon(Icons.Filled.MoreVert, contentDescription = "More")
             }
+
             DropdownMenu(
                 expanded = menuOpen,
                 onDismissRequest = { menuOpen = false }
@@ -81,5 +70,5 @@ fun ContactsTopBarCustom(
                 )
             }
         }
-    }
+    )
 }

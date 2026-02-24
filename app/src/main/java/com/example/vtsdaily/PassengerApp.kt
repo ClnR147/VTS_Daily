@@ -33,7 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.vtsdaily.ui.theme.ActiveColor
-import com.example.vtsdaily.ui.theme.AppBackground
 import com.example.vtsdaily.ui.theme.CompletedColor
 import com.example.vtsdaily.ui.theme.PrimaryPurple
 import com.example.vtsdaily.ui.theme.RemovedColor
@@ -43,6 +42,7 @@ import java.time.format.DateTimeFormatter
 import jxl.Sheet
 import com.example.vtsdaily.ui.theme.VtsGreen
 import androidx.compose.foundation.lazy.rememberLazyListState
+import com.example.vtsdaily.ui.components.VtsCard
 
 private const val SHOW_ADD_TRIP = false
 private val SANDBOX_DATE: LocalDate = LocalDate.of(2099, 1, 1)
@@ -107,13 +107,10 @@ fun PassengerApp(
         baseSchedule.passengers
     }
 
-
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(AppBackground) // light greenish background
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp)
     ) {
 
         // Date Header – centered text with consistent layout
@@ -142,8 +139,6 @@ fun PassengerApp(
                 .height(1.dp)
         )
 
-
-
         val statusLabel = when (viewMode) {
             TripViewMode.ACTIVE -> "Active"
             TripViewMode.COMPLETED -> "Completed"
@@ -155,38 +150,46 @@ fun PassengerApp(
             TripViewMode.REMOVED -> RemovedColor
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+        VtsCard(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Trip Status toggle (always clickable)
             Row(
-                modifier = Modifier.clickable {
-                    viewMode = when (viewMode) {
-                        TripViewMode.ACTIVE -> TripViewMode.COMPLETED
-                        TripViewMode.COMPLETED -> TripViewMode.REMOVED
-                        TripViewMode.REMOVED -> TripViewMode.ACTIVE
-                    }
-                },
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = "Trip Status:",
-                    color = PrimaryPurple,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = statusLabel,
-                    color = statusColor,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
+                // Trip Status toggle (always clickable)
+                Row(
+                    modifier = Modifier.clickable {
+                        viewMode = when (viewMode) {
+                            TripViewMode.ACTIVE -> TripViewMode.COMPLETED
+                            TripViewMode.COMPLETED -> TripViewMode.REMOVED
+                            TripViewMode.REMOVED -> TripViewMode.ACTIVE
+                        }
+                    },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Trip Status:",
+                        color = PrimaryPurple,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Medium
+                        )
                     )
-                )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = statusLabel,
+                        color = statusColor,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp
+                        )
+                    )
+                }
             }
         }
 

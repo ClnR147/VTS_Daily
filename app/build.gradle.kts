@@ -91,6 +91,7 @@ dependencies {
     implementation("com.google.accompanist:accompanist-flowlayout:0.30.1")
     implementation("com.opencsv:opencsv:5.9")
     implementation("androidx.compose.ui:ui-unit:1.10.3")
+    implementation("androidx.compose.foundation:foundation-layout:1.10.3")
 
 
     // Tests
