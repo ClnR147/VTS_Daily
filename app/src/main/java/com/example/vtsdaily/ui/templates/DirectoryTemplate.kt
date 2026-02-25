@@ -146,7 +146,7 @@ fun <T> DirectoryTemplateScreen(
     deleteAnimationMs: Long = 180L,
 
     // ✅ expose the “move search bar up/down” knob if you ever need it per-screen
-    afterDividerGap: Dp = 4.dp
+    afterDividerGap: Dp = 8.dp
 ) {
     require(sortOptions.isNotEmpty()) { "sortOptions must not be empty" }
 

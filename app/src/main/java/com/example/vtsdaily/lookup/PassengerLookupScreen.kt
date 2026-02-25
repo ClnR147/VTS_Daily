@@ -175,8 +175,6 @@ fun PassengerLookupScreen(
                         sortOptions = listOf("Name", "Trips"),
                         sortIndex = sortIndex,
                         onSortIndexChange = { sortIndex = it },
-
-                        afterDividerGap = 8.dp,   // match VtsAfterDividerSpacing()
                         horizontalPadding = 12.dp
                     )}else {
             }

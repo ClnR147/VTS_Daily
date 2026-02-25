@@ -25,7 +25,7 @@ fun DirectoryHeader(
     sortIndex: Int,
     onSortIndexChange: (Int) -> Unit,
     // ✅ ONE knob for “search bar distance from thick divider”
-    afterDividerGap: Dp = 4.dp,
+    afterDividerGap: Dp = 8.dp,
     horizontalPadding: Dp = 12.dp
 ) {
     if (showTopDivider) {
