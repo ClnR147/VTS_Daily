@@ -53,27 +53,7 @@ fun NamesPage(
                     .fillMaxWidth()
                     .zIndex(1f) // keep header above list rows
             ) {
-                Column(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Passenger Name",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            text = "# of Trips",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    ScreenDividers.Thin()
-                }
+
             }
         }
 

@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.vtsdaily.ui.components.ScreenDividers
+import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun DetailsPage(
@@ -52,39 +53,45 @@ fun DetailsPage(
                     Modifier.padding(CardInner),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Header: passenger name + trip count
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = name,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 2,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "$tripCount trip" + if (tripCount == 1) "" else "s",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
 
+                    // --- NEW: Name + Phone side-by-side (name first) ---
                     val phone = groupedTrips.values
                         .flatten()
                         .firstNotNullOfOrNull { it.phone?.trim()?.takeIf { p -> p.isNotBlank() } }
-                    if (!phone.isNullOrBlank()) {
-                        Text(
-                            "Phone: $phone",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable {
-                                val i = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
-                                context.startActivity(i)
+
+
+
+// --- Updated Name + Phone row ---
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = name,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp) // small breathing room before phone
+                                )
+
+                                if (!phone.isNullOrBlank()) {
+                                    Text(
+                                        text = phone,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        maxLines = 1,
+                                        modifier = Modifier.clickable {
+                                            val i = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
+                                            context.startActivity(i)
+                                        }
+                                    )
+                                }
                             }
-                        )
-                    }
+                    // --- END NEW ---
 
                     // Header → first detail divider
                     ScreenDividers.Thick()

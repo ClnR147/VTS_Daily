@@ -15,7 +15,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.vtsdaily.DateSelectActivity
 import com.example.vtsdaily.sanitizeName
+import com.example.vtsdaily.ui.components.DirectoryHeader
 import com.example.vtsdaily.ui.components.VtsSearchBar
+import com.example.vtsdaily.ui.components.VtsSearchBarCanonical
 import com.example.vtsdaily.ui.theme.VtsGreen
 import kotlinx.coroutines.launch
 import java.io.File
@@ -36,9 +38,19 @@ fun PassengerLookupScreen(
     var allRows by remember { mutableStateOf(LookupStore.load(context)) }
     var selectedName by rememberSaveable { mutableStateOf<String?>(null) }
 
+    // NEW: sort toggle index (0 = Name, 1 = Trips)
+    var sortIndex by rememberSaveable { mutableIntStateOf(0) }
+
     // ✅ save & restore scroll position for each page
     val namesListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState(0, 0) }
     val detailsListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState(0, 0) }
+
+    // ✅ Reposition Names list to the top when toggling Name <-> Trips (only on NAMES page)
+    LaunchedEffect(sortIndex, page) {
+        if (page == Page.NAMES) {
+            namesListState.scrollToItem(0)
+        }
+    }
 
     // trip counts (normalized)
     val counts by remember(allRows) {
@@ -56,17 +68,29 @@ fun PassengerLookupScreen(
         return counts[key] ?: 0
     }
 
-    // filtered names
-    val nameList = remember(allRows, query) {
+    // filtered + sorted names (NOW respects sortIndex)
+    val nameList = remember(allRows, query, sortIndex, counts) {
         val q = query.trim()
-        allRows.asSequence()
+
+        val base = allRows.asSequence()
             .map { it.passenger.orEmpty() }
             .filter { it.contains(q, ignoreCase = true) }
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
-            .sorted()
-            .toList()
+
+        when (sortIndex) {
+            1 -> base
+                .sortedWith(
+                    compareByDescending<String> { tripCountFor(it) }
+                        .thenBy { it.lowercase() }
+                )
+                .toList()
+
+            else -> base
+                .sortedBy { it.lowercase() }
+                .toList()
+        }
     }
 
     // ✅ plain try/catch version
@@ -142,14 +166,20 @@ fun PassengerLookupScreen(
             Column(Modifier.fillMaxSize()) {
 
                 if (page == Page.NAMES) {
-                    VtsSearchBar(
-                        value = query,
-                        onValueChange = { query = it },
-                        label = "Search name"
-                    )
-                } else {
-                    // No spacer needed — MainActivity already provides consistent spacing under the divider
-                }
+                    DirectoryHeader(
+                        showTopDivider = true,
+                        searchLabel = "Search name",
+                        query = query,
+                        onQueryChange = { query = it },
+
+                        sortOptions = listOf("Name", "Trips"),
+                        sortIndex = sortIndex,
+                        onSortIndexChange = { sortIndex = it },
+
+                        afterDividerGap = 8.dp,   // match VtsAfterDividerSpacing()
+                        horizontalPadding = 12.dp
+                    )}else {
+            }
 
                 when (page) {
                     Page.NAMES -> NamesPage(

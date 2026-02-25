@@ -140,7 +140,7 @@ fun <T> DirectoryTemplateScreen(
 
     // UI tweaks
     // ✅ default TRUE so Contacts/Clinics share the same divider rhythm
-    showTopDivider: Boolean = false,
+    showTopDivider: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp),
     rowSpacing: Dp = 10.dp,
     deleteAnimationMs: Long = 180L,

@@ -222,8 +222,6 @@ class MainActivity : ComponentActivity() {
                             Box(Modifier.fillMaxSize().background(darkScrim))
 
                             Column(Modifier.fillMaxSize()) {
-                                ScreenDividers.Thick()
-                                VtsAfterDividerSpacing()
 
                                 Box(Modifier.fillMaxSize()) {
                                     when (view) {

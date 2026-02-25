@@ -30,10 +30,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import com.example.vtsdaily.ui.components.ScreenDividers
+import com.example.vtsdaily.ui.components.VtsAfterDividerSpacing
 import kotlinx.coroutines.launch
 import java.io.File
 import com.example.vtsdaily.ui.components.VtsCard
+import com.example.vtsdaily.ui.components.VtsDirectorySearchField
 import com.example.vtsdaily.ui.components.VtsSearchBar
+import com.example.vtsdaily.ui.components.VtsSearchBarCanonical
 
 private val VtsGreen = Color(0xFF4CAF50)   // green
 private val VtsBannerText = Color(0xFFFFF5E1)
@@ -105,7 +109,9 @@ fun DriversScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            VtsSearchBar(
+            ScreenDividers.Thick()
+            VtsAfterDividerSpacing() // 8.dp
+            VtsDirectorySearchField(
                 value = query,
                 onValueChange = { query = it },
                 label = "Search (name, van, make/model)"
@@ -139,7 +145,6 @@ fun DriversScreen(
                             scope.launch { snackbarHostState.showSnackbar("Deleted \"${toDelete.name}\"") }
                         }
                     )
-
                 }
             }
         }
