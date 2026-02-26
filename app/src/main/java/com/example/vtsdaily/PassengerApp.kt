@@ -113,21 +113,6 @@ fun PassengerApp(
             TripViewMode.REMOVED -> RemovedColor
         }
 
-        VtsCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                // Trip Status toggle (always clickable)
-                // (left exactly as your app currently implements it)
-            }
-        }
-
         // ✅ CHANGE #2: remove REMOVED-only spacer so all 3 screens stay in sync
         // (deleted)
         // if (viewMode == TripViewMode.REMOVED) {

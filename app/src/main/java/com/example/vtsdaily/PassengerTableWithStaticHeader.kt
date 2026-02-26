@@ -72,17 +72,17 @@ fun PassengerTableWithStaticHeader(
             onPickDate = onPickDate
         )
 
-        // Static header row — banner width matches card width (8.dp gutters)
-        Row(
-            Modifier
+        // ✅ Static header row — banner width matches card width (8.dp gutters)
+        Box(
+            modifier = Modifier
                 .fillMaxWidth()
-                .background(VtsGreen), // ✅ full-width green bar
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 8.dp) // gutters OUTSIDE the green
         ) {
             Row(
-                Modifier
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp), // ✅ gutters for content only
+                    .background(VtsGreen)     // green only within gutters
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
