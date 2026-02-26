@@ -1,18 +1,11 @@
 package com.example.vtsdaily
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -29,19 +22,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.vtsdaily.ui.theme.ActiveColor
 import com.example.vtsdaily.ui.theme.CompletedColor
-import com.example.vtsdaily.ui.theme.PrimaryPurple
 import com.example.vtsdaily.ui.theme.RemovedColor
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import jxl.Sheet
-import com.example.vtsdaily.ui.theme.VtsGreen
 import androidx.compose.foundation.lazy.rememberLazyListState
+import com.example.vtsdaily.ui.components.ScreenDividers
 import com.example.vtsdaily.ui.components.VtsCard
 
 private const val SHOW_ADD_TRIP = false
@@ -75,7 +65,6 @@ fun PassengerApp(
         mutableStateOf(InsertedTripStore.loadInsertedTrips(context, effectiveDate))
     }
 
-
     var showInsertDialog by remember { mutableStateOf(false) }
     var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
@@ -85,13 +74,11 @@ fun PassengerApp(
         RemovedTripStore.removeRemovedTrip(context, effectiveDate, passenger)
         baseSchedule = loadSchedule(context, effectiveDate)
         insertedPassengers = InsertedTripStore.loadInsertedTrips(context, effectiveDate)
-
     }
 
-
-// Choose which list to show in the table:
-// - Active/Removed -> today's schedule (as before)
-// - Completed      -> the trips you marked completed (from CompletedTripStore), mapped to Passenger
+    // Choose which list to show in the table:
+    // - Active/Removed -> today's schedule (as before)
+    // - Completed      -> the trips you marked completed (from CompletedTripStore), mapped to Passenger
     val passengersForTable = if (viewMode == TripViewMode.COMPLETED) {
         CompletedTripStore.getCompletedTrips(context, effectiveDate).map { ct ->
             Passenger(
@@ -109,16 +96,11 @@ fun PassengerApp(
 
     Column(
         modifier = Modifier
-
+            .fillMaxWidth()
     ) {
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp)
-                .background(VtsGreen)
-                .height(1.dp)
-        )
+        // ✅ CHANGE #1: use your thick divider (and remove the thin 1.dp line + extra padding)
+        ScreenDividers.Thick()
 
         val statusLabel = when (viewMode) {
             TripViewMode.ACTIVE -> "Active"
@@ -142,16 +124,15 @@ fun PassengerApp(
                 horizontalArrangement = Arrangement.Center
             ) {
                 // Trip Status toggle (always clickable)
-                 {
-
-                }
+                // (left exactly as your app currently implements it)
             }
         }
 
-
-        if (viewMode == TripViewMode.REMOVED) {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+        // ✅ CHANGE #2: remove REMOVED-only spacer so all 3 screens stay in sync
+        // (deleted)
+        // if (viewMode == TripViewMode.REMOVED) {
+        //     Spacer(modifier = Modifier.height(8.dp))
+        // }
 
         PassengerTableWithStaticHeader(
             passengers = passengersForTable,
@@ -164,6 +145,7 @@ fun PassengerApp(
                 when (reason) {
                     TripRemovalReason.COMPLETED ->
                         CompletedTripStore.addCompletedTrip(context, effectiveDate, removedPassenger)
+
                     else -> {
                         RemovedTripStore.addRemovedTrip(context, effectiveDate, removedPassenger, reason)
                         InsertedTripStore.removeInsertedTrip(context, effectiveDate, removedPassenger)
@@ -188,7 +170,6 @@ fun PassengerApp(
             phoneBook = phoneBook,
             onLookupForName = onLookupForName
         )
-
 
         if (showDateListDialog) {
 
@@ -255,6 +236,7 @@ fun PassengerApp(
                 }
             )
         }
+
         if (SHOW_ADD_TRIP) {
             if (showInsertDialog) {
                 InsertTripDialog(
@@ -286,10 +268,9 @@ fun formatPhone(raw: String?): String {
     if (raw.isNullOrBlank()) return "—"
     val d = raw.filter(Char::isDigit)
     return if (d.length == 10)
-        "(${d.substring(0,3)}) ${d.substring(3,6)}-${d.substring(6)}"
+        "(${d.substring(0, 3)}) ${d.substring(3, 6)}-${d.substring(6)}"
     else raw
 }
-
 
 private fun idxOf(headers: List<String>, vararg candidates: String): Int =
     headers.indexOfFirst { h -> candidates.any { cand -> h.equals(cand, ignoreCase = true) } }
@@ -306,5 +287,3 @@ private fun buildPhoneBookFromSchedule(passengers: List<Passenger>?): Map<String
             if (key.isNotEmpty() && value != null) key to value else null
         }
         .toMap()
-
-
