@@ -109,27 +109,8 @@ fun PassengerApp(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 24.dp)
-    ) {
 
-        // Date Header – centered text with consistent layout
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp, bottom = 0.dp), // was vertical = 12.dp
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")) +
-                        if (isTestDate) "  (TEST)" else "",
-                color = PrimaryPurple,
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier
-                    .clickable { showDateListDialog = true }
-                    .padding(bottom = 2.dp)
-            )
-        }
+    ) {
 
         Box(
             modifier = Modifier
@@ -161,34 +142,8 @@ fun PassengerApp(
                 horizontalArrangement = Arrangement.Center
             ) {
                 // Trip Status toggle (always clickable)
-                Row(
-                    modifier = Modifier.clickable {
-                        viewMode = when (viewMode) {
-                            TripViewMode.ACTIVE -> TripViewMode.COMPLETED
-                            TripViewMode.COMPLETED -> TripViewMode.REMOVED
-                            TripViewMode.REMOVED -> TripViewMode.ACTIVE
-                        }
-                    },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Trip Status:",
-                        color = PrimaryPurple,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Medium
-                        )
-                    )
+                 {
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Text(
-                        text = statusLabel,
-                        color = statusColor,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
-                        )
-                    )
                 }
             }
         }
@@ -206,7 +161,6 @@ fun PassengerApp(
             viewMode = viewMode,
             context = context,
             onTripRemoved = { removedPassenger, reason ->
-                "${removedPassenger.name}-${removedPassenger.pickupAddress}-${removedPassenger.dropoffAddress}-${removedPassenger.typeTime}-${scheduleDate.format(formatter)}"
                 when (reason) {
                     TripRemovalReason.COMPLETED ->
                         CompletedTripStore.addCompletedTrip(context, effectiveDate, removedPassenger)
@@ -215,17 +169,23 @@ fun PassengerApp(
                         InsertedTripStore.removeInsertedTrip(context, effectiveDate, removedPassenger)
                     }
                 }
+
                 baseSchedule = loadSchedule(context, effectiveDate)
                 insertedPassengers = InsertedTripStore.loadInsertedTrips(context, effectiveDate)
-
             },
             onTripReinstated = handleTripReinstated,
 
-            // 🔹 give the table access to the XLS passengers for phone lookup
-            schedulePassengers = baseSchedule.passengers,
-            phoneBook = phoneBook,               // ← COMMA HERE
+            // ✅ Status chip cycles modes
+            onToggleViewMode = {
+                viewMode = when (viewMode) {
+                    TripViewMode.ACTIVE -> TripViewMode.COMPLETED
+                    TripViewMode.COMPLETED -> TripViewMode.REMOVED
+                    TripViewMode.REMOVED -> TripViewMode.ACTIVE
+                }
+            },
 
-            // 🔹 NEW
+            schedulePassengers = baseSchedule.passengers,
+            phoneBook = phoneBook,
             onLookupForName = onLookupForName
         )
 
