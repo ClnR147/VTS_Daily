@@ -72,21 +72,49 @@ fun PassengerApp(
         RemovedTripStore.removeRemovedTrip(context, effectiveDate, passenger)
         baseSchedule = loadSchedule(context, effectiveDate)
     }
+    // helper key so Active filtering matches your store entries reliably
+    fun Passenger.tripKey(): String =
+        "${name}|${typeTime}|${pickupAddress}|${dropoffAddress}"
 
+    val completedKeys = CompletedTripStore.getCompletedTrips(context, effectiveDate)
+        .map { ct -> "${ct.name}|${ct.typeTime}|${ct.pickupAddress}|${ct.dropoffAddress}" }
+        .toSet()
+
+    val removedKeys = RemovedTripStore.getRemovedTrips(context, effectiveDate)
+        .map { rt -> "${rt.name}|${rt.typeTime}|${rt.pickupAddress}|${rt.dropoffAddress}" }
+        .toSet()
+
+    val activePassengers = baseSchedule.passengers.filter { p ->
+        val k = p.tripKey()
+        k !in completedKeys && k !in removedKeys
+    }
     // ✅ Choose which list to show in the table
-    val passengersForTable: List<Passenger> = if (viewMode == TripViewMode.COMPLETED) {
-        CompletedTripStore.getCompletedTrips(context, effectiveDate).map { ct ->
-            Passenger(
-                name = ct.name,
-                id = "", // not needed for display here
-                pickupAddress = ct.pickupAddress,
-                dropoffAddress = ct.dropoffAddress,
-                typeTime = ct.typeTime,
-                phone = ct.phone.orEmpty()
-            )
-        }
-    } else {
-        baseSchedule.passengers
+    val passengersForTable: List<Passenger> = when (viewMode) {
+        TripViewMode.ACTIVE -> activePassengers
+
+        TripViewMode.COMPLETED ->
+            CompletedTripStore.getCompletedTrips(context, effectiveDate).map { ct ->
+                Passenger(
+                    name = ct.name,
+                    id = "",
+                    pickupAddress = ct.pickupAddress,
+                    dropoffAddress = ct.dropoffAddress,
+                    typeTime = ct.typeTime,
+                    phone = ct.phone.orEmpty()
+                )
+            }
+
+        TripViewMode.REMOVED ->
+            RemovedTripStore.getRemovedTrips(context, effectiveDate).map { rt ->
+                Passenger(
+                    name = rt.name,
+                    id = "",
+                    pickupAddress = rt.pickupAddress,
+                    dropoffAddress = rt.dropoffAddress,
+                    typeTime = rt.typeTime,
+                    phone = rt.phone.orEmpty()
+                )
+            }
     }
 
     Column(

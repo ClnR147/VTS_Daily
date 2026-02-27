@@ -17,14 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.vtsdaily.ui.components.ScreenDividers
 import com.example.vtsdaily.ui.theme.ActionGreen
 import com.example.vtsdaily.ui.theme.OnPrimaryText
 import com.example.vtsdaily.ui.theme.PrimaryPurple
 import com.example.vtsdaily.ui.theme.VtsGreen
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import androidx.compose.foundation.clickable
 
 @Composable
 fun PassengerTableWithStaticHeader(
@@ -46,19 +44,19 @@ fun PassengerTableWithStaticHeader(
         scheduleDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))
     }
 
-    val metricText = metricTextOverride ?: run {
-        val count = passengers.size
-        when (viewMode) {
-            TripViewMode.ACTIVE -> "$count Trips"
-            TripViewMode.COMPLETED -> "$count Completed"
-            TripViewMode.REMOVED -> "$count Removed"
-        }
+    // ✅ simplest possible rule: count what THIS composable is showing
+    // (and allow override from the caller if desired)
+    val metricText = when (viewMode) {
+        TripViewMode.ACTIVE -> "${passengers.size} Trips"
+
+        TripViewMode.COMPLETED -> metricTextOverride ?: "${passengers.size} Completed"
+
+        TripViewMode.REMOVED -> metricTextOverride ?: "${passengers.size} Removed"
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-
     ) {
 
         // ✅ Big schedule header (chip can toggle viewMode now)
@@ -146,7 +144,7 @@ private fun ScheduleHeaderBlock(
     viewMode: TripViewMode,
     metricText: String,
     onToggleViewMode: () -> Unit,
-    onPickDate: () -> Unit // ✅ NEW
+    onPickDate: () -> Unit
 ) {
     val errorColor = MaterialTheme.colorScheme.error
 
@@ -171,12 +169,11 @@ private fun ScheduleHeaderBlock(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // ✅ Date is tappable to pick schedule date
         Text(
             text = formattedDate,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onPickDate() }, // ✅ NEW
+                .clickable { onPickDate() },
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.SemiBold,
