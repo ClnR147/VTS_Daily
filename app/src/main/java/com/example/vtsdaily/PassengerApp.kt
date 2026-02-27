@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,22 +24,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.vtsdaily.ui.components.ScreenDividers
 import com.example.vtsdaily.ui.theme.ActiveColor
 import com.example.vtsdaily.ui.theme.CompletedColor
 import com.example.vtsdaily.ui.theme.RemovedColor
-import kotlinx.coroutines.delay
+import jxl.Sheet
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import jxl.Sheet
-import androidx.compose.foundation.lazy.rememberLazyListState
-import com.example.vtsdaily.ui.components.ScreenDividers
-import com.example.vtsdaily.ui.components.VtsCard
 
-private const val SHOW_ADD_TRIP = false
 private val SANDBOX_DATE: LocalDate = LocalDate.of(2099, 1, 1)
 
 private fun isTestScheduleDate(d: LocalDate): Boolean {
-    return d.year >= 2090  // adjust if your test years differ
+    return d.year >= 2090 // adjust if your test years differ
 }
 
 @Composable
@@ -46,40 +43,38 @@ fun PassengerApp(
     onLookupForName: (String) -> Unit,
     onDialerLaunched: () -> Unit
 ) {
-
     val context = LocalContext.current
-    val formatter = DateTimeFormatter.ofPattern("M-d-yy")
 
-    val defaultDate = getAvailableScheduleDates().firstOrNull() ?: LocalDate.now()
+    // ✅ keep one formatter used by the date trigger + dialog labels
+    val dateDisplayFormatter = remember { DateTimeFormatter.ofPattern("MMMM d, yyyy") }
+
+    // ✅ stabilize available dates list (don’t call repeatedly during recomposition)
+    val availableDates = remember { getAvailableScheduleDates() }
+
+    val defaultDate = availableDates.firstOrNull() ?: LocalDate.now()
     var scheduleDate by rememberSaveable { mutableStateOf(defaultDate) }
+
+    // (left intact; if you’re not using sandboxMode anywhere else, we can remove later)
     var sandboxMode by rememberSaveable { mutableStateOf(false) }
     val effectiveDate = if (sandboxMode) SANDBOX_DATE else scheduleDate
 
     var baseSchedule by remember(effectiveDate) {
         mutableStateOf(loadSchedule(context, effectiveDate))
     }
-    val isTestDate = scheduleDate.year >= 2099
 
     val phoneBook = remember(baseSchedule) { buildPhoneBookFromSchedule(baseSchedule.passengers) }
-    var insertedPassengers by remember(effectiveDate) {
-        mutableStateOf(InsertedTripStore.loadInsertedTrips(context, effectiveDate))
-    }
 
-    var showInsertDialog by remember { mutableStateOf(false) }
-    var scrollToBottom by remember { mutableStateOf(false) }
     var showDateListDialog by remember { mutableStateOf(false) }
     var viewMode by rememberSaveable { mutableStateOf(TripViewMode.ACTIVE) }
 
+    // ✅ REINSTATE: without inserted trips, reinstating just removes from RemovedTripStore
     val handleTripReinstated: (Passenger) -> Unit = { passenger ->
         RemovedTripStore.removeRemovedTrip(context, effectiveDate, passenger)
         baseSchedule = loadSchedule(context, effectiveDate)
-        insertedPassengers = InsertedTripStore.loadInsertedTrips(context, effectiveDate)
     }
 
-    // Choose which list to show in the table:
-    // - Active/Removed -> today's schedule (as before)
-    // - Completed      -> the trips you marked completed (from CompletedTripStore), mapped to Passenger
-    val passengersForTable = if (viewMode == TripViewMode.COMPLETED) {
+    // ✅ Choose which list to show in the table
+    val passengersForTable: List<Passenger> = if (viewMode == TripViewMode.COMPLETED) {
         CompletedTripStore.getCompletedTrips(context, effectiveDate).map { ct ->
             Passenger(
                 name = ct.name,
@@ -95,11 +90,9 @@ fun PassengerApp(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = Modifier.fillMaxWidth()
     ) {
-
-        // ✅ CHANGE #1: use your thick divider (and remove the thin 1.dp line + extra padding)
+        // ✅ Thick divider (full-width behavior depends on your ScreenDividers.Thick impl)
         ScreenDividers.Thick()
 
         val statusLabel = when (viewMode) {
@@ -113,16 +106,8 @@ fun PassengerApp(
             TripViewMode.REMOVED -> RemovedColor
         }
 
-        // ✅ CHANGE #2: remove REMOVED-only spacer so all 3 screens stay in sync
-        // (deleted)
-        // if (viewMode == TripViewMode.REMOVED) {
-        //     Spacer(modifier = Modifier.height(8.dp))
-        // }
-
         PassengerTableWithStaticHeader(
             passengers = passengersForTable,
-            insertedPassengers = insertedPassengers,
-            setInsertedPassengers = { insertedPassengers = it },
             scheduleDate = effectiveDate,
             viewMode = viewMode,
             context = context,
@@ -130,19 +115,19 @@ fun PassengerApp(
                 when (reason) {
                     TripRemovalReason.COMPLETED ->
                         CompletedTripStore.addCompletedTrip(context, effectiveDate, removedPassenger)
-
-                    else -> {
+                    else ->
                         RemovedTripStore.addRemovedTrip(context, effectiveDate, removedPassenger, reason)
-                        InsertedTripStore.removeInsertedTrip(context, effectiveDate, removedPassenger)
-                    }
                 }
-
                 baseSchedule = loadSchedule(context, effectiveDate)
-                insertedPassengers = InsertedTripStore.loadInsertedTrips(context, effectiveDate)
             },
-            onTripReinstated = handleTripReinstated,
-
-            // ✅ Status chip cycles modes
+            onTripReinstated = { passenger ->
+                RemovedTripStore.removeRemovedTrip(context, effectiveDate, passenger)
+                baseSchedule = loadSchedule(context, effectiveDate)
+            },
+            schedulePassengers = baseSchedule.passengers,
+            phoneBook = phoneBook,
+            onDialerLaunched = onDialerLaunched,
+            onLookupForName = onLookupForName,
             onToggleViewMode = {
                 viewMode = when (viewMode) {
                     TripViewMode.ACTIVE -> TripViewMode.COMPLETED
@@ -150,15 +135,11 @@ fun PassengerApp(
                     TripViewMode.REMOVED -> TripViewMode.ACTIVE
                 }
             },
-
-            schedulePassengers = baseSchedule.passengers,
-            phoneBook = phoneBook,
-            onLookupForName = onLookupForName
+            onPickDate = { showDateListDialog = true }
         )
 
         if (showDateListDialog) {
-
-            val pastDates = remember { getAvailableScheduleDates() }
+            val pastDates = availableDates
 
             AlertDialog(
                 onDismissRequest = { showDateListDialog = false },
@@ -169,7 +150,6 @@ fun PassengerApp(
                     )
                 },
                 text = {
-
                     val listState = rememberLazyListState()
 
                     val firstRealIndex = remember(pastDates) {
@@ -189,21 +169,15 @@ fun PassengerApp(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(pastDates) { date ->
-
                             TextButton(
                                 onClick = {
                                     scheduleDate = date
-                                    baseSchedule = loadSchedule(context, scheduleDate)
-                                    insertedPassengers =
-                                        InsertedTripStore.loadInsertedTrips(context, date)
-
+                                    baseSchedule = loadSchedule(context, date) // ✅ use date directly
                                     showDateListDialog = false
                                 }
                             ) {
                                 Text(
-                                    date.format(
-                                        DateTimeFormatter.ofPattern("MMMM d, yyyy")
-                                    ),
+                                    date.format(dateDisplayFormatter),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
@@ -220,28 +194,6 @@ fun PassengerApp(
                     }
                 }
             )
-        }
-
-        if (SHOW_ADD_TRIP) {
-            if (showInsertDialog) {
-                InsertTripDialog(
-                    onDismiss = { showInsertDialog = false },
-                    onInsert = { newPassenger ->
-                        insertedPassengers = insertedPassengers + newPassenger
-                        InsertedTripStore.addInsertedTrip(context, effectiveDate, newPassenger)
-
-                        showInsertDialog = false
-                        scrollToBottom = true
-                    }
-                )
-            }
-        }
-
-        if (scrollToBottom) {
-            LaunchedEffect(Unit) {
-                delay(100)
-                scrollToBottom = false
-            }
         }
     }
 }

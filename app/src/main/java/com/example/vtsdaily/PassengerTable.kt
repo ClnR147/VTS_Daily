@@ -114,15 +114,13 @@ fun PassengerContactDialog(
 @Composable
 fun PassengerTable(
     passengers: List<Passenger>,
-    insertedPassengers: List<Passenger>,
-    setInsertedPassengers: (List<Passenger>) -> Unit,
     scheduleDate: LocalDate,
     viewMode: TripViewMode,
     context: Context,
     onTripRemoved: (Passenger, TripRemovalReason) -> Unit,
     onTripReinstated: (Passenger) -> Unit,
     onDialerLaunched: () -> Unit,
-    onLookupForName: (String) -> Unit = {}   // ← NEW
+    onLookupForName: (String) -> Unit = {}
 ) {
     var selectedPassenger by remember { mutableStateOf<Passenger?>(null) }
     var passengerToActOn by remember { mutableStateOf<Passenger?>(null) }
@@ -175,16 +173,17 @@ fun PassengerTable(
     val namePhones = remember(scheduleDate) { phoneNameMapFromXls(scheduleDate) }
 
     val visiblePassengers = when (viewMode) {
-        TripViewMode.ACTIVE -> (passengers + insertedPassengers)
-            .filterNot { CompletedTripStore.isTripCompleted(context, scheduleDate, it) }
+
+        TripViewMode.ACTIVE -> passengers
+            .filterNot { CompletedTripStore.isTripCompleted(context, forDate = scheduleDate, passenger = it) }
             .sortedBy { toSortableTime(it.typeTime) }
 
-        TripViewMode.COMPLETED -> (passengers + insertedPassengers)
-            .filter { CompletedTripStore.isTripCompleted(context, scheduleDate, it) }
-            // 🔹 NEW: if phone missing, backfill from XLS by name-only (trim at '(' or '+', lowercase)
+        TripViewMode.COMPLETED -> passengers
+            .filter { CompletedTripStore.isTripCompleted(context, forDate = scheduleDate, passenger = it) }
+            // If phone missing, backfill from XLS by name-only (your existing logic)
             .map { p ->
                 if (p.phone.isBlank()) {
-                    val key = cleanedName(p.name)
+                    val key = cleanedName(raw = p.name)
                     val lookedUp = namePhones[key]
                     if (!lookedUp.isNullOrBlank()) p.copy(phone = lookedUp) else p
                 } else p
@@ -192,9 +191,9 @@ fun PassengerTable(
             .sortedBy { toSortableTime(it.typeTime) }
 
         TripViewMode.REMOVED -> {
-            RemovedTripStore.getRemovedTrips(context, scheduleDate)
+            RemovedTripStore.getRemovedTrips(context, forDate = scheduleDate)
                 .map { rt ->
-                    val key = cleanedName(rt.name)
+                    val key = cleanedName(raw = rt.name)
                     val lookedUp = namePhones[key]
                     Passenger(
                         name = rt.name,
@@ -202,7 +201,7 @@ fun PassengerTable(
                         pickupAddress = rt.pickupAddress,
                         dropoffAddress = rt.dropoffAddress,
                         typeTime = rt.typeTime,
-                        phone = lookedUp ?: rt.phone.orEmpty()
+                        phone = rt.phone?.takeIf { it.isNotBlank() } ?: (lookedUp ?: "")
                     )
                 }
                 .sortedBy { toSortableTime(it.typeTime) }
@@ -320,22 +319,18 @@ fun PassengerTable(
                             .combinedClickable(
                                 onClick = {
                                     if (viewMode == TripViewMode.ACTIVE) {
-                                        if (passenger in insertedPassengers) {
-                                            tripBeingEdited = passenger
+                                        if (passenger.phone.isNotBlank()) {
+                                            val intent = Intent(
+                                                Intent.ACTION_DIAL,
+                                                "tel:${passenger.phone}".toUri()
+                                            )
+                                            context.startActivity(intent)
                                         } else {
-                                            if (passenger.phone.isNotBlank()) {
-                                                val intent = Intent(
-                                                    Intent.ACTION_DIAL,
-                                                    "tel:${passenger.phone}".toUri()
-                                                )
-                                                context.startActivity(intent)
-                                            } else {
-                                                Toast.makeText(
-                                                    context,
-                                                    "No phone number available",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
+                                            Toast.makeText(
+                                                context,
+                                                "No phone number available",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     }
                                 },
