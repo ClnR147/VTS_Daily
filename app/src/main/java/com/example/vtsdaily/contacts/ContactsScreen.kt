@@ -1,6 +1,5 @@
 package com.example.vtsdaily.contacts
 
-import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -8,17 +7,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -27,7 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,15 +35,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import com.example.vtsdaily.storage.ImportantContact
 import com.example.vtsdaily.storage.ImportantContactStore
-import com.example.vtsdaily.ui.components.ScreenDividers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -323,51 +311,52 @@ fun ContactsScreen(
 
     // --- BODY (unchanged) ---
 
-            DirectoryTemplateScreen(
-                items = contacts,
+    DirectoryTemplateScreen(
+        items = contacts,
 
-                // single sort: Name (no segmented row will display because of template tweak)
-                sortOptions = listOf(
-                    SortOption(
-                        label = "Name",
-                        comparator = compareBy { it.name.lowercase() },
-                        primaryText = { it.name },
-                        secondaryText = { "" } // keep Contacts as name + phone (no extra line)
-                    )
-                ),
-
-                itemKey = { c -> "${c.name.lowercase()}|${c.phone}" },
-
-                searchLabel = "Search contacts",
-                searchHintPredicate = { c, q ->
-                    // Consistency choice: include name search; optionally include phone search too
-                    c.name.lowercase().contains(q)
-                    // If you WANT phone search as well, uncomment:
-                    // || c.phone.lowercase().contains(q)
-                },
-
-                phoneOf = { it.phone },
-
-                onEdit = { c -> editing = c },
-
-                // Option A: immediate UI removal
-                onDeleteImmediate = { c ->
-                    contacts = contacts.toMutableList().also { it.remove(c) }
-                },
-
-                // Option A: only delete from store if not undone
-                onDeleteFinal = { c ->
-                    ImportantContactStore.delete(appContext, c.name, c.phone)
-                    contacts = ImportantContactStore.load(appContext)
-                },
-
-                // Undo pressed: reload from store
-                onUndo = {
-                    contacts = ImportantContactStore.load(appContext)
-                },
-
-                deleteSnackbarMessage = { c -> "Deleted \"${c.name}\"" }
+        sortOptions = listOf(
+            SortOption(
+                label = "Name",
+                comparator = compareBy { it.name.lowercase() },
+                primaryText = { it.name },
+                secondaryText = { "" }
             )
+        ),
+
+        itemKey = { c -> "${c.name.lowercase()}|${c.phone}" },
+
+        searchLabel = "Search contacts",
+        searchHintPredicate = { c, q ->
+            c.name.lowercase().contains(q)
+        },
+
+        phoneOf = { it.phone },
+
+        onEdit = { c -> editing = c },
+
+        onDeleteImmediate = { c ->
+            contacts = contacts.toMutableList().also { it.remove(c) }
+        },
+
+        onDeleteFinal = { c ->
+            ImportantContactStore.delete(appContext, c.name, c.phone)
+            contacts = ImportantContactStore.load(appContext)
+        },
+
+        onUndo = {
+            contacts = ImportantContactStore.load(appContext)
+        },
+
+        deleteSnackbarMessage = { c -> "Deleted \"${c.name}\"" },
+
+        // ✅ Slightly larger top padding for visual drop
+        contentPadding = PaddingValues(
+            start = 12.dp,
+            end = 12.dp,
+            top = 12.dp,      // this is the “drop”
+            bottom = 24.dp
+        )
+    )
 
     editing?.let {
         AddEditContactDialog(

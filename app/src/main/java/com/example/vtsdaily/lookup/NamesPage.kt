@@ -40,7 +40,12 @@ fun NamesPage(
     LazyColumn(
         state = state,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 16.dp),
+        contentPadding = PaddingValues(
+            start = 12.dp,
+            end = 12.dp,
+            top = 4.dp,      // 👈 small nudge downward
+            bottom = 16.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // sticky header
@@ -71,7 +76,7 @@ fun NamesPage(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
