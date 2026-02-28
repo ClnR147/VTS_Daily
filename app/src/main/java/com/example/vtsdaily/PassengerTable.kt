@@ -217,7 +217,7 @@ fun PassengerTable(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = if (viewMode == TripViewMode.REMOVED) 0.dp else 4.dp)
+            .padding(top = 4.dp) // ✅ same for all modes
             .verticalScroll(rememberScrollState())
     ) {
         // Trip Note dialog (ACTIVE edit)

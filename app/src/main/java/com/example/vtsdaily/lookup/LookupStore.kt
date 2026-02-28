@@ -68,7 +68,8 @@ object LookupStore {
         return runCatching {
             val json = f.readText(utf8)
             val type = object : TypeToken<List<LookupRow>>() {}.type
-            gson.fromJson<List<LookupRow>>(json, type) ?: emptyList()
+            val rows = gson.fromJson<List<LookupRow>>(json, type) ?: emptyList()
+            rows.distinctBy { stableKey(it) }   // ✅ collapses existing duplicates too
         }.getOrElse { emptyList() }
     }
 
@@ -203,11 +204,21 @@ object LookupStore {
         return d?.toString() ?: norm(s)
     }
 
+    private fun normAddr(s: String?): String {
+        val x = s?.trim()?.lowercase(Locale.US).orEmpty()
+        if (x.isEmpty()) return ""
+        return x
+            .replace(".", " ")                 // dots -> spaces (handles Rd.1203a)
+            .replace(",", " ")                 // commas -> spaces
+            .replace(Regex("\\s+"), " ")       // collapse whitespace
+            .trim()
+    }
+
     fun stableKey(r: LookupRow): String = listOf(
         dateKey(r.driveDate),
         norm(r.passenger),
-        norm(r.pAddress),
-        norm(r.dAddress)
+        normAddr(r.pAddress),
+        normAddr(r.dAddress)
     ).joinToString("|")
 
     fun mergeAndSave(context: Context, existing: List<LookupRow>, incoming: List<LookupRow>): List<LookupRow> {
